@@ -15,13 +15,15 @@ Froglog data comes from the [Froglog API](https://wiki.froglog.co.uk/Api/Documen
 
 Sign-in stores the JWT and username only. The password is not saved. The widget grid stays on the public user endpoints, so private games do not appear there. A private game can still receive a session after it is linked.
 
-This build shares the package name `rip.moth.cocoonshell` and is signed with the debug key in `froglog/debug.keystore` (store password `froglog`, alias `froglog`). Uninstall the official Cocoon Shell app before the first install of this mod. A later Froglog build signed with the same key can upgrade in place. `versionCode` is 7 and `versionName` is `3.06-1-froglog6`.
+This build shares the package name `rip.moth.cocoonshell` and is signed with the debug key in `froglog/debug.keystore` (store password `froglog`, alias `froglog`). Uninstall the official Cocoon Shell app before the first install of this mod. A later Froglog build signed with the same key can upgrade in place. `versionCode` is 8 and `versionName` is `3.06-1-froglog7`.
 
 The Froglog recent tile uses the same 3×2 grid size as Recently played. Covers stay small inside that cell. Remove the old Froglog tile and add it again so the grid span updates.
 
 ## Install
 
-The packaged file is `dist/cocoon-306-froglog.apk` after `./froglog/build.sh`. It is not committed. This build is sha256 `7efd98f2b037340b5509ad808cc4bda0d94de1aa2ef10185273846e1de2dd657` and is attached to the GitHub release [v3.06-1-froglog6](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.06-1-froglog6) as `cocoon-306-froglog.apk`. There is no device on this machine, so install and on-screen behavior were not checked. Treat the APK as a prototype until you install it and open New games in the Froglog pod.
+The packaged file is `dist/cocoon-306-froglog.apk` after `./froglog/build.sh`. It is not committed. This build is sha256 `814cb1198ea45d20438eb0ed707fb8448f449cbcbc69c7c223766788019f51f9`.
+
+On an Android 14 emulator, `3.06-1-froglog6` reached the main screen and then died while laying out the friends panel: `VerifyError` in `ef.q3.invoke`, unaligned packed-switch payload. `3.06-1-froglog7` keeps that screen up. The same emulator run does not cover Froglog sign-in or posting a session.
 
 1. Uninstall official Cocoon Shell if it is still the store build. A previous Froglog build with this same debug key can update over itself.
 2. Install `dist/cocoon-306-froglog.apk`.

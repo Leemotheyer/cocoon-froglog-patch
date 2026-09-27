@@ -39,6 +39,7 @@ import com.android.tools.smali.dexlib2.immutable.ImmutableMethod;
 import com.android.tools.smali.dexlib2.immutable.ImmutableTryBlock;
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction10t;
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction10x;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction11x;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction20t;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction21c;
@@ -521,11 +522,15 @@ public final class PatchCatalog {
         prefix.add(new ImmutableInstruction21c(Opcode.SGET_OBJECT, 0,
                 new ImmutableFieldReference("Lta/z;", "a", "Lta/z;")));
         prefix.add(new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0));
+        // packed-switch payloads must stay 4-byte aligned. The friend case sits
+        // between the switch and its payload, so the insert has to be an even
+        // number of code units. The nop is the fall-through after the early return.
+        prefix.add(new ImmutableInstruction10x(Opcode.NOP));
         int added = 0;
         for (Instruction instruction : prefix) {
             added += instruction.getCodeUnits();
         }
-        if (added != 11) {
+        if (added != 12 || (added & 1) != 0) {
             throw new IllegalStateException("friend click prefix " + added);
         }
         int[] addresses = addresses(instructions);
