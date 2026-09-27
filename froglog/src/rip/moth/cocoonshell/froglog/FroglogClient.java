@@ -38,6 +38,32 @@ public final class FroglogClient {
         }
     }
 
+    public static final class Stats {
+        public final String monthLine;
+        public final String yearLine;
+        public final String rateLine;
+        public final String error;
+
+        public Stats(String monthLine, String yearLine, String rateLine, String error) {
+            this.monthLine = monthLine;
+            this.yearLine = yearLine;
+            this.rateLine = rateLine;
+            this.error = error;
+        }
+    }
+
+    public static final class Hit {
+        public final String title;
+        public final String platform;
+        public final String coverUrl;
+
+        public Hit(String title, String platform, String coverUrl) {
+            this.title = title;
+            this.platform = platform;
+            this.coverUrl = coverUrl;
+        }
+    }
+
     public static Session login(String username, String password) throws Exception {
         JSONObject body = new JSONObject();
         body.put("username", username);
@@ -61,7 +87,7 @@ public final class FroglogClient {
         return new Session(token, name);
     }
 
-    public static Recent recentGames(String token, String username, int limit) {
+    public static Recent recentGames(String token, String username, int limit, String filter) {
         try {
             String encoded = URLEncoder.encode(username, "UTF-8").replace("+", "%20");
             HttpResult games = request("GET", BASE + "/users/" + encoded + "/games", token, null);
@@ -77,10 +103,277 @@ public final class FroglogClient {
             }
             HttpResult live = request("GET", BASE + "/users/" + encoded + "/live-service", token, null);
             String liveBody = (live.code >= 200 && live.code < 300) ? live.body : "[]";
-            return new Recent(FroglogGames.recent(games.body, liveBody, limit), null);
+            return new Recent(FroglogGames.recent(games.body, liveBody, limit, filter), null);
         } catch (Exception e) {
             return new Recent(Collections.<FroglogGame>emptyList(), "Could not reach Froglog");
         }
+    }
+
+    /** The signed-in library, including private games. Used to match a Cocoon title before writing. */
+    public static Recent library(String token) {
+        return library(token, FroglogGames.FILTER_RECENT, Integer.MAX_VALUE);
+    }
+
+    /** Signed-in library for the Froglog pod. Private games are included. The widget grid stays public. */
+    public static Recent library(String token, String filter, int limit) {
+        try {
+            HttpResult games = request("GET", BASE + "/games", token, null);
+            if (games.code == 401) {
+                return new Recent(Collections.<FroglogGame>emptyList(), "Sign in to Froglog again");
+            }
+            if (games.code < 200 || games.code >= 300) {
+                return new Recent(Collections.<FroglogGame>emptyList(),
+                        errorMessage(games.body, "Could not load your Froglog library (" + games.code + ")"));
+            }
+            HttpResult live = request("GET", BASE + "/live-service", token, null);
+            String liveBody = (live.code >= 200 && live.code < 300) ? live.body : "[]";
+            return new Recent(FroglogGames.recent(games.body, liveBody, limit, filter), null);
+        } catch (Exception e) {
+            return new Recent(Collections.<FroglogGame>emptyList(), "Could not reach Froglog");
+        }
+    }
+
+    /** Activity for the signed-in user, already scoped to people they follow. */
+    public static String activityJson(String token) throws Exception {
+        HttpResult result = request("GET", BASE + "/activity?limit=40", token, null);
+        if (result.code == 401) {
+            throw new IllegalStateException("Sign in to Froglog again");
+        }
+        if (result.code < 200 || result.code >= 300) {
+            throw new IllegalStateException(errorMessage(result.body, "Could not load Froglog activity (" + result.code + ")"));
+        }
+        return result.body;
+    }
+
+    /** Players online right now. Used only to mark a followed user as playing. */
+    public static String onlineJson(String token) throws Exception {
+        HttpResult result = request("GET", BASE + "/activity/online", token, null);
+        if (result.code < 200 || result.code >= 300) {
+            return "[]";
+        }
+        return result.body == null || result.body.isEmpty() ? "[]" : result.body;
+    }
+
+    public static Stats stats(String token) {
+        try {
+            HttpResult result = request("GET", BASE + "/stats", token, null);
+            if (result.code == 401) {
+                return new Stats("", "", "", "Sign in to Froglog again");
+            }
+            if (result.code < 200 || result.code >= 300) {
+                return new Stats("", "", "", errorMessage(result.body, "Could not load Froglog stats (" + result.code + ")"));
+            }
+            JSONObject json = new JSONObject(result.body);
+            JSONObject month = json.optJSONObject("this_month");
+            JSONObject year = json.optJSONObject("this_year");
+            JSONObject overall = json.optJSONObject("overall");
+            return new Stats(periodLine("This month", month), periodLine("This year", year), rateLine(overall), null);
+        } catch (Exception e) {
+            return new Stats("", "", "", "Could not reach Froglog");
+        }
+    }
+
+    public static java.util.List<Hit> search(String token, String query) throws Exception {
+        String q = URLEncoder.encode(query == null ? "" : query, "UTF-8").replace("+", "%20");
+        HttpResult result = request("GET", BASE + "/search?q=" + q, token, null);
+        if (result.code < 200 || result.code >= 300) {
+            throw new IllegalStateException(errorMessage(result.body, "Froglog search failed (" + result.code + ")"));
+        }
+        java.util.ArrayList<Hit> hits = new java.util.ArrayList<Hit>();
+        org.json.JSONArray array = new org.json.JSONArray(result.body == null || result.body.isEmpty() ? "[]" : result.body);
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject obj = array.optJSONObject(i);
+            if (obj == null) {
+                continue;
+            }
+            String title = obj.optString("name", "").trim();
+            if (title.isEmpty()) {
+                continue;
+            }
+            String platform = null;
+            org.json.JSONArray platforms = obj.optJSONArray("platforms");
+            if (platforms != null && platforms.length() > 0) {
+                JSONObject first = platforms.optJSONObject(0);
+                JSONObject nested = first == null ? null : first.optJSONObject("platform");
+                if (nested != null) {
+                    platform = nested.optString("name", null);
+                }
+            }
+            String cover = obj.optString("background_image", null);
+            hits.add(new Hit(title, platform, cover == null || cover.isEmpty() ? null : cover));
+        }
+        return hits;
+    }
+
+    public static final class Logged {
+        public final long id;
+        public final boolean live;
+
+        public Logged(long id, boolean live) {
+            this.id = id;
+            this.live = live;
+        }
+    }
+
+    public static long createGame(String token, String title, String platform, String coverUrl, boolean isPublic) throws Exception {
+        FroglogCreate.Outcome outcome = createGameKeyed(token, title, platform, coverUrl, isPublic, null, false);
+        if (outcome.needsChoice()) {
+            throw new IllegalStateException("Froglog already has this game");
+        }
+        if (outcome.error != null) {
+            throw new IllegalStateException(outcome.error);
+        }
+        return outcome.createdId;
+    }
+
+    /**
+     * {@code clientRef} is stable for one Cocoon game so a retry does not create a second entry.
+     * {@code confirmNew} sends {@code confirm_action: "new"} when the player wants a separate log.
+     */
+    public static FroglogCreate.Outcome createGameKeyed(String token, String title, String platform, String coverUrl,
+            boolean isPublic, String clientRef, boolean confirmNew) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("title", title);
+        if (platform != null && !platform.isEmpty()) {
+            body.put("platform", platform);
+        }
+        if (coverUrl != null && !coverUrl.isEmpty()) {
+            body.put("cover_image", coverUrl);
+            body.put("img", coverUrl);
+        }
+        body.put("is_public", isPublic);
+        if (clientRef != null && !clientRef.isEmpty()) {
+            body.put("client_ref", clientRef);
+        }
+        if (confirmNew) {
+            body.put("confirm_action", "new");
+        }
+        HttpResult result = request("POST", BASE + "/games", token, body.toString());
+        return FroglogCreate.interpret(result.code, result.body);
+    }
+
+    public static Logged logSession(String token, FroglogGame game, String date, double hours, String syncRef) throws Exception {
+        return logSession(token, game, date, hours, syncRef, "Logged from Cocoon");
+    }
+
+    public static Logged logSession(String token, FroglogGame game, String date, double hours, String syncRef, String notes) throws Exception {
+        boolean live = game.live;
+        long id = game.id;
+        if (!live) {
+            try {
+                JSONObject raw = getGame(token, id);
+                JSONObject payload = FroglogTracking.preparePayload(raw, date);
+                if (payload != null) {
+                    putGame(token, id, payload);
+                }
+            } catch (CallException missing) {
+                if (missing.code != 404) {
+                    throw missing;
+                }
+                Long recovered = uniqueLiveId(token, game.title);
+                if (recovered == null) {
+                    throw missing;
+                }
+                live = true;
+                id = recovered.longValue();
+            }
+        }
+        try {
+            postSession(token, live, id, date, hours, syncRef, notes);
+            return new Logged(id, live);
+        } catch (CallException missing) {
+            if (missing.code != 404 || live) {
+                throw missing;
+            }
+            Long recovered = uniqueLiveId(token, game.title);
+            if (recovered == null) {
+                throw missing;
+            }
+            postSession(token, true, recovered.longValue(), date, hours, syncRef, notes);
+            return new Logged(recovered.longValue(), true);
+        }
+    }
+
+    private static JSONObject getGame(String token, long id) throws Exception {
+        HttpResult result = request("GET", BASE + "/games/" + id, token, null);
+        if (result.code < 200 || result.code >= 300) {
+            throw call(result, "Could not load the Froglog game (" + result.code + ")");
+        }
+        return new JSONObject(result.body);
+    }
+
+    private static void putGame(String token, long id, JSONObject body) throws Exception {
+        HttpResult result = request("PUT", BASE + "/games/" + id, token, body.toString());
+        if (result.code < 200 || result.code >= 300) {
+            throw call(result, "Could not update the Froglog game (" + result.code + ")");
+        }
+    }
+
+    private static void postSession(String token, boolean live, long id, String date, double hours, String syncRef, String notes) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("date", date);
+        body.put("hours", hours);
+        body.put("notes", notes == null || notes.isEmpty() ? "Logged from Cocoon" : notes);
+        String path;
+        if (live) {
+            path = BASE + "/live-service/" + id + "/sessions";
+        } else {
+            body.put("is_public", false);
+            if (syncRef != null) {
+                body.put("sync_ref", syncRef);
+            }
+            path = BASE + "/games/" + id + "/sessions";
+        }
+        HttpResult result = request("POST", path, token, body.toString());
+        if (result.code < 200 || result.code >= 300) {
+            throw call(result, "Could not log the session (" + result.code + ")");
+        }
+    }
+
+    private static Long uniqueLiveId(String token, String title) throws Exception {
+        HttpResult live = request("GET", BASE + "/live-service", token, null);
+        if (live.code < 200 || live.code >= 300) {
+            return null;
+        }
+        List<FroglogGame> games = FroglogGames.recent("[]", live.body, Integer.MAX_VALUE, FroglogGames.FILTER_LIVE);
+        return FroglogTracking.uniqueLiveId(games, title);
+    }
+
+    private static CallException call(HttpResult result, String fallback) {
+        return new CallException(result.code, errorMessage(result.body, fallback));
+    }
+
+    private static final class CallException extends Exception {
+        final int code;
+
+        CallException(int code, String message) {
+            super(message);
+            this.code = code;
+        }
+    }
+
+    private static String periodLine(String label, JSONObject period) {
+        if (period == null) {
+            return label + ": —";
+        }
+        double hours = period.optDouble("hours", 0);
+        int completed = period.optInt("completed", 0);
+        String hoursLabel = FroglogGames.hoursLabel(Double.valueOf(hours));
+        return label + ": " + (hoursLabel == null ? "0h" : hoursLabel) + " · " + completed + " finished";
+    }
+
+    private static String rateLine(JSONObject overall) {
+        if (overall == null || !overall.has("completion_rate") || overall.isNull("completion_rate")) {
+            return "Completion —";
+        }
+        double rate = overall.optDouble("completion_rate", Double.NaN);
+        if (Double.isNaN(rate)) {
+            return "Completion —";
+        }
+        if (rate <= 1.0) {
+            rate = rate * 100.0;
+        }
+        return "Completion " + Math.round(rate) + "%";
     }
 
     private static String errorMessage(String body, String fallback) {

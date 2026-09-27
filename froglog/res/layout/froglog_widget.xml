@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/froglog_widget_bg"
     android:orientation="vertical"
-    android:padding="10dp">
+    android:padding="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -20,7 +20,7 @@
             android:layout_weight="1"
             android:text="Froglog"
             android:textColor="#F4F1EA"
-            android:textSize="15sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
 
         <TextView
@@ -29,6 +29,20 @@
             android:layout_height="wrap_content"
             android:text="Recent games"
             android:textColor="#A8A29A"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/froglog_filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/froglog_cover_placeholder"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:text="Recent"
+            android:textColor="#F4F1EA"
             android:textSize="11sp" />
     </LinearLayout>
 
@@ -45,24 +59,26 @@
     <LinearLayout
         android:id="@+id/froglog_row"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:layout_weight="1"
+        android:gravity="center"
         android:orientation="horizontal">
 
         <LinearLayout
             android:id="@+id/froglog_slot0"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
+            android:gravity="center_horizontal"
             android:orientation="vertical">
 
             <ImageView
                 android:id="@+id/froglog_art0"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/froglog_cover_placeholder"
+                android:clipToOutline="true"
                 android:scaleType="centerCrop"
                 android:src="@drawable/froglog_cover_placeholder" />
 
@@ -71,33 +87,37 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:gravity="center"
                 android:maxLines="1"
                 android:textColor="#F4F1EA"
-                android:textSize="11sp" />
+                android:textSize="10sp" />
 
             <TextView
                 android:id="@+id/froglog_meta0"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:gravity="center"
                 android:maxLines="1"
                 android:textColor="#A8A29A"
-                android:textSize="10sp" />
+                android:textSize="9sp" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/froglog_slot1"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
+            android:gravity="center_horizontal"
             android:orientation="vertical">
 
             <ImageView
                 android:id="@+id/froglog_art1"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/froglog_cover_placeholder"
+                android:clipToOutline="true"
                 android:scaleType="centerCrop"
                 android:src="@drawable/froglog_cover_placeholder" />
 
@@ -106,33 +126,37 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:gravity="center"
                 android:maxLines="1"
                 android:textColor="#F4F1EA"
-                android:textSize="11sp" />
+                android:textSize="10sp" />
 
             <TextView
                 android:id="@+id/froglog_meta1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:gravity="center"
                 android:maxLines="1"
                 android:textColor="#A8A29A"
-                android:textSize="10sp" />
+                android:textSize="9sp" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/froglog_slot2"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
+            android:gravity="center_horizontal"
             android:orientation="vertical">
 
             <ImageView
                 android:id="@+id/froglog_art2"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/froglog_cover_placeholder"
+                android:clipToOutline="true"
                 android:scaleType="centerCrop"
                 android:src="@drawable/froglog_cover_placeholder" />
 
@@ -141,32 +165,36 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:gravity="center"
                 android:maxLines="1"
                 android:textColor="#F4F1EA"
-                android:textSize="11sp" />
+                android:textSize="10sp" />
 
             <TextView
                 android:id="@+id/froglog_meta2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:gravity="center"
                 android:maxLines="1"
                 android:textColor="#A8A29A"
-                android:textSize="10sp" />
+                android:textSize="9sp" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/froglog_slot3"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:gravity="center_horizontal"
             android:orientation="vertical">
 
             <ImageView
                 android:id="@+id/froglog_art3"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/froglog_cover_placeholder"
+                android:clipToOutline="true"
                 android:scaleType="centerCrop"
                 android:src="@drawable/froglog_cover_placeholder" />
 
@@ -175,18 +203,20 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:gravity="center"
                 android:maxLines="1"
                 android:textColor="#F4F1EA"
-                android:textSize="11sp" />
+                android:textSize="10sp" />
 
             <TextView
                 android:id="@+id/froglog_meta3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:gravity="center"
                 android:maxLines="1"
                 android:textColor="#A8A29A"
-                android:textSize="10sp" />
+                android:textSize="9sp" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

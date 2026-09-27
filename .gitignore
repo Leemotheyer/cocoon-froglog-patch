@@ -1,6 +1,6 @@
 work/
 dist/
-tools/
+/tools/
 *.apk
 *.idsig
 .gradle/

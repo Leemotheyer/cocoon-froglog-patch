@@ -5,11 +5,13 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 
-/** Runs before the UI so the Froglog catalog tile exists the first time the picker opens. */
+/** Runs before the UI so the Froglog catalog tiles and pod exist the first time they are shown. */
 public final class FroglogInitProvider extends ContentProvider {
     @Override
     public boolean onCreate() {
         CatalogHook.install(getContext());
+        FroglogPods.install(getContext());
+        FroglogSocial.warm(getContext());
         return true;
     }
 

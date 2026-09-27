@@ -9,6 +9,9 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -23,6 +26,7 @@ import java.util.List;
  */
 public class FroglogRecentWidget extends AppWidgetProvider {
     public static final String ACTION_REFRESH = "rip.moth.cocoonshell.froglog.REFRESH";
+    public static final String ACTION_FILTER = "rip.moth.cocoonshell.froglog.FILTER";
     private static final int SLOTS = 4;
 
     @Override
@@ -43,9 +47,17 @@ public class FroglogRecentWidget extends AppWidgetProvider {
     }
 
     @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int appWidgetId, Bundle newOptions) {
+        onUpdate(context, manager, new int[] {appWidgetId});
+    }
+
+    @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
-        if (intent != null && ACTION_REFRESH.equals(intent.getAction())) {
+        if (intent != null && ACTION_FILTER.equals(intent.getAction())) {
+            FroglogStore.setFilter(context, FroglogGames.nextFilter(FroglogStore.filter(context)));
+        }
+        if (intent != null && (ACTION_REFRESH.equals(intent.getAction()) || ACTION_FILTER.equals(intent.getAction()))) {
             AppWidgetManager manager = AppWidgetManager.getInstance(context);
             int[] ids = manager.getAppWidgetIds(new ComponentName(context, FroglogRecentWidget.class));
             onUpdate(context, manager, ids);
@@ -57,16 +69,20 @@ public class FroglogRecentWidget extends AppWidgetProvider {
         String username = FroglogStore.username(context);
         FroglogClient.Recent recent = null;
         if (FroglogStore.signedIn(context)) {
-            recent = FroglogClient.recentGames(token, username, SLOTS);
+            recent = FroglogClient.recentGames(token, username, SLOTS, FroglogStore.filter(context));
         }
         for (int id : ids) {
-            manager.updateAppWidget(id, views(context, id, username, recent));
+            manager.updateAppWidget(id, views(context, manager, id, username, recent));
         }
     }
 
-    private static RemoteViews views(Context context, int widgetId, String username, FroglogClient.Recent recent) {
+    private static RemoteViews views(Context context, AppWidgetManager manager, int widgetId, String username, FroglogClient.Recent recent) {
+        Bundle options = manager.getAppWidgetOptions(widgetId);
+        Fit fit = fit(options == null ? Bundle.EMPTY : options);
         RemoteViews views = new RemoteViews(context.getPackageName(), layout(context, "froglog_widget"));
         views.setTextViewText(id(context, "froglog_title"), "Froglog");
+        String filter = FroglogStore.filter(context);
+        views.setTextViewText(id(context, "froglog_filter"), FroglogGames.filterLabel(filter));
         boolean signedIn = FroglogStore.signedIn(context);
         if (!signedIn) {
             showMessage(context, views, "Sign in to see your recent Froglog games");
@@ -75,7 +91,7 @@ public class FroglogRecentWidget extends AppWidgetProvider {
             showMessage(context, views, recent.error);
             views.setTextViewText(id(context, "froglog_subtitle"), username);
         } else if (recent == null || recent.games.isEmpty()) {
-            showMessage(context, views, "No public Froglog games yet");
+            showMessage(context, views, "No Froglog games in " + FroglogGames.filterLabel(filter));
             views.setTextViewText(id(context, "froglog_subtitle"), username);
         } else {
             views.setViewVisibility(id(context, "froglog_message"), View.GONE);
@@ -84,29 +100,48 @@ public class FroglogRecentWidget extends AppWidgetProvider {
             List<FroglogGame> games = recent.games;
             for (int i = 0; i < SLOTS; i++) {
                 int slot = id(context, "froglog_slot" + i);
-                if (i >= games.size()) {
+                if (i >= games.size() || i >= fit.slots) {
                     views.setViewVisibility(slot, View.GONE);
                     continue;
                 }
                 FroglogGame game = games.get(i);
                 views.setViewVisibility(slot, View.VISIBLE);
                 views.setTextViewText(id(context, "froglog_name" + i), game.title);
-                views.setTextViewText(id(context, "froglog_meta" + i), game.meta);
+                int meta = id(context, "froglog_meta" + i);
+                if (fit.compact) {
+                    views.setViewVisibility(meta, View.GONE);
+                } else {
+                    views.setViewVisibility(meta, View.VISIBLE);
+                    views.setTextViewText(meta, game.meta);
+                }
+                int art = id(context, "froglog_art" + i);
+                sizeCover(views, art, fit.coverDp);
                 Bitmap cover = loadCover(game.coverUrl);
                 if (cover != null) {
-                    views.setImageViewBitmap(id(context, "froglog_art" + i), cover);
+                    views.setImageViewBitmap(art, cover);
                 } else {
-                    views.setImageViewResource(id(context, "froglog_art" + i),
+                    views.setImageViewResource(art,
                             context.getResources().getIdentifier("froglog_cover_placeholder", "drawable", context.getPackageName()));
                 }
+                Intent detail = new Intent(context, FroglogGameDetail.class);
+                detail.putExtra(FroglogGameDetail.EXTRA_TITLE, game.title);
+                detail.putExtra(FroglogGameDetail.EXTRA_META, game.meta);
+                detail.putExtra(FroglogGameDetail.EXTRA_REVIEW, game.review);
+                detail.putExtra(FroglogGameDetail.EXTRA_COVER, game.coverUrl == null ? "" : game.coverUrl);
+                detail.setData(Uri.parse("froglog://game/" + widgetId + "/" + i));
+                views.setOnClickPendingIntent(slot, PendingIntent.getActivity(context, widgetId * 10 + i, detail,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
             }
         }
-        Intent open = new Intent(context, FroglogWidgetConfig.class);
+        Intent open = new Intent(context, FroglogPodActivity.class);
         open.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
         open.setData(Uri.parse("froglog://widget/" + widgetId));
-        PendingIntent pending = PendingIntent.getActivity(context, widgetId, open,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        views.setOnClickPendingIntent(id(context, "froglog_root"), pending);
+        views.setOnClickPendingIntent(id(context, "froglog_title"), PendingIntent.getActivity(context, widgetId, open,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+        Intent cycle = new Intent(context, FroglogRecentWidget.class);
+        cycle.setAction(ACTION_FILTER);
+        views.setOnClickPendingIntent(id(context, "froglog_filter"), PendingIntent.getBroadcast(context, widgetId + 50, cycle,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         return views;
     }
 
@@ -136,7 +171,7 @@ public class FroglogRecentWidget extends AppWidgetProvider {
                 if (raw == null) {
                     return null;
                 }
-                int max = 160;
+                int max = 96;
                 int width = raw.getWidth();
                 int height = raw.getHeight();
                 if (width <= max && height <= max) {
@@ -154,6 +189,50 @@ public class FroglogRecentWidget extends AppWidgetProvider {
             if (conn != null) {
                 conn.disconnect();
             }
+        }
+    }
+
+    /** Cocoon turns provider dp into grid cells with ceil(dp / 74). Covers stay inside that cell. */
+    private static Fit fit(Bundle options) {
+        int width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0);
+        int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0);
+        if (width <= 0) {
+            width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 222);
+        }
+        if (height <= 0) {
+            height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 148);
+        }
+        boolean compact = height < 100;
+        int text = compact ? 16 : 32;
+        int innerW = Math.max(48, width - 16);
+        int innerH = Math.max(36, height - 16 - 22 - text);
+        int slots = SLOTS;
+        int gap = 6;
+        int cover = Math.min(innerH, (innerW - gap * (slots - 1)) / slots);
+        while (slots > 3 && cover < 40) {
+            slots--;
+            cover = Math.min(innerH, (innerW - gap * (slots - 1)) / slots);
+        }
+        cover = Math.max(36, Math.min(cover, 56));
+        return new Fit(cover, slots, compact);
+    }
+
+    private static void sizeCover(RemoteViews views, int viewId, int coverDp) {
+        if (Build.VERSION.SDK_INT >= 31) {
+            views.setViewLayoutWidth(viewId, coverDp, TypedValue.COMPLEX_UNIT_DIP);
+            views.setViewLayoutHeight(viewId, coverDp, TypedValue.COMPLEX_UNIT_DIP);
+        }
+    }
+
+    private static final class Fit {
+        final int coverDp;
+        final int slots;
+        final boolean compact;
+
+        Fit(int coverDp, int slots, boolean compact) {
+            this.coverDp = coverDp;
+            this.slots = slots;
+            this.compact = compact;
         }
     }
 

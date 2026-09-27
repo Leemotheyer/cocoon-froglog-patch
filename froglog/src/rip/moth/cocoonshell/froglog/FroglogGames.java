@@ -15,20 +15,80 @@ import java.util.List;
 public final class FroglogGames {
     private FroglogGames() {}
 
+    public static final String FILTER_RECENT = "recent";
+    public static final String FILTER_PROGRESS = "progress";
+    public static final String FILTER_COMPLETED = "completed";
+    public static final String FILTER_LIVE = "live";
+
     public static List<FroglogGame> recent(String gamesJson, String liveJson, int limit) {
+        return recent(gamesJson, liveJson, limit, FILTER_RECENT);
+    }
+
+    public static List<FroglogGame> recent(String gamesJson, String liveJson, int limit, String filter) {
         ArrayList<FroglogGame> all = new ArrayList<FroglogGame>();
-        collect(gamesJson, false, all);
-        collect(liveJson, true, all);
-        Collections.sort(all, new Comparator<FroglogGame>() {
+        String mode = filter == null ? FILTER_RECENT : filter;
+        if (!FILTER_LIVE.equals(mode)) {
+            collect(gamesJson, false, all);
+        }
+        if (FILTER_RECENT.equals(mode) || FILTER_LIVE.equals(mode)) {
+            collect(liveJson, true, all);
+        }
+        ArrayList<FroglogGame> kept = new ArrayList<FroglogGame>();
+        for (FroglogGame game : all) {
+            if (accepts(game, mode)) {
+                kept.add(game);
+            }
+        }
+        Collections.sort(kept, new Comparator<FroglogGame>() {
             @Override
             public int compare(FroglogGame a, FroglogGame b) {
                 return Long.compare(b.sortKey, a.sortKey);
             }
         });
-        if (all.size() > limit) {
-            return new ArrayList<FroglogGame>(all.subList(0, limit));
+        if (kept.size() > limit) {
+            return new ArrayList<FroglogGame>(kept.subList(0, limit));
         }
-        return all;
+        return kept;
+    }
+
+    public static String nextFilter(String filter) {
+        if (FILTER_PROGRESS.equals(filter)) {
+            return FILTER_COMPLETED;
+        }
+        if (FILTER_COMPLETED.equals(filter)) {
+            return FILTER_LIVE;
+        }
+        if (FILTER_LIVE.equals(filter)) {
+            return FILTER_RECENT;
+        }
+        return FILTER_PROGRESS;
+    }
+
+    public static String filterLabel(String filter) {
+        if (FILTER_PROGRESS.equals(filter)) {
+            return "Playing";
+        }
+        if (FILTER_COMPLETED.equals(filter)) {
+            return "Finished";
+        }
+        if (FILTER_LIVE.equals(filter)) {
+            return "Live";
+        }
+        return "Recent";
+    }
+
+    private static boolean accepts(FroglogGame game, String filter) {
+        if (FILTER_PROGRESS.equals(filter)) {
+            return !game.live && statusIs(game.status, "In Progress");
+        }
+        if (FILTER_COMPLETED.equals(filter)) {
+            return !game.live && statusIs(game.status, "Completed");
+        }
+        return true;
+    }
+
+    private static boolean statusIs(String status, String expected) {
+        return status != null && expected.equalsIgnoreCase(status.trim());
     }
 
     private static void collect(String json, boolean live, List<FroglogGame> out) {
@@ -72,28 +132,56 @@ public final class FroglogGames {
             if (cover == null) {
                 cover = text(obj, "img");
             }
-            out.add(new FroglogGame(title, text(obj, "platform"), cover, meta(when, hours, status), rank));
+            Double rating = number(obj, "rating");
+            int sessions = obj.optInt("session_count", 0);
+            String platform = text(obj, "platform");
+            out.add(new FroglogGame(obj.optLong("id", -1), live, title, platform, cover, status,
+                    text(obj, "review"), rating, sessions, meta(platform, status, rating, sessions, hours, when), rank));
         }
     }
 
-    static String meta(String when, Double hours, String status) {
+    static String meta(String platform, String status, Double rating, int sessions, Double hours, String when) {
+        ArrayList<String> parts = new ArrayList<String>();
+        if (platform != null) {
+            parts.add(platform);
+        }
+        String statusLabel = statusLabel(status);
+        if (statusLabel != null) {
+            parts.add(statusLabel);
+        }
+        if (rating != null && rating > 0) {
+            parts.add("★" + trimTrailingZero(rating.doubleValue()));
+        }
+        if (sessions > 0) {
+            parts.add(sessions == 1 ? "1 session" : sessions + " sessions");
+        }
         String hoursLabel = hoursLabel(hours);
-        if (when != null && hoursLabel != null) {
-            return when + " · " + hoursLabel;
-        }
-        if (when != null) {
-            return when;
-        }
-        if (hoursLabel != null && status != null) {
-            return status + " · " + hoursLabel;
-        }
         if (hoursLabel != null) {
-            return hoursLabel;
+            parts.add(hoursLabel);
+        } else if (when != null) {
+            parts.add(when);
         }
-        if (status != null) {
-            return status;
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < parts.size(); i++) {
+            if (i > 0) {
+                out.append(" · ");
+            }
+            out.append(parts.get(i));
         }
-        return "";
+        return out.toString();
+    }
+
+    static String statusLabel(String status) {
+        if (status == null) {
+            return null;
+        }
+        if ("active".equalsIgnoreCase(status)) {
+            return "Live";
+        }
+        if ("dormant".equalsIgnoreCase(status)) {
+            return "Dormant";
+        }
+        return status;
     }
 
     public static String hoursLabel(Double hours) {

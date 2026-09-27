@@ -19,9 +19,16 @@ public final class FroglogGamesTest {
         expect("Fresh Session", recent.get(1).title);
         expect("Old Session", recent.get(2).title);
         expect("Finished Earlier", recent.get(3).title);
-        expect("2026-09-10 · 12h", recent.get(0).meta);
-        expect("2026-09-01 · 4.5h", recent.get(1).meta);
+        expect("PC · Live · 12h", recent.get(0).meta);
+        expect("Switch · In Progress · 4.5h", recent.get(1).meta);
         expect("https://example/fresh.jpg", recent.get(1).coverUrl);
+        List<FroglogGame> playing = FroglogGames.recent(games, live, 4, FroglogGames.FILTER_PROGRESS);
+        expect(2, Integer.valueOf(playing.size()));
+        expect("Fresh Session", playing.get(0).title);
+        expect("Never Played", playing.get(1).title);
+        List<FroglogGame> liveOnly = FroglogGames.recent(games, live, 4, FroglogGames.FILTER_LIVE);
+        expect("Live Service", liveOnly.get(0).title);
+        expect(1, Integer.valueOf(liveOnly.size()));
         expect(true, FroglogGames.recent("{\"error\":\"nope\"}", "[]", 4).isEmpty());
         expect("4h", FroglogGames.hoursLabel(4.0));
         expect("4.5h", FroglogGames.hoursLabel(4.5));
