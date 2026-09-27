@@ -11,9 +11,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Adds a Froglog tile to Cocoon's widget catalog.
+ * Adds Froglog tiles to Cocoon's widget catalog.
  * The existing Recently played tile ({@code NOW_PLAYING}) is left as it is.
- * Froglog is a separate catalog entry that hosts this app's own widget.
+ * Froglog recent games and Froglog stats are separate catalog entries.
  */
 public final class CatalogHook {
     private static final String TAG = "FroglogWidget";
@@ -35,7 +35,7 @@ public final class CatalogHook {
             List<?> next = withFroglog(existing);
             if (next != existing) {
                 setStatic(field, next);
-                Log.i(TAG, "Added Froglog to the widget catalog");
+                Log.i(TAG, "Added Froglog tiles to the widget catalog");
             }
         } catch (Throwable t) {
             Log.e(TAG, "Could not add Froglog to the widget catalog", t);
@@ -48,21 +48,11 @@ public final class CatalogHook {
             if (context == null || existing == null) {
                 return existing;
             }
-            int label = res("string", "widget_type_froglog");
-            int desc = res("string", "widget_type_froglog_desc");
-            if (label == 0 || desc == 0 || containsLabel(existing, label)) {
-                return existing;
-            }
-            ArrayList<Object> copy = new ArrayList<Object>(existing);
-            ArrayList<ta.j> sizes = new ArrayList<ta.j>();
-            sizes.add(new ta.j(Integer.valueOf(4), Integer.valueOf(2)));
-            copy.add(new mf.o1(
-                    rip.moth.cocoonshell.data.model.Widget.WidgetType.ANDROID_WIDGET,
-                    label,
-                    desc,
-                    ef.b.GAMEPAD,
-                    sizes));
-            return copy;
+            ArrayList<Object> copy = append(null, existing,
+                    "widget_type_froglog", "widget_type_froglog_desc", ef.b.GAMEPAD, 3, 2);
+            copy = append(copy, existing,
+                    "widget_type_froglog_stats", "widget_type_froglog_stats_desc", ef.b.BAR_GRAPH, 3, 2);
+            return copy == null ? existing : copy;
         } catch (Throwable t) {
             Log.e(TAG, "Catalog append failed", t);
             return existing;
@@ -70,7 +60,7 @@ public final class CatalogHook {
     }
 
     /**
-     * Picker hook. Returns true only for the Froglog tile, which is then placed
+     * Picker hook. Returns true only for a Froglog tile, which is then placed
      * immediately. Every other tile, including Recently played and Android widget,
      * keeps the original path.
      */
@@ -79,21 +69,57 @@ public final class CatalogHook {
             if (context == null || callback == null || labelRes == 0) {
                 return false;
             }
-            if (labelRes != res("string", "widget_type_froglog")) {
+            String provider;
+            int width;
+            int height;
+            if (labelRes == res("string", "widget_type_froglog")) {
+                provider = FroglogRecentWidget.class.getName();
+                width = 3;
+                height = 2;
+            } else if (labelRes == res("string", "widget_type_froglog_stats")) {
+                provider = FroglogStatsWidget.class.getName();
+                width = 3;
+                height = 2;
+            } else {
                 return false;
             }
-            AppWidgetProviderInfo info = provider();
+            AppWidgetProviderInfo info = provider(provider);
             if (info == null) {
                 return false;
             }
             ArrayList<ta.j> sizes = new ArrayList<ta.j>();
-            sizes.add(new ta.j(Integer.valueOf(4), Integer.valueOf(2)));
+            sizes.add(new ta.j(Integer.valueOf(width), Integer.valueOf(height)));
             mf.y1.f(callback, rip.moth.cocoonshell.data.model.Widget.WidgetType.ANDROID_WIDGET, info, sizes);
             return true;
         } catch (Throwable t) {
             Log.e(TAG, "Could not place Froglog widget", t);
             return false;
         }
+    }
+
+    private static ArrayList<Object> append(ArrayList<Object> copy, List<?> existing,
+            String labelName, String descName, ef.b icon, int width, int height) {
+        int label = res("string", labelName);
+        int desc = res("string", descName);
+        if (label == 0 || desc == 0) {
+            return copy;
+        }
+        List<?> look = copy == null ? existing : copy;
+        if (containsLabel(look, label)) {
+            return copy;
+        }
+        if (copy == null) {
+            copy = new ArrayList<Object>(existing);
+        }
+        ArrayList<ta.j> sizes = new ArrayList<ta.j>();
+        sizes.add(new ta.j(Integer.valueOf(width), Integer.valueOf(height)));
+        copy.add(new mf.o1(
+                rip.moth.cocoonshell.data.model.Widget.WidgetType.ANDROID_WIDGET,
+                label,
+                desc,
+                icon,
+                sizes));
+        return copy;
     }
 
     private static boolean containsLabel(List<?> existing, int label) {
@@ -105,9 +131,8 @@ public final class CatalogHook {
         return false;
     }
 
-    private static AppWidgetProviderInfo provider() {
+    private static AppWidgetProviderInfo provider(String name) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        String name = FroglogRecentWidget.class.getName();
         for (AppWidgetProviderInfo info : manager.getInstalledProviders()) {
             if (info.provider != null && name.equals(info.provider.getClassName())) {
                 return info;

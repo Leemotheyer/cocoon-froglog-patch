@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/froglog_stats_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/froglog_widget_bg"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <TextView
+        android:id="@+id/froglog_stats_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Froglog"
+        android:textColor="#F4F1EA"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/froglog_stats_month"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="#F4F1EA"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/froglog_stats_year"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#F4F1EA"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/froglog_stats_rate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#A8A29A"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/froglog_stats_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="#F4F1EA"
+        android:textSize="13sp"
+        android:visibility="gone" />
+</LinearLayout>

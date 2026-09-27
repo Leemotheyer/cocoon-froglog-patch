@@ -49,8 +49,22 @@ mkdir -p "$WORK/froglog-test"
 javac --release 11 -encoding UTF-8 -cp "$JSON_JAR" -d "$WORK/froglog-test" \
   "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogGame.java" \
   "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogGames.java" \
-  "$ROOT/froglog/test/FroglogGamesTest.java"
+  "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogMatch.java" \
+  "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogQueue.java" \
+  "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogCreate.java" \
+  "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogTracking.java" \
+  "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogFollow.java" \
+  "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogFollows.java" \
+  "$ROOT/froglog/test/FroglogGamesTest.java" \
+  "$ROOT/froglog/test/FroglogMatchTest.java" \
+  "$ROOT/froglog/test/FroglogFollowsTest.java" \
+  "$ROOT/froglog/test/FroglogQueueTest.java" \
+  "$ROOT/froglog/test/FroglogTrackingTest.java"
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogGamesTest
+java -cp "$WORK/froglog-test:$JSON_JAR" FroglogMatchTest
+java -cp "$WORK/froglog-test:$JSON_JAR" FroglogFollowsTest
+java -cp "$WORK/froglog-test:$JSON_JAR" FroglogQueueTest
+java -cp "$WORK/froglog-test:$JSON_JAR" FroglogTrackingTest
 
 echo "compile widget"
 rm -rf "$WORK/froglog-stubs" "$WORK/froglog-classes"
@@ -121,7 +135,19 @@ for required in ("classes4.dex", "classes7.dex"):
 if any(name.endswith("baseline.prof") or name.endswith("baseline.profm") for name in names):
     raise SystemExit("baseline profiles were not removed")
 # Binary manifest strings are UTF-16.
-for token in ("FroglogRecentWidget", "FroglogWidgetConfig", "FroglogInitProvider"):
+for token in (
+    "FroglogRecentWidget",
+    "FroglogStatsWidget",
+    "FroglogWidgetConfig",
+    "FroglogInitProvider",
+    "FroglogGameDetail",
+    "FroglogSessionPrompt",
+    "FroglogMapActivity",
+    "FroglogAddGame",
+    "FroglogLibraryPicker",
+    "FroglogPodActivity",
+    "FroglogFriendActivity",
+):
     if token.encode("utf-16le") not in manifest:
         raise SystemExit(f"manifest missing {token}")
 print("package contains classes7.dex and the Froglog components")
