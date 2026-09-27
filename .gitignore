@@ -1,0 +1,7 @@
+work/
+dist/
+tools/
+*.apk
+*.idsig
+.gradle/
+build/
