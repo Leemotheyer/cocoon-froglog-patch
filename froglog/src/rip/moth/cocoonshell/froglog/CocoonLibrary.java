@@ -35,9 +35,61 @@ public final class CocoonLibrary {
         }
     }
 
+    /** One finished row from {@code game_sessions}, the table Cocoon's Log pod lists. */
+    public static final class Session {
+        public final String clientSessionId;
+        public final String title;
+        public final String platformId;
+        public final long startTime;
+        public final long endTime;
+        public final int durationMinutes;
+        public final String date;
+
+        public Session(String clientSessionId, String title, String platformId, long startTime, long endTime,
+                int durationMinutes, String date) {
+            this.clientSessionId = clientSessionId == null ? "" : clientSessionId;
+            this.title = title == null ? "" : title.trim();
+            this.platformId = platformId == null ? "" : platformId;
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.durationMinutes = durationMinutes;
+            this.date = date == null ? "" : date;
+        }
+    }
+
+    /** Finished sessions that ended after {@code sinceMs}, oldest first. Null if the database could not be read. */
+    public static List<Session> sessionsSince(Context context, long sinceMs) {
+        ArrayList<Session> sessions = new ArrayList<Session>();
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
+        try {
+            String path = context.getDatabasePath("cocoon_db").getPath();
+            db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
+            cursor = db.rawQuery(
+                    "SELECT clientSessionId, gameName, platformId, startTime, endTime, durationMinutes, date "
+                            + "FROM game_sessions WHERE endTime > ? ORDER BY endTime ASC LIMIT 200",
+                    new String[] {String.valueOf(sinceMs)});
+            while (cursor.moveToNext()) {
+                sessions.add(new Session(cursor.getString(0), cursor.getString(1), cursor.getString(2),
+                        cursor.getLong(3), cursor.getLong(4), cursor.getInt(5), cursor.getString(6)));
+            }
+        } catch (RuntimeException e) {
+            android.util.Log.w("FroglogWidget", "game_sessions read failed", e);
+            return null;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+            if (db != null) {
+                db.close();
+            }
+        }
+        return sessions;
+    }
+
     /**
-     * The game Cocoon is tracking right now. Open rows live in
-     * {@code pending_game_sessions} until the finished session is written.
+     * The game Cocoon is tracking right now. Only RUNNING counts: PAUSED is the grace
+     * window after the player leaves the game, and FINALIZING is the session closing.
      */
     public static Playing playing(Context context) {
         SQLiteDatabase db = null;
@@ -47,7 +99,7 @@ public final class CocoonLibrary {
             db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
             cursor = db.rawQuery(
                     "SELECT gameName, platformId, startTimeMs FROM pending_game_sessions "
-                            + "WHERE finalizedAtMs IS NULL AND state IN ('RUNNING', 'PAUSED', 'FINALIZING') "
+                            + "WHERE finalizedAtMs IS NULL AND state = 'RUNNING' "
                             + "ORDER BY updatedAtMs DESC LIMIT 1",
                     null);
             if (!cursor.moveToFirst()) {

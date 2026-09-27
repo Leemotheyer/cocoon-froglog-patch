@@ -105,6 +105,7 @@ public class FroglogPodActivity extends Activity {
     protected void onResume() {
         super.onResume();
         showPending();
+        FroglogSync.kick(this);
     }
 
     private View header() {
@@ -333,16 +334,36 @@ public class FroglogPodActivity extends Activity {
             return;
         }
         pendingCard.setVisibility(View.VISIBLE);
-        pending.addView(section("New games"));
         List<FroglogQueue.Item> items = FroglogStore.pending(this);
-        if (items.isEmpty()) {
+        java.util.ArrayList<FroglogQueue.Item> waiting = new java.util.ArrayList<FroglogQueue.Item>();
+        java.util.ArrayList<FroglogQueue.Item> unmapped = new java.util.ArrayList<FroglogQueue.Item>();
+        for (int i = 0; i < items.size(); i++) {
+            FroglogQueue.Item item = items.get(i);
+            String link = FroglogStore.link(this, FroglogMatch.linkKey(item.title, item.platform));
+            if (link != null && link.indexOf(':') > 0) {
+                waiting.add(item);
+            } else {
+                unmapped.add(item);
+            }
+        }
+        if (!waiting.isEmpty()) {
+            pending.addView(section("Waiting to upload"));
+            TextView note = text("These sessions are saved on this device and upload when Froglog can be reached.", 13, false);
+            note.setTextColor(MUTED);
+            pending.addView(note);
+            for (int i = 0; i < waiting.size(); i++) {
+                pending.addView(pendingRow(waiting.get(i)));
+            }
+        }
+        pending.addView(section("New games"));
+        if (unmapped.isEmpty()) {
             TextView empty = text("Sessions Cocoon could not match wait here. Map one to a Froglog game, create an entry, or dismiss it.", 14, false);
             empty.setTextColor(MUTED);
             pending.addView(empty);
             return;
         }
-        for (int i = 0; i < items.size(); i++) {
-            pending.addView(pendingRow(items.get(i)));
+        for (int i = 0; i < unmapped.size(); i++) {
+            pending.addView(pendingRow(unmapped.get(i)));
         }
     }
 

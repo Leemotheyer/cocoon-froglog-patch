@@ -23,6 +23,7 @@ import org.jf.dexlib2.iface.instruction.Instruction;
 import org.jf.dexlib2.iface.instruction.OneRegisterInstruction;
 import org.jf.dexlib2.iface.instruction.ReferenceInstruction;
 import org.jf.dexlib2.iface.instruction.SwitchElement;
+import org.jf.dexlib2.iface.instruction.TwoRegisterInstruction;
 import org.jf.dexlib2.iface.instruction.formats.Instruction10t;
 import org.jf.dexlib2.iface.instruction.formats.Instruction20t;
 import org.jf.dexlib2.iface.instruction.formats.Instruction21t;
@@ -96,6 +97,7 @@ public final class PatchCatalog {
     private static final String GLASS_DRAW = "Lkf/n2;";
     private static final String GLASS_HOST = "Ldg/m3;";
     private static final String WIDGET_HOST = "Ltf/i1;";
+    private static final String STATUS_BAR = "Ldg/h4;";
     private static final String INSERT =
             "(Lrip/moth/cocoonshell/data/model/GameSession;Lxa/c;)Ljava/lang/Object;";
     private static final String OPEN_POD =
@@ -121,6 +123,7 @@ public final class PatchCatalog {
         ClassDef glassDraw = null;
         ClassDef glassHost = null;
         ClassDef widgetHost = null;
+        ClassDef statusBar = null;
         for (ClassDef cls : dex.getClasses()) {
             if (CATALOG.equals(cls.getType())) {
                 catalog = cls;
@@ -150,12 +153,14 @@ public final class PatchCatalog {
                 glassHost = cls;
             } else if (WIDGET_HOST.equals(cls.getType())) {
                 widgetHost = cls;
+            } else if (STATUS_BAR.equals(cls.getType())) {
+                statusBar = cls;
             }
         }
         if (catalog == null || session == null || pods == null || podAction == null || router == null
                 || friends == null || friendTabs == null || friendMaps == null || friendClick == null
                 || theme == null || surfacePrefs == null
-                || glassDraw == null || glassHost == null || widgetHost == null) {
+                || glassDraw == null || glassHost == null || widgetHost == null || statusBar == null) {
             throw new IllegalStateException("catalog=" + (catalog != null) + " session=" + (session != null)
                     + " pods=" + (pods != null) + " podAction=" + (podAction != null)
                     + " router=" + (router != null)
@@ -163,7 +168,7 @@ public final class PatchCatalog {
                     + " maps=" + (friendMaps != null) + " click=" + (friendClick != null)
                     + " theme=" + (theme != null) + " surfacePrefs=" + (surfacePrefs != null)
                     + " glassDraw=" + (glassDraw != null) + " glassHost=" + (glassHost != null)
-                    + " widgetHost=" + (widgetHost != null));
+                    + " widgetHost=" + (widgetHost != null) + " statusBar=" + (statusBar != null));
         }
         final ClassDef catalogReplacement = patchCatalog(catalog);
         final ClassDef sessionReplacement = patchSession(session);
@@ -179,6 +184,7 @@ public final class PatchCatalog {
         final ClassDef glassDrawReplacement = prefixGlassMethods(glassDraw, "b");
         final ClassDef glassHostReplacement = prefixGlassMethods(glassHost, "h", "A0");
         final ClassDef widgetHostReplacement = patchWidgetHost(widgetHost);
+        final ClassDef statusBarReplacement = patchStatusBar(statusBar);
         final DexBackedDexFile source = dex;
         DexFileFactory.writeDexFile(args[1], new DexFile() {
             @Override
@@ -213,6 +219,8 @@ public final class PatchCatalog {
                         classes.add(glassHostReplacement);
                     } else if (WIDGET_HOST.equals(cls.getType())) {
                         classes.add(widgetHostReplacement);
+                    } else if (STATUS_BAR.equals(cls.getType())) {
+                        classes.add(statusBarReplacement);
                     } else {
                         classes.add(cls);
                     }
@@ -654,7 +662,7 @@ public final class PatchCatalog {
         for (Method method : friends.getDirectMethods()) {
             if ("c0".equals(method.getName())
                     && "(Lp1/o;FFLz0/e0;I)V".equals(signature(method))) {
-                direct.add(patchFriendTabs(method));
+                direct.add(patchFriendCount(patchFriendGate(patchFriendTabs(method)), "size", 3));
                 patchedTabs = true;
             } else if ("b0".equals(method.getName())
                     && signature(method).startsWith("(Ljava/util/List;Leg/l0;Lfe/u;Ljava/util/List;Lef/w0;")) {
@@ -675,6 +683,131 @@ public final class PatchCatalog {
             virtual.add(method);
         }
         return copyClass(friends, direct, virtual);
+    }
+
+    /**
+     * The status-bar friends pill shows {@code ef.d0.k0(steam).size()}. Right after that count
+     * is read, FroglogSocial adds live Froglog follows. It reads a StateFlow through Cocoon's
+     * collectAsState, so the pill recomposes when Froglog presence changes.
+     */
+    private static ClassDef patchStatusBar(ClassDef bar) {
+        List<Method> direct = new ArrayList<Method>();
+        boolean patched = false;
+        for (Method method : bar.getDirectMethods()) {
+            if ("k".equals(method.getName()) && "(ILp1/o;Lz0/e0;Z)V".equals(signature(method))) {
+                direct.add(patchFriendCount(method, "intValue", 2));
+                patched = true;
+            } else {
+                direct.add(method);
+            }
+        }
+        if (!patched) {
+            throw new IllegalStateException("status bar friend count not found");
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        for (Method method : bar.getVirtualMethods()) {
+            virtual.add(method);
+        }
+        return copyClass(bar, direct, virtual);
+    }
+
+    /**
+     * {@code readName} is the call that yields the count outside any remember block
+     * ({@code intValue} or {@code size}). {@code composerParam} is the Composer's parameter
+     * index. Every earlier parameter is one word.
+     */
+    private static Method patchFriendCount(Method method, String readName, int composerParam) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> instructions = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            instructions.add(instruction);
+        }
+        int k0 = -1;
+        for (int i = 0; i < instructions.size(); i++) {
+            Instruction instruction = instructions.get(i);
+            if (instruction.getOpcode() == Opcode.INVOKE_STATIC && instruction instanceof ReferenceInstruction) {
+                Reference ref = ((ReferenceInstruction) instruction).getReference();
+                if (ref instanceof MethodReference && FRIENDS.equals(((MethodReference) ref).getDefiningClass())
+                        && "k0".equals(((MethodReference) ref).getName())) {
+                    k0 = i;
+                    break;
+                }
+            }
+        }
+        if (k0 < 0) {
+            throw new IllegalStateException("status bar k0 call not found");
+        }
+        int insert = -1;
+        for (int i = k0; i < instructions.size() - 1; i++) {
+            Instruction instruction = instructions.get(i);
+            if ((instruction.getOpcode() != Opcode.INVOKE_VIRTUAL && instruction.getOpcode() != Opcode.INVOKE_INTERFACE)
+                    || !(instruction instanceof ReferenceInstruction)) {
+                continue;
+            }
+            Reference ref = ((ReferenceInstruction) instruction).getReference();
+            if (!(ref instanceof MethodReference) || instructions.get(i + 1).getOpcode() != Opcode.MOVE_RESULT) {
+                continue;
+            }
+            MethodReference read = (MethodReference) ref;
+            if (readName.equals(read.getName())
+                    && ("Ljava/lang/Number;".equals(read.getDefiningClass()) || "Ljava/util/List;".equals(read.getDefiningClass()))) {
+                insert = i + 2;
+                break;
+            }
+        }
+        if (insert < 0) {
+            throw new IllegalStateException("friend count read not found");
+        }
+        int count = ((OneRegisterInstruction) instructions.get(insert - 1)).getRegisterA();
+        int composer = impl.getRegisterCount() - parameterWords(method) + composerParam;
+        if (composer > 15) {
+            // Large Compose methods copy the Composer into a low register first.
+            for (int i = 0; i < Math.min(8, instructions.size()); i++) {
+                Instruction instruction = instructions.get(i);
+                if (instruction.getOpcode() == Opcode.MOVE_OBJECT_FROM16
+                        && ((TwoRegisterInstruction) instruction).getRegisterB() == composer) {
+                    composer = ((TwoRegisterInstruction) instruction).getRegisterA();
+                    break;
+                }
+            }
+        }
+        if (count > 15 || composer > 15) {
+            throw new IllegalStateException("status bar registers count=" + count + " composer=" + composer);
+        }
+        List<Instruction> extra = new ArrayList<Instruction>();
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC,
+                2, count, composer, 0, 0, 0,
+                new ImmutableMethodReference(
+                        "Lrip/moth/cocoonshell/froglog/FroglogSocial;",
+                        "withLiveCount",
+                        Arrays.asList("I", "Ljava/lang/Object;"),
+                        "I")));
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, count));
+        int added = 0;
+        for (Instruction instruction : extra) {
+            added += instruction.getCodeUnits();
+        }
+        if (added != 4) {
+            throw new IllegalStateException("status bar insert " + added);
+        }
+        int[] addresses = addresses(instructions);
+        int insertAt = addresses[insert];
+        int[] switchAt = switchAddresses(instructions, addresses);
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        for (int i = 0; i < instructions.size(); i++) {
+            if (i == insert) {
+                rewritten.addAll(extra);
+            }
+            rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], insertAt, added));
+        }
+        System.out.println("friend count " + method.getDefiningClass() + "->" + method.getName()
+                + " v" + count + " composer v" + composer);
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                rewritten,
+                shiftTries(impl.getTryBlocks(), insertAt, added),
+                Collections.emptyList()));
     }
 
     private static ClassDef patchFriendClick(ClassDef click) {
@@ -969,6 +1102,95 @@ public final class PatchCatalog {
             rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], insertAt, added));
         }
         System.out.println("friend tabs instructions " + rewritten.size());
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                rewritten,
+                shiftTries(impl.getTryBlocks(), insertAt, added),
+                Collections.emptyList()));
+    }
+
+    /**
+     * The friends panel returns early unless Steam is available or Android social
+     * conversations exist. The Steam flag is copied to a high register right before
+     * that check, so FroglogSocial can also open it for a signed-in Froglog account.
+     */
+    private static Method patchFriendGate(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> instructions = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            instructions.add(instruction);
+        }
+        int steamCheck = -1;
+        for (int i = 0; i < instructions.size() - 1; i++) {
+            Instruction instruction = instructions.get(i);
+            if (instruction.getOpcode() == Opcode.INVOKE_STATIC && instruction instanceof ReferenceInstruction) {
+                Reference ref = ((ReferenceInstruction) instruction).getReference();
+                if (ref instanceof MethodReference
+                        && "Lrip/moth/cocoonshell/data/api/z;".equals(((MethodReference) ref).getDefiningClass())
+                        && "m".equals(((MethodReference) ref).getName())
+                        && instructions.get(i + 1).getOpcode() == Opcode.MOVE_RESULT) {
+                    steamCheck = i;
+                    break;
+                }
+            }
+        }
+        if (steamCheck < 0) {
+            throw new IllegalStateException("friend panel Steam check not found");
+        }
+        int steam = ((OneRegisterInstruction) instructions.get(steamCheck + 1)).getRegisterA();
+        int tabs = -1;
+        for (int i = steamCheck; i < instructions.size(); i++) {
+            Instruction instruction = instructions.get(i);
+            if (instruction.getOpcode() == Opcode.INVOKE_STATIC && instruction instanceof ReferenceInstruction) {
+                Reference ref = ((ReferenceInstruction) instruction).getReference();
+                if (ref instanceof MethodReference && "withFriendsTabs".equals(((MethodReference) ref).getName())) {
+                    tabs = i;
+                    break;
+                }
+            }
+        }
+        int insert = -1;
+        for (int i = Math.max(tabs, steamCheck); i < instructions.size(); i++) {
+            Instruction instruction = instructions.get(i);
+            if (instruction.getOpcode() == Opcode.MOVE_FROM16
+                    && ((TwoRegisterInstruction) instruction).getRegisterB() == steam
+                    && ((TwoRegisterInstruction) instruction).getRegisterA() > 15) {
+                insert = i;
+                break;
+            }
+        }
+        if (tabs < 0 || insert < 0 || steam > 15) {
+            throw new IllegalStateException("friend panel gate tabs=" + tabs + " insert=" + insert + " steam=v" + steam);
+        }
+        List<Instruction> extra = new ArrayList<Instruction>();
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC,
+                1, steam, 0, 0, 0, 0,
+                new ImmutableMethodReference(
+                        "Lrip/moth/cocoonshell/froglog/FroglogSocial;",
+                        "showFriendsPanel",
+                        Collections.singletonList("Z"),
+                        "Z")));
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, steam));
+        int added = 0;
+        for (Instruction instruction : extra) {
+            added += instruction.getCodeUnits();
+        }
+        if (added != 4) {
+            throw new IllegalStateException("friend panel gate insert " + added);
+        }
+        int[] addresses = addresses(instructions);
+        int insertAt = addresses[insert];
+        int[] switchAt = switchAddresses(instructions, addresses);
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        for (int i = 0; i < instructions.size(); i++) {
+            if (i == insert) {
+                rewritten.addAll(extra);
+            }
+            rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], insertAt, added));
+        }
+        System.out.println("friend panel gate v" + steam + " -> v"
+                + ((TwoRegisterInstruction) instructions.get(insert)).getRegisterA());
         return replace(method, new ImmutableMethodImplementation(
                 impl.getRegisterCount(),
                 rewritten,

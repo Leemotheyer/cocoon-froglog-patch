@@ -34,7 +34,7 @@ public final class FroglogSubmit {
                             target.status, target.review, target.rating, target.sessionCount, target.meta, target.sortKey);
                     FroglogStore.link(context, FroglogMatch.linkKey(title, platform), logged.id, logged.live);
                 }
-                FroglogStore.markPosted(context, item.sync);
+                FroglogStore.markPosted(context, item.sync, item.minutes, logged.remote());
                 FroglogStore.removePending(context, item.sync);
             } catch (Exception e) {
                 String message = e.getMessage() == null ? "Could not log the session" : e.getMessage();

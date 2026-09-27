@@ -6,6 +6,7 @@ import android.util.Log;
 /**
  * Reports the open Cocoon session to Froglog the same way LilyPad does:
  * {@code PUT /users/me/now-playing} while a game is running, then DELETE when it ends.
+ * Play sessions are posted by {@link FroglogSync}, not here.
  */
 public final class FroglogPresence {
     private static final String TAG = "FroglogWidget";
@@ -20,8 +21,6 @@ public final class FroglogPresence {
     private static boolean visibilityOn;
     private static FroglogClient.Recent library;
     private static long libraryAt;
-    private static CocoonLibrary.Playing lastPlaying;
-    private static Target lastTarget;
 
     private FroglogPresence() {}
 
@@ -33,6 +32,11 @@ public final class FroglogPresence {
             started = true;
         }
         final Context app = context.getApplicationContext();
+        // A previous run may have died while in game. The first poll clears it if nothing is running.
+        if (FroglogStore.signedIn(app)) {
+            FroglogStore.setPresenceOn(app, true);
+        }
+        FroglogSync.start(app);
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -43,6 +47,12 @@ public final class FroglogPresence {
                         Log.e(TAG, "Froglog presence poll failed", t);
                     }
                     try {
+                        FroglogSync.tick(app);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Froglog session sync failed", t);
+                    }
+                    FroglogSocial.warm(app);
+                    try {
                         Thread.sleep(POLL_MS);
                     } catch (InterruptedException e) {
                         return;
@@ -50,17 +60,6 @@ public final class FroglogPresence {
                 }
             }
         }, "froglog-presence").start();
-    }
-
-    /** The insert path will post this play, so the presence-end backup must not. */
-    public static void skipCloseLog(Context context) {
-        CocoonLibrary.Playing playing;
-        synchronized (LOCK) {
-            playing = lastPlaying;
-        }
-        if (context != null && playing != null) {
-            FroglogStore.markPosted(context, playing.title + ":" + playing.startTimeMs);
-        }
     }
 
     /** The finished session has been written, so Online Now should clear now. */
@@ -79,7 +78,10 @@ public final class FroglogPresence {
 
     static void sync(Context context) {
         if (!FroglogStore.signedIn(context)) {
-            clear(context, false);
+            synchronized (LOCK) {
+                postedKey = null;
+                postedAt = 0;
+            }
             return;
         }
         CocoonLibrary.Playing playing = CocoonLibrary.playing(context);
@@ -94,64 +96,30 @@ public final class FroglogPresence {
         }
         String key = FroglogNowPlaying.key(target.id, target.live, playing.startTimeMs);
         long now = System.currentTimeMillis();
-        String token = FroglogStore.token(context);
         boolean needPresence;
         synchronized (LOCK) {
             needPresence = postedKey == null || !key.equals(postedKey) || now - postedAt >= HEARTBEAT_MS;
         }
-        if (needPresence) {
-            try {
-                ensureVisible(token);
-                FroglogClient.setNowPlaying(token, target.id, FroglogNowPlaying.gameType(target.live),
-                        target.title, FroglogNowPlaying.startedAt(playing.startTimeMs));
-                synchronized (LOCK) {
-                    postedKey = key;
-                    postedAt = now;
-                    lastPlaying = playing;
-                    lastTarget = target;
-                }
-            } catch (Exception e) {
-                Log.w(TAG, "Could not set Froglog now playing", e);
-            }
-        } else {
-            synchronized (LOCK) {
-                lastPlaying = playing;
-                lastTarget = target;
-            }
-        }
-        logRunning(context, token, playing, target);
-    }
-
-    /**
-     * Now-playing is presence only. A real play session is
-     * {@code POST /games/:id/sessions}. Do not wait for Cocoon to finalize.
-     */
-    private static void logRunning(Context context, String token, CocoonLibrary.Playing playing, Target target) {
-        if (context == null || token == null || playing == null || target == null) {
+        if (!needPresence) {
             return;
         }
-        String sync = playing.title + ":" + playing.startTimeMs;
-        if (FroglogStore.posted(context, sync)) {
-            return;
-        }
-        int minutes = FroglogTracking.playMinutes(0, playing.startTimeMs, System.currentTimeMillis());
-        if (minutes < 1) {
-            return;
-        }
+        String token = FroglogStore.token(context);
         try {
-            FroglogGame game = FroglogClient.ownedGame(token, playing.title, playing.platformId);
-            if (game == null) {
-                game = new FroglogGame(target.id, target.live, target.title, playing.platformId,
-                        null, "", "", null, 0, "", 0);
+            ensureVisible(token);
+            FroglogStore.setPresenceOn(context, true);
+            FroglogClient.setNowPlaying(token, target.id, FroglogNowPlaying.gameType(target.live),
+                    target.title, FroglogNowPlaying.startedAt(playing.startTimeMs));
+            boolean first;
+            synchronized (LOCK) {
+                first = !key.equals(postedKey);
+                postedKey = key;
+                postedAt = now;
             }
-            FroglogClient.Logged logged = FroglogClient.logSession(token, game, day(playing.startTimeMs),
-                    FroglogMatch.hoursFromMinutes(minutes), "cocoon:" + sync, FroglogSubmit.NOTES);
-            FroglogStore.link(context, FroglogMatch.linkKey(playing.title, playing.platformId),
-                    logged.id, logged.live);
-            FroglogStore.markPosted(context, sync);
-            Log.i(TAG, "Logged Froglog session " + playing.title + " · " + minutes + "m id=" + logged.id);
+            if (first) {
+                Log.i(TAG, "Set Froglog now playing " + target.title);
+            }
         } catch (Exception e) {
-            Log.w(TAG, "Could not log Froglog session while playing", e);
+            Log.w(TAG, "Could not set Froglog now playing", e);
         }
     }
 
@@ -171,68 +139,29 @@ public final class FroglogPresence {
         }
     }
 
+    /**
+     * Sends DELETE whenever Froglog may still show this user in game. The flag is
+     * persisted, so an offline or interrupted clear is retried on the next poll.
+     */
     private static void clear(Context context, boolean force) {
-        String token = FroglogStore.signedIn(context) ? FroglogStore.token(context) : null;
-        CocoonLibrary.Playing playing;
-        Target target;
         synchronized (LOCK) {
-            if (!force && postedKey == null) {
-                return;
-            }
-            playing = lastPlaying;
-            target = lastTarget;
             postedKey = null;
             postedAt = 0;
-            lastPlaying = null;
-            lastTarget = null;
         }
-        logClosed(context, token, playing, target);
-        if (token == null) {
+        if (!FroglogStore.signedIn(context)) {
+            return;
+        }
+        if (!force && !FroglogStore.presenceOn(context)) {
             return;
         }
         try {
-            FroglogClient.clearNowPlaying(token);
+            FroglogClient.clearNowPlaying(FroglogStore.token(context));
+            FroglogStore.setPresenceOn(context, false);
+            Log.i(TAG, "Cleared Froglog now playing");
         } catch (Exception e) {
-            Log.w(TAG, "Could not clear Froglog now playing", e);
+            FroglogStore.setPresenceOn(context, true);
+            Log.w(TAG, "Could not clear Froglog now playing, will retry", e);
         }
-    }
-
-    /**
-     * Now-playing does not create a play session. If Cocoon never inserts a finished
-     * row, this still posts hours from the presence window that just ended.
-     */
-    private static void logClosed(Context context, String token, CocoonLibrary.Playing playing, Target target) {
-        if (context == null || token == null || playing == null || target == null) {
-            return;
-        }
-        String sync = playing.title + ":" + playing.startTimeMs;
-        if (FroglogStore.posted(context, sync)) {
-            return;
-        }
-        int minutes = FroglogTracking.playMinutes(0, playing.startTimeMs, System.currentTimeMillis());
-        if (minutes < 1) {
-            return;
-        }
-        try {
-            FroglogGame game = new FroglogGame(target.id, target.live, target.title, playing.platformId,
-                    null, "", "", null, 0, "", 0);
-            FroglogClient.Logged logged = FroglogClient.logSession(token, game, day(playing.startTimeMs),
-                    FroglogMatch.hoursFromMinutes(minutes), "cocoon:" + sync, FroglogSubmit.NOTES);
-            FroglogStore.link(context, FroglogMatch.linkKey(playing.title, playing.platformId),
-                    logged.id, logged.live);
-            FroglogStore.markPosted(context, sync);
-            Log.i(TAG, "Logged Froglog session " + playing.title + " · " + minutes + "m");
-        } catch (Exception e) {
-            Log.w(TAG, "Could not log Froglog session when play ended", e);
-            FroglogStore.enqueuePending(context, playing.title, playing.platformId, minutes,
-                    day(playing.startTimeMs), sync);
-        }
-    }
-
-    private static String day(long startTimeMs) {
-        long when = startTimeMs > 0 ? startTimeMs : System.currentTimeMillis();
-        return new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-                .format(new java.util.Date(when));
     }
 
     private static Target resolve(Context context, CocoonLibrary.Playing playing) {
@@ -265,7 +194,7 @@ public final class FroglogPresence {
     private static FroglogClient.Recent library(Context context) {
         long now = System.currentTimeMillis();
         synchronized (LOCK) {
-            if (library != null && now - libraryAt < LIBRARY_MS) {
+            if (library != null && library.error == null && now - libraryAt < LIBRARY_MS) {
                 return library;
             }
         }

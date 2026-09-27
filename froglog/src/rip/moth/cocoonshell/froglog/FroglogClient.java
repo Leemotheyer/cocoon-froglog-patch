@@ -194,7 +194,20 @@ public final class FroglogClient {
         }
     }
 
-    /** Players online right now. Used only to mark a followed user as playing. */
+    /** People the signed-in user follows. Not in the public docs. Null when it cannot be read. */
+    public static String followingJson(String token) {
+        try {
+            HttpResult result = request("GET", BASE + "/users/me/following", token, null);
+            if (result.code < 200 || result.code >= 300) {
+                return null;
+            }
+            return result.body;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Everyone in game right now, not just follows. Used only to mark a followed user as playing. */
     public static String onlineJson(String token) throws Exception {
         HttpResult result = request("GET", BASE + "/activity/online", token, null);
         if (result.code < 200 || result.code >= 300) {
@@ -259,10 +272,37 @@ public final class FroglogClient {
     public static final class Logged {
         public final long id;
         public final boolean live;
+        /** Froglog's id for the session row, 0 if the response had none. */
+        public final long sessionId;
 
         public Logged(long id, boolean live) {
+            this(id, live, 0L);
+        }
+
+        public Logged(long id, boolean live, long sessionId) {
             this.id = id;
             this.live = live;
+            this.sessionId = sessionId;
+        }
+
+        /** {@code game:12:34} or {@code live:12:34}, so a later update can find the row. */
+        public String remote() {
+            return sessionId <= 0 ? null : (live ? "live:" : "game:") + id + ":" + sessionId;
+        }
+    }
+
+    /** Sets the hours of a session already on Froglog. {@code remote} is {@link Logged#remote()}. */
+    public static void updateSessionHours(String token, String remote, double hours) throws Exception {
+        String[] parts = remote.split(":");
+        boolean live = "live".equals(parts[0]);
+        String path = BASE + (live ? "/live-service/" : "/games/") + Long.parseLong(parts[1])
+                + "/sessions/" + Long.parseLong(parts[2]);
+        JSONObject body = new JSONObject();
+        body.put("hours", hours);
+        HttpResult result = request("PUT", path, token, body.toString());
+        Log.i("FroglogWidget", "SESSION PUT " + path + " " + body + " -> " + result.code);
+        if (result.code < 200 || result.code >= 300) {
+            throw call(result, "Could not update the session (" + result.code + ")");
         }
     }
 
@@ -346,8 +386,8 @@ public final class FroglogClient {
             }
         }
         try {
-            postSession(token, live, id, date, hours, syncRef, notes);
-            return new Logged(id, live);
+            long session = postSession(token, live, id, date, hours, syncRef, notes);
+            return new Logged(id, live, session);
         } catch (CallException missing) {
             if (missing.code != 404 || live) {
                 throw missing;
@@ -356,8 +396,8 @@ public final class FroglogClient {
             if (recovered == null) {
                 throw missing;
             }
-            postSession(token, true, recovered.longValue(), date, hours, syncRef, notes);
-            return new Logged(recovered.longValue(), true);
+            long session = postSession(token, true, recovered.longValue(), date, hours, syncRef, notes);
+            return new Logged(recovered.longValue(), true, session);
         }
     }
 
@@ -388,7 +428,7 @@ public final class FroglogClient {
         }
     }
 
-    private static void postSession(String token, boolean live, long id, String date, double hours, String syncRef, String notes) throws Exception {
+    private static long postSession(String token, boolean live, long id, String date, double hours, String syncRef, String notes) throws Exception {
         JSONObject body = new JSONObject();
         body.put("date", date);
         body.put("hours", hours);
@@ -408,6 +448,11 @@ public final class FroglogClient {
         Log.i("FroglogWidget", "SESSION RESP " + result.code + " " + result.body);
         if (result.code < 200 || result.code >= 300) {
             throw call(result, "Could not log the session (" + result.code + ")");
+        }
+        try {
+            return new JSONObject(result.body).optLong("id", 0L);
+        } catch (Exception e) {
+            return 0L;
         }
     }
 

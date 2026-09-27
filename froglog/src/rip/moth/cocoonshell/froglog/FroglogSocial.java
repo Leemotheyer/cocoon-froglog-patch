@@ -20,8 +20,51 @@ public final class FroglogSocial {
     private static volatile List<FroglogFollow> cache = Collections.emptyList();
     private static volatile long fetchedAt;
     private static volatile boolean loading;
+    private static yb.v0 liveFlow;
+    private static int lastLogged = -1;
 
     private FroglogSocial() {}
+
+    private static synchronized yb.v0 liveFlow() {
+        if (liveFlow == null) {
+            liveFlow = yb.n0.c(Integer.valueOf(liveCount(cache)));
+        }
+        return liveFlow;
+    }
+
+    private static int liveCount(List<FroglogFollow> people) {
+        int live = 0;
+        for (int i = 0; i < people.size(); i++) {
+            if (people.get(i).playing) {
+                live++;
+            }
+        }
+        return live;
+    }
+
+    private static void publish() {
+        try {
+            liveFlow().h(Integer.valueOf(liveCount(cache)));
+        } catch (Throwable t) {
+            Log.w(TAG, "Could not publish the Froglog friend count", t);
+        }
+    }
+
+    /**
+     * Called by the status-bar friends pill right after Cocoon counts Steam friends.
+     * Must run on every composition so the pill's group structure stays stable.
+     */
+    public static int withLiveCount(int steam, Object composer) {
+        refreshSoon(token(), self());
+        z0.u0 state = z7.h0.Q(liveFlow(), (z0.e0) composer);
+        Object value = state.getValue();
+        int live = token() != null && value instanceof Integer ? ((Integer) value).intValue() : 0;
+        if (live != lastLogged) {
+            lastLogged = live;
+            Log.i(TAG, "Status bar friends: " + steam + " Steam + " + live + " Froglog");
+        }
+        return steam + live;
+    }
 
     public static void warm(Context context) {
         if (context == null || !FroglogStore.signedIn(context)) {
@@ -37,12 +80,18 @@ public final class FroglogSocial {
     public static void clear() {
         cache = Collections.emptyList();
         fetchedAt = 0L;
+        publish();
     }
 
     /** Steam conversion stays Steam-only. Kept so an old hook is harmless. */
     public static List<?> withFollows(List<?> existing) {
         refreshSoon(token(), self());
         return existing;
+    }
+
+    /** Cocoon draws the friends panel only when Steam is available. A Froglog sign-in counts too. */
+    public static boolean showFriendsPanel(boolean steam) {
+        return steam || (token() != null && !token().isEmpty());
     }
 
     /** Adds a Froglog tab beside Steam and Android when the user is signed in. */
@@ -126,14 +175,19 @@ public final class FroglogSocial {
         try {
             String activity = FroglogClient.activityJson(token);
             String online = FroglogClient.onlineJson(token);
-            cache = FroglogFollows.people(activity, online, self);
+            String following = FroglogClient.followingJson(token);
+            if (following == null) {
+                Log.w(TAG, "Froglog follow list unavailable, using the activity feed");
+            }
+            cache = FroglogFollows.people(activity, online, following, self);
             int live = 0;
             for (int i = 0; i < cache.size(); i++) {
                 if (cache.get(i).playing) {
                     live++;
                 }
             }
-            Log.i(TAG, "Froglog follows " + cache.size() + " last-seen, " + live + " now-playing");
+            Log.i(TAG, "Froglog follows " + cache.size() + ", " + live + " in game");
+            publish();
         } catch (Exception e) {
             Log.w(TAG, "Could not load Froglog follows");
         } finally {

@@ -66,6 +66,57 @@ public final class FroglogStore {
         }
     }
 
+    /** Also remembers the minutes sent and the Froglog row, so a longer Cocoon session can update it. */
+    public static void markPosted(Context context, String syncRef, int minutes, String remote) {
+        if (syncRef == null) {
+            return;
+        }
+        SharedPreferences.Editor edit = prefs(context).edit()
+                .putBoolean("posted_" + syncRef, true)
+                .putInt("posted_min_" + syncRef, minutes);
+        if (remote != null) {
+            edit.putString("remote_" + syncRef, remote);
+        }
+        edit.commit();
+    }
+
+    /** Minutes already on Froglog for this Cocoon session. Unknown for older posts, so no update is tried. */
+    public static int postedMinutes(Context context, String syncRef) {
+        return syncRef == null ? Integer.MAX_VALUE : prefs(context).getInt("posted_min_" + syncRef, Integer.MAX_VALUE);
+    }
+
+    public static String remote(Context context, String syncRef) {
+        return syncRef == null ? null : prefs(context).getString("remote_" + syncRef, null);
+    }
+
+    /** End time of the newest Cocoon session already copied into the queue. 0 before the first scan. */
+    public static long sessionsSince(Context context) {
+        return prefs(context).getLong("sessions_since", 0L);
+    }
+
+    public static void setSessionsSince(Context context, long endTimeMs) {
+        prefs(context).edit().putLong("sessions_since", endTimeMs).commit();
+    }
+
+    /** True while Froglog may still show this user in game, including after a failed clear. */
+    public static boolean presenceOn(Context context) {
+        return prefs(context).getBoolean("presence_on", false);
+    }
+
+    public static void setPresenceOn(Context context, boolean on) {
+        prefs(context).edit().putBoolean("presence_on", on).commit();
+    }
+
+    public static boolean asked(Context context, String sync) {
+        return sync != null && prefs(context).getBoolean("asked_" + sync, false);
+    }
+
+    public static void markAsked(Context context, String sync) {
+        if (sync != null) {
+            prefs(context).edit().putBoolean("asked_" + sync, true).apply();
+        }
+    }
+
     public static synchronized List<FroglogQueue.Item> pending(Context context) {
         return FroglogQueue.parse(prefs(context).getString(PENDING, "[]"));
     }

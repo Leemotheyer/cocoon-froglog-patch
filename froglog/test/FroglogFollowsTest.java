@@ -17,18 +17,22 @@ public final class FroglogFollowsTest {
                 + "{\"username\":\"cy\",\"displayUsername\":\"Cy\",\"title\":\"Hades II\"}"
                 + "]}";
         List<FroglogFollow> people = FroglogFollows.people(activity, online, "me");
-        expect(3, people.size());
-        expect("ada", people.get(0).username);
-        expect("Ada L", people.get(0).name);
-        expect("Finished · Hades", people.get(0).status);
-        expect(false, people.get(0).playing);
-        expect("bo", people.get(1).username);
-        expect("Playing Celeste II", people.get(1).status);
-        expect(true, people.get(1).playing);
-        expect("https://img/bo", people.get(1).avatarUrl);
-        expect("cy", people.get(2).username);
-        expect("Playing Hades II", people.get(2).status);
-        expect(true, people.get(2).playing);
+        // cy is online but not followed, so /activity/online alone does not add them.
+        expect(2, people.size());
+        expect("bo", people.get(0).username);
+        expect("Playing Celeste II", people.get(0).status);
+        expect(true, people.get(0).playing);
+        expect("https://img/bo", people.get(0).avatarUrl);
+        expect("ada", people.get(1).username);
+        expect("Ada L", people.get(1).name);
+        expect("Finished · Hades", people.get(1).status);
+        expect(false, people.get(1).playing);
+        List<FroglogFollow> followed = FroglogFollows.people(activity, online,
+                "[{\"target_username\":\"cy\"},{\"target_username\":\"ada\"}]", "me");
+        expect(2, followed.size());
+        expect("cy", followed.get(0).username);
+        expect("Playing Hades II", followed.get(0).status);
+        expect("ada", followed.get(1).username);
         expect(0, FroglogFollows.people("{\"activity\":[]}", "[]", "me").size());
         String lastSeen = "{\"activity\":["
                 + "{\"username\":\"lee\",\"display_username\":\"Lee\",\"game_title\":\"FINAL FANTASY XIV Online Free Trial\",\"type\":\"session_logged\",\"created_at\":\"2026-09-27\"}"
@@ -38,6 +42,11 @@ public final class FroglogFollowsTest {
         expect("lee", offline.get(0).username);
         expect("Logged · FINAL FANTASY XIV Online Free Trial", offline.get(0).status);
         expect(false, offline.get(0).playing);
+        List<FroglogFollow> untitled = FroglogFollows.people(lastSeen,
+                "[{\"username\":\"lee\",\"displayUsername\":\"Lee\",\"title\":null}]", "me");
+        expect(true, untitled.get(0).playing);
+        expect("In game", untitled.get(0).status);
+        expect(null, untitled.get(0).game);
         System.out.println("FroglogFollowsTest ok");
     }
 
