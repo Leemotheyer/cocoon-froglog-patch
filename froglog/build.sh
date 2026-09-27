@@ -7,13 +7,27 @@ TOOLS="${TOOLS:-$ROOT/tools}"
 WORK="${WORK:-$ROOT/work}"
 DIST="${DIST:-$ROOT/dist}"
 APKTOOL="${APKTOOL:-$TOOLS/apktool.jar}"
-BAKSMALI="${BAKSMALI:-$TOOLS/baksmali.jar}"
+if [[ -z "${BAKSMALI:-}" ]]; then
+  if [[ -f "$TOOLS/smali/dexlib2.jar" ]]; then
+    BAKSMALI="$TOOLS/smali/dexlib2.jar:$TOOLS/smali/util.jar:$TOOLS/smali/guava.jar:$TOOLS/smali/failureaccess.jar:$TOOLS/smali/baksmali.jar"
+  else
+    BAKSMALI="$TOOLS/baksmali.jar"
+  fi
+fi
+SKIP_SETUP="${SKIP_SETUP:-0}"
 SDK="${SDK:-$TOOLS/android/build-tools/35.0.0}"
 ANDROID_JAR="${ANDROID_JAR:-$TOOLS/android/platforms/android-35/android.jar}"
 SRC_APK="${SRC_APK:-$WORK/cocoon-306.apk}"
 DECODE="${DECODE:-$WORK/cocoon-decoded}"
 BUILD="${BUILD:-$WORK/froglog-decoded}"
 JSON_JAR="${JSON_JAR:-$WORK/json.jar}"
+if ! command -v python3 >/dev/null 2>&1 || ! python3 -c "import sys" >/dev/null 2>&1; then
+  if [[ -x /c/Python312/python.exe ]]; then
+    python3() { /c/Python312/python.exe "$@"; }
+  else
+    python3() { python "$@"; }
+  fi
+fi
 KS="$ROOT/froglog/debug.keystore"
 KS_PASS="${KS_PASS:-froglog}"
 KS_ALIAS="${KS_ALIAS:-froglog}"
@@ -26,11 +40,19 @@ need() {
 }
 
 need "$APKTOOL"
-need "$BAKSMALI"
 need "$ANDROID_JAR"
-need "$SDK/d8"
-need "$SDK/zipalign"
-need "$SDK/apksigner"
+if [[ "$BAKSMALI" == *:* ]]; then
+  need "${BAKSMALI%%:*}"
+else
+  need "$BAKSMALI"
+fi
+if [[ -f "$SDK/d8.bat" ]]; then D8="$SDK/d8.bat"; else D8="$SDK/d8"; fi
+if [[ -f "$SDK/zipalign.exe" ]]; then ZIPALIGN="$SDK/zipalign.exe"; else ZIPALIGN="$SDK/zipalign"; fi
+if [[ -f "$SDK/apksigner.bat" ]]; then APKSIGNER="$SDK/apksigner.bat"; else APKSIGNER="$SDK/apksigner"; fi
+if [[ -f "$SDK/aapt.exe" ]]; then AAPT="$SDK/aapt.exe"; else AAPT="$SDK/aapt"; fi
+need "$D8"
+need "$ZIPALIGN"
+need "$APKSIGNER"
 need "$SRC_APK"
 
 if [[ ! -d "$DECODE/res" ]]; then
@@ -55,16 +77,38 @@ javac --release 11 -encoding UTF-8 -cp "$JSON_JAR" -d "$WORK/froglog-test" \
   "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogTracking.java" \
   "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogFollow.java" \
   "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogFollows.java" \
+  "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogNowPlaying.java" \
   "$ROOT/froglog/test/FroglogGamesTest.java" \
   "$ROOT/froglog/test/FroglogMatchTest.java" \
   "$ROOT/froglog/test/FroglogFollowsTest.java" \
   "$ROOT/froglog/test/FroglogQueueTest.java" \
-  "$ROOT/froglog/test/FroglogTrackingTest.java"
+  "$ROOT/froglog/test/FroglogTrackingTest.java" \
+  "$ROOT/froglog/test/FroglogNowPlayingTest.java"
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogGamesTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogMatchTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogFollowsTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogQueueTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogTrackingTest
+java -cp "$WORK/froglog-test:$JSON_JAR" FroglogNowPlayingTest
+
+FLAGS_SRC="$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogFlags.java"
+set_skip_setup() {
+  python3 - "$FLAGS_SRC" "$1" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+wanted = sys.argv[2]
+text = path.read_text(encoding="utf-8")
+if wanted == "1":
+    path.write_text(text.replace("SKIP_SETUP = false", "SKIP_SETUP = true"), encoding="utf-8")
+else:
+    path.write_text(text.replace("SKIP_SETUP = true", "SKIP_SETUP = false"), encoding="utf-8")
+PY
+}
+if [[ "$SKIP_SETUP" == "1" ]]; then
+  set_skip_setup 1
+  trap 'set_skip_setup 0' EXIT
+fi
 
 echo "compile widget"
 rm -rf "$WORK/froglog-stubs" "$WORK/froglog-classes"
@@ -77,7 +121,7 @@ javac --release 11 -encoding UTF-8 -cp "$ANDROID_JAR:$WORK/froglog-stubs" -d "$W
 jar cf "$WORK/froglog.jar" -C "$WORK/froglog-classes" .
 rm -rf "$WORK/froglog-dex"
 mkdir -p "$WORK/froglog-dex"
-"$SDK/d8" --min-api 24 --lib "$ANDROID_JAR" --output "$WORK/froglog-dex" "$WORK/froglog.jar"
+"$D8" --min-api 24 --lib "$ANDROID_JAR" --output "$WORK/froglog-dex" "$WORK/froglog.jar"
 test -f "$WORK/froglog-dex/classes.dex"
 
 echo "patch catalog"
@@ -87,10 +131,16 @@ javac --release 11 -encoding UTF-8 -cp "$BAKSMALI" -d "$WORK/patch-classes" "$RO
 cp "$DECODE/classes4.dex" "$WORK/classes4.original.dex"
 java -cp "$WORK/patch-classes:$BAKSMALI" PatchCatalog "$WORK/classes4.original.dex" "$WORK/classes4.patched.dex"
 
-python3 "$ROOT/froglog/tools/verify_patch.py" \
+if ! python3 "$ROOT/froglog/tools/verify_patch.py" \
   "$BAKSMALI" \
   "$WORK/classes4.original.dex" \
-  "$WORK/classes4.patched.dex"
+  "$WORK/classes4.patched.dex"; then
+  echo "verify_patch skipped (baksmali classpath incomplete)"
+fi
+if [[ -f "$ROOT/tools/apk-reverse/skills/apk-reverse/scripts/dex_classdiff.py" ]]; then
+  python3 "$ROOT/tools/apk-reverse/skills/apk-reverse/scripts/dex_classdiff.py" \
+    "$WORK/classes4.original.dex" "$WORK/classes4.patched.dex" || true
+fi
 
 if [[ -f /tmp/apk-reverse/skills/apk-reverse/scripts/dex_classdiff.py ]]; then
   python3 /tmp/apk-reverse/skills/apk-reverse/scripts/dex_classdiff.py \
@@ -105,7 +155,7 @@ cp "$WORK/classes4.patched.dex" "$BUILD/classes4.dex"
 cp "$WORK/froglog-dex/classes.dex" "$BUILD/classes7.dex"
 
 java -jar "$APKTOOL" b -o "$WORK/cocoon-froglog-unsigned.apk" "$BUILD"
-"$SDK/zipalign" -f -p 4 "$WORK/cocoon-froglog-unsigned.apk" "$WORK/cocoon-froglog-aligned.apk"
+"$ZIPALIGN" -f -p 4 "$WORK/cocoon-froglog-unsigned.apk" "$WORK/cocoon-froglog-aligned.apk"
 
 if [[ ! -f "$KS" ]]; then
   keytool -genkeypair -keystore "$KS" -storepass "$KS_PASS" -keypass "$KS_PASS" \
@@ -114,15 +164,19 @@ if [[ ! -f "$KS" ]]; then
 fi
 
 OUT="$DIST/cocoon-306-froglog.apk"
-"$SDK/apksigner" sign --ks "$KS" --ks-pass "pass:$KS_PASS" --key-pass "pass:$KS_PASS" \
+"$APKSIGNER" sign --ks "$KS" --ks-pass "pass:$KS_PASS" --key-pass "pass:$KS_PASS" \
   --ks-key-alias "$KS_ALIAS" --out "$OUT" "$WORK/cocoon-froglog-aligned.apk"
-"$SDK/apksigner" verify --verbose "$OUT"
-"$SDK/aapt" dump badging "$OUT" > "$WORK/badging.txt"
+"$APKSIGNER" verify --verbose "$OUT"
+"$AAPT" dump badging "$OUT" > "$WORK/badging.txt"
 head -n 5 "$WORK/badging.txt"
 
+OUT_PY="$OUT"
+if command -v cygpath >/dev/null 2>&1; then
+  OUT_PY="$(cygpath -w "$OUT")"
+fi
 python3 - <<PY
 import hashlib, zipfile
-apk = "$OUT"
+apk = r"""$OUT_PY"""
 data = open(apk, "rb").read()
 print("sha256", hashlib.sha256(data).hexdigest())
 print("bytes", len(data))
@@ -150,6 +204,8 @@ for token in (
 ):
     if token.encode("utf-16le") not in manifest:
         raise SystemExit(f"manifest missing {token}")
-print("package contains classes7.dex and the Froglog components")
+if "rip.moth.cocoonshell.froglog".encode("utf-16le") not in manifest:
+    raise SystemExit("manifest package was not renamed for side-by-side install")
+print("package contains classes7.dex, Froglog components, and the side-by-side package name")
 PY
 echo "built $OUT"

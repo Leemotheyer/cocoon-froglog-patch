@@ -1,13 +1,12 @@
 package rip.moth.cocoonshell.froglog;
 
 import android.app.Activity;
-import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.util.List;
@@ -28,46 +27,60 @@ public class FroglogAddGame extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        title = field(extra(EXTRA_TITLE));
+        title = FroglogTheme.field(this, "Game title");
+        title.setText(extra(EXTRA_TITLE));
         String shownPlatform = extra(EXTRA_PLATFORM_LABEL);
-        platform = field(shownPlatform.isEmpty() ? extra(EXTRA_PLATFORM) : shownPlatform);
-        status = text("Search Froglog, then add the game as public or private.", 14, false);
-        status.setTextColor(Color.parseColor("#C8C2B8"));
+        platform = FroglogTheme.field(this, "Platform");
+        platform.setText(shownPlatform.isEmpty() ? extra(EXTRA_PLATFORM) : shownPlatform);
+        status = FroglogTheme.text(this, "Search Froglog, then add the game as public or private.", 14, false);
+        status.setTextColor(FroglogTheme.MUTED);
         results = new LinearLayout(this);
         results.setOrientation(LinearLayout.VERTICAL);
 
-        LinearLayout root = column();
-        root.addView(text("Add to Froglog", 22, true));
-        root.addView(gap());
-        root.addView(title);
-        root.addView(gap());
-        root.addView(platform);
-        root.addView(gap());
-        root.addView(button("Search", new View.OnClickListener() {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.addView(title);
+        form.addView(gap());
+        form.addView(platform);
+        form.addView(gap());
+        form.addView(button("Search", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 search();
             }
         }));
-        root.addView(gap());
-        root.addView(button("Add as public", new View.OnClickListener() {
+        form.addView(gap());
+        form.addView(button("Add as public", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 create(true);
             }
         }));
-        root.addView(gap());
-        root.addView(button("Add as private", new View.OnClickListener() {
+        form.addView(gap());
+        form.addView(FroglogTheme.secondary(this, "Add as private", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 create(false);
             }
         }));
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(20), dp(24), dp(20), dp(24));
+        root.addView(FroglogTheme.title(this, "Add to Froglog"));
+        TextView copy = FroglogTheme.text(this, "Match a catalog game, or add the title as typed.", 14, false);
+        copy.setTextColor(FroglogTheme.MUTED);
+        root.addView(copy);
+        root.addView(FroglogTheme.card(this, form));
         root.addView(gap());
         root.addView(status);
         root.addView(gap());
         root.addView(results);
-        setContentView(scroll(root));
+        ScrollView scroll = new ScrollView(this);
+        FroglogTheme.page(scroll);
+        scroll.addView(root);
+        setContentView(scroll);
+        FroglogTheme.paintSystemBars(this);
         if (!title.getText().toString().trim().isEmpty()) {
             search();
         }
@@ -140,8 +153,11 @@ public class FroglogAddGame extends Activity {
         for (int i = 0; i < hits.size(); i++) {
             final FroglogClient.Hit hit = hits.get(i);
             String label = hit.title + (hit.platform == null ? "" : " · " + hit.platform);
-            results.addView(gap());
-            results.addView(button(label, new View.OnClickListener() {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.VERTICAL);
+            row.addView(FroglogTheme.text(this, label, 15, true));
+            View card = FroglogTheme.card(this, row);
+            card.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     title.setText(hit.title);
@@ -151,7 +167,8 @@ public class FroglogAddGame extends Activity {
                     coverUrl = hit.coverUrl;
                     status.setText("Using " + hit.title + ". Choose public or private.");
                 }
-            }));
+            });
+            results.addView(card);
         }
     }
 
@@ -190,6 +207,12 @@ public class FroglogAddGame extends Activity {
                         throw new IllegalStateException(outcome.error == null ? "Froglog did not return a game id" : outcome.error);
                     }
                     final FroglogGame created = new FroglogGame(outcome.createdId, false, name, platformName, cover, "In Progress", "", null, 0, "", 0);
+                    try {
+                        FroglogClient.ensureTracking(token, created.id, new java.text.SimpleDateFormat(
+                                "yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date()));
+                    } catch (Exception ignored) {
+                        // Session close still stamps the date. The row exists either way.
+                    }
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -219,7 +242,7 @@ public class FroglogAddGame extends Activity {
             }
         }));
         results.addView(gap());
-        results.addView(button("Log as a separate game", new View.OnClickListener() {
+        results.addView(FroglogTheme.secondary(this, "Log as a separate game", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 confirmNew = true;
@@ -269,56 +292,8 @@ public class FroglogAddGame extends Activity {
         return value == null ? "" : value;
     }
 
-    private android.widget.ScrollView scroll(View child) {
-        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
-        scroll.setBackgroundColor(Color.parseColor("#121418"));
-        scroll.addView(child);
-        return scroll;
-    }
-
-    private LinearLayout column() {
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(24), dp(28), dp(24), dp(24));
-        return root;
-    }
-
-    private TextView text(String value, int sp, boolean bold) {
-        TextView view = new TextView(this);
-        view.setText(value);
-        view.setTextSize(sp);
-        view.setTextColor(Color.parseColor("#F4F1EA"));
-        if (bold) {
-            view.setTypeface(view.getTypeface(), android.graphics.Typeface.BOLD);
-        }
-        return view;
-    }
-
-    private EditText field(String value) {
-        EditText view = new EditText(this);
-        view.setText(value);
-        view.setSingleLine(true);
-        view.setTextColor(Color.parseColor("#F4F1EA"));
-        view.setHintTextColor(Color.parseColor("#8A847C"));
-        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-        bg.setColor(Color.parseColor("#1C2028"));
-        bg.setCornerRadius(dp(10));
-        view.setBackground(bg);
-        view.setPadding(dp(12), dp(10), dp(12), dp(10));
-        return view;
-    }
-
     private Button button(String label, View.OnClickListener listener) {
-        Button view = new Button(this);
-        view.setText(label);
-        view.setAllCaps(false);
-        view.setTextColor(Color.parseColor("#121418"));
-        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-        bg.setColor(Color.parseColor("#8BD17C"));
-        bg.setCornerRadius(dp(12));
-        view.setBackground(bg);
-        view.setOnClickListener(listener);
-        return view;
+        return FroglogTheme.button(this, label, listener);
     }
 
     private View gap() {

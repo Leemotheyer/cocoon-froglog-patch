@@ -65,16 +65,36 @@ public final class FroglogPods {
             if (entry == null || context == null || !isFroglog(entry)) {
                 return false;
             }
-            Intent open = new Intent(context, FroglogPodActivity.class);
-            if (!(context instanceof Activity)) {
-                open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            }
-            context.startActivity(open);
-            return true;
+            return launch(context);
         } catch (Throwable t) {
             Log.e(TAG, "Could not open the Froglog pod", t);
             return false;
         }
+    }
+
+    /**
+     * The overlay click sends the pod {@code action} type, not the entry.
+     * Froglog must use its own type so this does not open Log or Settings.
+     */
+    public static boolean openIfAction(xd.k0 action, Context context) {
+        try {
+            if (action != xd.k0.FROGLOG || context == null) {
+                return false;
+            }
+            return launch(context);
+        } catch (Throwable t) {
+            Log.e(TAG, "Could not open the Froglog pod", t);
+            return false;
+        }
+    }
+
+    private static boolean launch(Context context) {
+        Intent open = new Intent(context, FroglogPodActivity.class);
+        if (!(context instanceof Activity)) {
+            open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        }
+        context.startActivity(open);
+        return true;
     }
 
     private static boolean contains(List<?> existing) {
@@ -97,7 +117,7 @@ public final class FroglogPods {
             return null;
         }
         return new xd.l0(
-                xd.k0.SETTINGS,
+                xd.k0.FROGLOG,
                 URI,
                 "Froglog",
                 "Froglog",

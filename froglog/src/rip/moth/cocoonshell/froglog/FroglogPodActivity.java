@@ -34,11 +34,11 @@ import java.util.List;
  * Cocoon pod for the Froglog account. Sign-in lives here, with the signed-in library under it.
  */
 public class FroglogPodActivity extends Activity {
-    private static final int INK = 0xFF101411;
-    private static final int CARD = 0xFF1A211C;
-    private static final int CREAM = 0xFFF3F1EA;
-    private static final int MUTED = 0xFFB7C0B6;
-    private static final int GREEN = 0xFF8BD17C;
+    private static final int INK = FroglogTheme.INK;
+    private static final int CARD = FroglogTheme.FIELD;
+    private static final int CREAM = FroglogTheme.INK;
+    private static final int MUTED = FroglogTheme.MUTED;
+    private static final int GREEN = FroglogTheme.ACCENT;
 
     private int appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
     private int generation;
@@ -61,11 +61,14 @@ public class FroglogPodActivity extends Activity {
         if (extras != null) {
             appWidgetId = extras.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
         }
+        if (isWidgetConfigure() && FroglogStore.signedIn(this)) {
+            finishPod();
+            return;
+        }
         setResult(RESULT_CANCELED);
-        paintSystemBars();
 
         ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(INK);
+        FroglogTheme.page(scroll);
         LinearLayout root = column(dp(20), dp(18));
         root.addView(header());
         account = column(0, dp(14));
@@ -89,6 +92,7 @@ public class FroglogPodActivity extends Activity {
         root.addView(games);
         scroll.addView(root);
         setContentView(scroll);
+        paintSystemBars();
         bindAccount();
         load();
         if (Build.VERSION.SDK_INT >= 33
@@ -109,17 +113,13 @@ public class FroglogPodActivity extends Activity {
         row.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout titles = column(0, 0);
         titles.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView eyebrow = text("POD", 11, false);
-        eyebrow.setTextColor(GREEN);
-        eyebrow.setLetterSpacing(0.18f);
-        titles.addView(eyebrow);
-        titles.addView(text("Froglog", 28, true));
+        titles.addView(FroglogTheme.title(this, "Froglog"));
         TextView body = text("Your account, library, and sessions still waiting for a Froglog game.", 14, false);
         body.setTextColor(MUTED);
         titles.addView(body);
         row.addView(titles);
         TextView done = text("Done", 15, true);
-        done.setTextColor(INK);
+        done.setTextColor(0xFFFFFFFF);
         done.setBackground(pill(GREEN));
         done.setPadding(dp(16), dp(8), dp(16), dp(8));
         done.setOnClickListener(new View.OnClickListener() {
@@ -166,14 +166,16 @@ public class FroglogPodActivity extends Activity {
         account.addView(copy);
         account.addView(gap(10));
         LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setOrientation(LinearLayout.VERTICAL);
         Button add = action("Add a Cocoon game", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startActivity(new Intent(FroglogPodActivity.this, FroglogLibraryPicker.class));
             }
         });
-        Button out = action("Sign out", new View.OnClickListener() {
+        add.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        Button out = FroglogTheme.secondary(this, "Sign out", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 FroglogStore.clear(FroglogPodActivity.this);
@@ -183,10 +185,11 @@ public class FroglogPodActivity extends Activity {
                 load();
             }
         });
+        LinearLayout.LayoutParams outParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        outParams.topMargin = dp(8);
+        out.setLayoutParams(outParams);
         actions.addView(add);
-        View spacer = new View(this);
-        spacer.setLayoutParams(new LinearLayout.LayoutParams(dp(8), 1));
-        actions.addView(spacer);
         actions.addView(out);
         account.addView(actions);
     }
@@ -203,8 +206,8 @@ public class FroglogPodActivity extends Activity {
             final String mode = modes[i];
             boolean selected = mode.equals(filter);
             TextView chip = text(FroglogGames.filterLabel(mode), 12, selected);
-            chip.setTextColor(selected ? INK : CREAM);
-            chip.setBackground(pill(selected ? GREEN : CARD));
+            chip.setTextColor(selected ? 0xFFFFFFFF : INK);
+            chip.setBackground(pill(selected ? GREEN : FroglogTheme.FIELD));
             chip.setPadding(dp(10), dp(6), dp(10), dp(6));
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -242,6 +245,10 @@ public class FroglogPodActivity extends Activity {
                         @Override
                         public void run() {
                             refreshWidgets();
+                            if (isWidgetConfigure()) {
+                                finishPod();
+                                return;
+                            }
                             bindAccount();
                             load();
                         }
@@ -427,7 +434,7 @@ public class FroglogPodActivity extends Activity {
             return;
         }
         for (int i = 0; i < recent.games.size(); i++) {
-            games.addView(gameRow(recent.games.get(i)));
+            games.addView(card(gameRow(recent.games.get(i))));
         }
     }
 
@@ -441,7 +448,7 @@ public class FroglogPodActivity extends Activity {
         artParams.rightMargin = dp(12);
         art.setLayoutParams(artParams);
         art.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        art.setBackground(rounded(0xFF2A3140, dp(8)));
+        art.setBackground(rounded(FroglogTheme.FIELD, dp(12)));
         art.setClipToOutline(true);
         row.addView(art);
         LinearLayout lines = column(0, 0);
@@ -526,6 +533,12 @@ public class FroglogPodActivity extends Activity {
         }
     }
 
+    private boolean isWidgetConfigure() {
+        Intent intent = getIntent();
+        return intent != null
+                && AppWidgetManager.ACTION_APPWIDGET_CONFIGURE.equals(intent.getAction());
+    }
+
     private void finishPod() {
         if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             Intent result = new Intent();
@@ -548,29 +561,11 @@ public class FroglogPodActivity extends Activity {
     }
 
     private void paintSystemBars() {
-        getWindow().setStatusBarColor(INK);
-        getWindow().setNavigationBarColor(INK);
-        if (Build.VERSION.SDK_INT >= 30) {
-            WindowInsetsController controller = getWindow().getInsetsController();
-            if (controller != null) {
-                controller.setSystemBarsAppearance(0,
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                                | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
-            }
-        }
+        FroglogTheme.paintSystemBars(this);
     }
 
-    private LinearLayout card(LinearLayout child) {
-        LinearLayout wrap = new LinearLayout(this);
-        wrap.setOrientation(LinearLayout.VERTICAL);
-        wrap.setBackground(rounded(CARD, dp(18)));
-        wrap.setPadding(dp(16), dp(14), dp(16), dp(14));
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        params.topMargin = dp(14);
-        wrap.setLayoutParams(params);
-        wrap.addView(child);
-        return wrap;
+    private LinearLayout card(View child) {
+        return FroglogTheme.card(this, child);
     }
 
     private LinearLayout column(int padH, int padV) {
@@ -581,42 +576,19 @@ public class FroglogPodActivity extends Activity {
     }
 
     private TextView section(String value) {
-        TextView view = text(value, 12, true);
-        view.setTextColor(GREEN);
-        view.setLetterSpacing(0.08f);
-        return view;
+        return FroglogTheme.section(this, value);
     }
 
     private TextView text(String value, int sp, boolean bold) {
-        TextView view = new TextView(this);
-        view.setText(value);
-        view.setTextSize(sp);
-        view.setTextColor(CREAM);
-        if (bold) {
-            view.setTypeface(Typeface.DEFAULT_BOLD);
-        }
-        return view;
+        return FroglogTheme.text(this, value, sp, bold);
     }
 
     private EditText field(String hint) {
-        EditText view = new EditText(this);
-        view.setHint(hint);
-        view.setHintTextColor(0xFF7E877C);
-        view.setTextColor(CREAM);
-        view.setSingleLine(true);
-        view.setPadding(dp(12), dp(10), dp(12), dp(10));
-        view.setBackground(rounded(0xFF101411, dp(12)));
-        return view;
+        return FroglogTheme.field(this, hint);
     }
 
     private Button action(String label, View.OnClickListener listener) {
-        Button view = new Button(this);
-        view.setText(label);
-        view.setAllCaps(false);
-        view.setTextColor(INK);
-        view.setBackground(pill(GREEN));
-        view.setOnClickListener(listener);
-        return view;
+        return FroglogTheme.button(this, label, listener);
     }
 
     private GradientDrawable rounded(int color, int radius) {

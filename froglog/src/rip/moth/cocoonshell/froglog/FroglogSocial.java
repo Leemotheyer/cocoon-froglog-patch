@@ -10,8 +10,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Puts Froglog follows into Cocoon's friends list and opens their games on tap.
- * The password is never involved. The list comes from the signed-in activity feed.
+ * Puts live Froglog follows on Cocoon's own Froglog friends tab.
+ * Last-played people stay off the social list. Taps open FroglogFriendActivity.
  */
 public final class FroglogSocial {
     private static final String TAG = "FroglogWidget";
@@ -39,19 +39,56 @@ public final class FroglogSocial {
         fetchedAt = 0L;
     }
 
-    /** Called at the end of Cocoon's Steam friend conversion. Must stay off the network. */
+    /** Steam conversion stays Steam-only. Kept so an old hook is harmless. */
     public static List<?> withFollows(List<?> existing) {
         refreshSoon(token(), self());
-        List<FroglogFollow> people = cache;
-        if (existing == null || people.isEmpty()) {
+        return existing;
+    }
+
+    /** Adds a Froglog tab beside Steam and Android when the user is signed in. */
+    public static List<?> withFriendsTabs(List<?> tabs) {
+        refreshSoon(token(), self());
+        if (tabs == null) {
+            return tabs;
+        }
+        if (token() == null || token().isEmpty()) {
+            return tabs;
+        }
+        for (int i = 0; i < tabs.size(); i++) {
+            if (tabs.get(i) == ef.w0.FROGLOG) {
+                return tabs;
+            }
+        }
+        ArrayList<Object> next = new ArrayList<Object>(tabs.size() + 1);
+        next.add(ef.w0.FROGLOG);
+        next.addAll(tabs);
+        return next;
+    }
+
+    /** The selected social tab's friend rows. Froglog is never mixed into Steam. */
+    public static List<?> listForTab(Object tab, List<?> existing) {
+        refreshSoon(token(), self());
+        if (tab != ef.w0.FROGLOG) {
             return existing;
         }
-        ArrayList<Object> merged = new ArrayList<Object>(people.size() + existing.size());
-        for (FroglogFollow person : people) {
-            merged.add(row(person));
+        ArrayList<Object> live = new ArrayList<Object>();
+        List<FroglogFollow> people = cache;
+        for (int i = 0; i < people.size(); i++) {
+            FroglogFollow person = people.get(i);
+            if (person.playing) {
+                live.add(row(person));
+            }
         }
-        merged.addAll(existing);
-        return merged;
+        Log.i(TAG, "Froglog tab " + live.size() + " now-playing");
+        return live;
+    }
+
+    /** Keep the Froglog chip from using the Steam glyph. */
+    public static Object tabIcon(Object tab, Object icon) {
+        if (tab == ef.w0.FROGLOG) {
+            return ef.b.PEOPLE;
+        }
+        return icon;
     }
 
     /** Steam chat calls longValue on a friend id. Froglog rows have none, so open them here. */
@@ -90,6 +127,13 @@ public final class FroglogSocial {
             String activity = FroglogClient.activityJson(token);
             String online = FroglogClient.onlineJson(token);
             cache = FroglogFollows.people(activity, online, self);
+            int live = 0;
+            for (int i = 0; i < cache.size(); i++) {
+                if (cache.get(i).playing) {
+                    live++;
+                }
+            }
+            Log.i(TAG, "Froglog follows " + cache.size() + " last-seen, " + live + " now-playing");
         } catch (Exception e) {
             Log.w(TAG, "Could not load Froglog follows");
         } finally {
@@ -124,16 +168,16 @@ public final class FroglogSocial {
     }
 
     private static ef.d6 row(FroglogFollow person) {
-        ef.v0 tier = person.playing || person.game != null ? ef.v0.IN_GAME : ef.v0.ONLINE;
+        // Froglog presence is in-game only. Last-played never reaches this list.
         return new ef.d6(
                 "froglog:" + person.username,
                 null,
                 person.name,
                 person.avatarUrl,
-                tier,
+                ef.v0.IN_GAME,
                 person.status,
                 person.game,
-                null,
+                "froglog",
                 null,
                 false);
     }

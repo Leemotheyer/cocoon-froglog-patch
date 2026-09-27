@@ -9,9 +9,11 @@ import android.net.Uri;
 public final class FroglogInitProvider extends ContentProvider {
     @Override
     public boolean onCreate() {
+        FroglogSetup.skipIfRequested(getContext());
         CatalogHook.install(getContext());
         FroglogPods.install(getContext());
         FroglogSocial.warm(getContext());
+        FroglogPresence.start(getContext());
         return true;
     }
 

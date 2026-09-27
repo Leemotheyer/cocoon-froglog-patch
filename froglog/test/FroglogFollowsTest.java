@@ -12,9 +12,12 @@ public final class FroglogFollowsTest {
                 + "{\"username\":\"ada\",\"nickname\":\"Ada L\",\"game_title\":\"Hades\",\"type\":\"game_completed\",\"created_at\":\"2026-09-02\"},"
                 + "{\"username\":\"bo\",\"display_username\":\"Bo\",\"type\":\"game_started\",\"created_at\":\"2026-09-03\",\"game_title\":\"Celeste\"}"
                 + "]}";
-        String online = "[{\"username\":\"bo\",\"displayUsername\":\"Bo\",\"title\":\"Celeste II\",\"avatarUrl\":\"https://img/bo\"}]";
+        String online = "{\"online\":["
+                + "{\"username\":\"bo\",\"displayUsername\":\"Bo\",\"title\":\"Celeste II\",\"avatarUrl\":\"https://img/bo\"},"
+                + "{\"username\":\"cy\",\"displayUsername\":\"Cy\",\"title\":\"Hades II\"}"
+                + "]}";
         List<FroglogFollow> people = FroglogFollows.people(activity, online, "me");
-        expect(2, people.size());
+        expect(3, people.size());
         expect("ada", people.get(0).username);
         expect("Ada L", people.get(0).name);
         expect("Finished · Hades", people.get(0).status);
@@ -23,7 +26,18 @@ public final class FroglogFollowsTest {
         expect("Playing Celeste II", people.get(1).status);
         expect(true, people.get(1).playing);
         expect("https://img/bo", people.get(1).avatarUrl);
+        expect("cy", people.get(2).username);
+        expect("Playing Hades II", people.get(2).status);
+        expect(true, people.get(2).playing);
         expect(0, FroglogFollows.people("{\"activity\":[]}", "[]", "me").size());
+        String lastSeen = "{\"activity\":["
+                + "{\"username\":\"lee\",\"display_username\":\"Lee\",\"game_title\":\"FINAL FANTASY XIV Online Free Trial\",\"type\":\"session_logged\",\"created_at\":\"2026-09-27\"}"
+                + "]}";
+        List<FroglogFollow> offline = FroglogFollows.people(lastSeen, lastSeen, "me");
+        expect(1, offline.size());
+        expect("lee", offline.get(0).username);
+        expect("Logged · FINAL FANTASY XIV Online Free Trial", offline.get(0).status);
+        expect(false, offline.get(0).playing);
         System.out.println("FroglogFollowsTest ok");
     }
 

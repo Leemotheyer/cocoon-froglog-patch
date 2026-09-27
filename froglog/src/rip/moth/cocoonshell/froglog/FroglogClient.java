@@ -1,5 +1,7 @@
 package rip.moth.cocoonshell.froglog;
 
+import android.util.Log;
+
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -42,12 +44,18 @@ public final class FroglogClient {
         public final String monthLine;
         public final String yearLine;
         public final String rateLine;
+        public final String compactHours;
         public final String error;
 
         public Stats(String monthLine, String yearLine, String rateLine, String error) {
+            this(monthLine, yearLine, rateLine, error, "0h");
+        }
+
+        public Stats(String monthLine, String yearLine, String rateLine, String error, String compactHours) {
             this.monthLine = monthLine;
             this.yearLine = yearLine;
             this.rateLine = rateLine;
+            this.compactHours = compactHours == null || compactHours.isEmpty() ? "0h" : compactHours;
             this.error = error;
         }
     }
@@ -145,6 +153,47 @@ public final class FroglogClient {
         return result.body;
     }
 
+    /**
+     * Same payload LilyPad sends so Froglog's Online Now card and profile show
+     * the game currently open in Cocoon.
+     */
+    public static void setNowPlaying(String token, long gameId, String gameType, String title, String startedAt)
+            throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("game_id", gameId);
+        body.put("game_type", gameType == null || gameType.isEmpty() ? "game" : gameType);
+        if (title != null && !title.isEmpty()) {
+            body.put("title", title);
+        }
+        if (startedAt != null && !startedAt.isEmpty()) {
+            body.put("started_at", startedAt);
+        }
+        HttpResult result = request("PUT", BASE + "/users/me/now-playing", token, body.toString());
+        if (result.code < 200 || result.code >= 300) {
+            throw call(result, "Could not update Froglog presence (" + result.code + ")");
+        }
+    }
+
+    public static void clearNowPlaying(String token) throws Exception {
+        HttpResult result = request("DELETE", BASE + "/users/me/now-playing", token, null);
+        if (result.code == 404) {
+            return;
+        }
+        if (result.code < 200 || result.code >= 300) {
+            throw call(result, "Could not clear Froglog presence (" + result.code + ")");
+        }
+    }
+
+    /** Turns on the profile "In Game" row that LilyPad also enables. */
+    public static void showCurrentSession(String token, boolean enabled) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("showCurrentSession", enabled);
+        HttpResult result = request("PUT", BASE + "/users/current-session-visibility", token, body.toString());
+        if (result.code < 200 || result.code >= 300) {
+            throw call(result, "Could not update Froglog presence visibility (" + result.code + ")");
+        }
+    }
+
     /** Players online right now. Used only to mark a followed user as playing. */
     public static String onlineJson(String token) throws Exception {
         HttpResult result = request("GET", BASE + "/activity/online", token, null);
@@ -167,7 +216,9 @@ public final class FroglogClient {
             JSONObject month = json.optJSONObject("this_month");
             JSONObject year = json.optJSONObject("this_year");
             JSONObject overall = json.optJSONObject("overall");
-            return new Stats(periodLine("This month", month), periodLine("This year", year), rateLine(overall), null);
+            String hours = FroglogGames.hoursLabel(month == null ? null : Double.valueOf(month.optDouble("hours", 0)));
+            return new Stats(periodLine("This month", month), periodLine("This year", year), rateLine(overall),
+                    null, hours == null ? "0h" : hours);
         } catch (Exception e) {
             return new Stats("", "", "", "Could not reach Froglog");
         }
@@ -256,9 +307,26 @@ public final class FroglogClient {
         return logSession(token, game, date, hours, syncRef, "Logged from Cocoon");
     }
 
+    /**
+     * The signed-in library row for this title. Now-playing can accept a catalog id
+     * that {@code GET /games/:id} and {@code POST /games/:id/sessions} reject.
+     */
+    public static FroglogGame ownedGame(String token, String title, String platform) {
+        Recent recent = library(token);
+        if (recent == null || recent.games == null) {
+            return null;
+        }
+        return FroglogMatch.best(recent.games, title, platform);
+    }
+
     public static Logged logSession(String token, FroglogGame game, String date, double hours, String syncRef, String notes) throws Exception {
         boolean live = game.live;
         long id = game.id;
+        FroglogGame owned = ownedGame(token, game.title, game.platform);
+        if (owned != null) {
+            live = owned.live;
+            id = owned.id;
+        }
         if (!live) {
             try {
                 JSONObject raw = getGame(token, id);
@@ -271,11 +339,10 @@ public final class FroglogClient {
                     throw missing;
                 }
                 Long recovered = uniqueLiveId(token, game.title);
-                if (recovered == null) {
-                    throw missing;
+                if (recovered != null) {
+                    live = true;
+                    id = recovered.longValue();
                 }
-                live = true;
-                id = recovered.longValue();
             }
         }
         try {
@@ -291,6 +358,18 @@ public final class FroglogClient {
             }
             postSession(token, true, recovered.longValue(), date, hours, syncRef, notes);
             return new Logged(recovered.longValue(), true);
+        }
+    }
+
+    /**
+     * Turns on session tracking and stamps {@code start_date} when the library row
+     * is still empty. Presence can call this before a finished session exists.
+     */
+    public static void ensureTracking(String token, long id, String date) throws Exception {
+        JSONObject raw = getGame(token, id);
+        JSONObject payload = FroglogTracking.preparePayload(raw, date);
+        if (payload != null) {
+            putGame(token, id, payload);
         }
     }
 
@@ -324,7 +403,9 @@ public final class FroglogClient {
             }
             path = BASE + "/games/" + id + "/sessions";
         }
+        Log.i("FroglogWidget", "SESSION POST " + path + " " + body);
         HttpResult result = request("POST", path, token, body.toString());
+        Log.i("FroglogWidget", "SESSION RESP " + result.code + " " + result.body);
         if (result.code < 200 || result.code >= 300) {
             throw call(result, "Could not log the session (" + result.code + ")");
         }

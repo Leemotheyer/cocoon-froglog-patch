@@ -12,6 +12,7 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsetsController;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -31,11 +32,11 @@ public class FroglogMapActivity extends Activity {
     public static final String EXTRA_DATE = "date";
     public static final String EXTRA_SYNC = "sync";
 
-    private static final int INK = 0xFF101411;
-    private static final int CARD = 0xFF1A211C;
-    private static final int CREAM = 0xFFF3F1EA;
-    private static final int MUTED = 0xFFB7C0B6;
-    private static final int GREEN = 0xFF8BD17C;
+    private static final int INK = FroglogTheme.INK;
+    private static final int CARD = FroglogTheme.FIELD;
+    private static final int CREAM = FroglogTheme.INK;
+    private static final int MUTED = FroglogTheme.MUTED;
+    private static final int GREEN = FroglogTheme.ACCENT;
 
     private TextView status;
     private LinearLayout actions;
@@ -48,7 +49,6 @@ public class FroglogMapActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        paintSystemBars();
         final String title = extra(EXTRA_TITLE);
         final String platform = extra(EXTRA_PLATFORM);
         final int minutes = getIntent().getIntExtra(EXTRA_MINUTES, 0);
@@ -59,15 +59,12 @@ public class FroglogMapActivity extends Activity {
         }
 
         ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(INK);
+        FroglogTheme.page(scroll);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(20), dp(24), dp(20), dp(24));
-        TextView eyebrow = text("NEW GAME", 11, true);
-        eyebrow.setTextColor(GREEN);
-        eyebrow.setLetterSpacing(0.16f);
-        root.addView(eyebrow);
-        root.addView(text(title.isEmpty() ? "Unknown session" : title, 26, true));
+        root.addView(FroglogTheme.section(this, "New game"));
+        root.addView(FroglogTheme.title(this, title.isEmpty() ? "Unknown session" : title));
         TextView meta = text(minutes + "m"
                 + (date.isEmpty() ? "" : " · " + date)
                 + (platform.isEmpty() ? "" : " · " + platform), 14, false);
@@ -80,13 +77,14 @@ public class FroglogMapActivity extends Activity {
         root.addView(gap(14));
         actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.VERTICAL);
-        root.addView(actions);
+        root.addView(FroglogTheme.card(this, actions));
         libraryList = new LinearLayout(this);
         libraryList.setOrientation(LinearLayout.VERTICAL);
         root.addView(gap(8));
         root.addView(libraryList);
         scroll.addView(root);
         setContentView(scroll);
+        paintSystemBars();
         paintActions(title, platform, minutes, sync);
         loadLibrary(title, platform);
     }
@@ -209,13 +207,7 @@ public class FroglogMapActivity extends Activity {
 
     private void showLibrary(String query) {
         if (filter == null) {
-            filter = new EditText(this);
-            filter.setHint("Filter your library");
-            filter.setHintTextColor(0xFF7E877C);
-            filter.setTextColor(CREAM);
-            filter.setSingleLine(true);
-            filter.setPadding(dp(12), dp(10), dp(12), dp(10));
-            filter.setBackground(rounded(CARD, dp(12)));
+            filter = FroglogTheme.field(this, "Filter your library");
             filter.addTextChangedListener(new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -243,18 +235,25 @@ public class FroglogMapActivity extends Activity {
                 continue;
             }
             shown++;
-            TextView row = text(game.title
-                    + (game.platform == null || game.platform.isEmpty() ? "" : " · " + game.platform)
-                    + (game.live ? " · Live" : "")
-                    + (game.status == null || game.status.isEmpty() ? "" : " · " + game.status), 15, false);
-            row.setPadding(0, dp(12), 0, dp(12));
-            row.setOnClickListener(new View.OnClickListener() {
+            LinearLayout wrap = new LinearLayout(this);
+            wrap.setOrientation(LinearLayout.VERTICAL);
+            wrap.addView(text(game.title, 16, true));
+            String meta = (game.platform == null || game.platform.isEmpty() ? "" : game.platform)
+                    + (game.live ? (game.platform == null || game.platform.isEmpty() ? "" : " · ") + "Live" : "")
+                    + (game.status == null || game.status.isEmpty() ? "" : ((game.platform == null || game.platform.isEmpty()) && !game.live ? "" : " · ") + game.status);
+            if (!meta.isEmpty()) {
+                TextView line = text(meta, 13, false);
+                line.setTextColor(MUTED);
+                wrap.addView(line);
+            }
+            View card = FroglogTheme.card(this, wrap);
+            card.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     send(game, extra(EXTRA_TITLE), extra(EXTRA_PLATFORM));
                 }
             });
-            libraryRows.addView(row);
+            libraryRows.addView(card);
         }
         if (shown == 0) {
             TextView empty = text(library.isEmpty() ? "Your Froglog library is empty." : "Nothing in the library matches that.", 14, false);
@@ -322,36 +321,16 @@ public class FroglogMapActivity extends Activity {
     }
 
     private void paintSystemBars() {
-        getWindow().setStatusBarColor(INK);
-        getWindow().setNavigationBarColor(INK);
-        if (Build.VERSION.SDK_INT >= 30) {
-            WindowInsetsController controller = getWindow().getInsetsController();
-            if (controller != null) {
-                controller.setSystemBarsAppearance(0,
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                                | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
-            }
-        }
+        FroglogTheme.paintSystemBars(this);
     }
 
     private TextView action(String label, View.OnClickListener listener) {
-        TextView view = text(label, 15, true);
-        view.setTextColor(INK);
-        view.setBackground(rounded(GREEN, dp(14)));
-        view.setPadding(dp(14), dp(12), dp(14), dp(12));
-        view.setOnClickListener(listener);
+        Button view = FroglogTheme.button(this, label, listener);
         return view;
     }
 
     private TextView text(String value, int sp, boolean bold) {
-        TextView view = new TextView(this);
-        view.setText(value);
-        view.setTextSize(sp);
-        view.setTextColor(CREAM);
-        if (bold) {
-            view.setTypeface(Typeface.DEFAULT_BOLD);
-        }
-        return view;
+        return FroglogTheme.text(this, value, sp, bold);
     }
 
     private GradientDrawable rounded(int color, int radius) {

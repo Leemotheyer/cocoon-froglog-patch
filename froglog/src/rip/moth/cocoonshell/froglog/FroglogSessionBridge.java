@@ -27,39 +27,45 @@ public final class FroglogSessionBridge {
             if (context == null || session == null || !FroglogStore.signedIn(context)) {
                 return;
             }
-            int minutes = session.getDurationMinutes();
+            long start = session.getStartTime();
             long end = session.getEndTime();
+            int minutes = FroglogTracking.playMinutes(session.getDurationMinutes(), start, end);
             long now = System.currentTimeMillis();
-            if (minutes < 1 || end <= 0 || now - end > RECENT_MS || end - now > 60L * 1000L) {
-                return;
-            }
             String title = session.getGameName();
             if (title == null || title.trim().isEmpty()) {
+                FroglogPresence.ended(context);
+                return;
+            }
+            title = title.trim();
+            if (minutes < 1 || end <= 0 || now - end > RECENT_MS || end - now > 60L * 1000L) {
+                FroglogPresence.ended(context);
                 return;
             }
             String platform = session.getPlatformId() == null ? "" : session.getPlatformId();
             String sync = session.getClientSessionId();
             if (sync == null || sync.isEmpty()) {
-                sync = title + ":" + session.getStartTime();
+                sync = title + ":" + start;
             }
-            if (FroglogStore.posted(context, sync)) {
+            if (FroglogStore.posted(context, sync) || FroglogStore.posted(context, title + ":" + start)) {
+                FroglogPresence.skipCloseLog(context);
+                FroglogPresence.ended(context);
                 return;
             }
             String key = FroglogMatch.linkKey(title, platform);
             String link = FroglogStore.link(context, key);
             if ("no".equals(link)) {
+                FroglogPresence.skipCloseLog(context);
+                FroglogPresence.ended(context);
                 return;
             }
             String date = date(session);
+            FroglogPresence.skipCloseLog(context);
+            FroglogPresence.ended(context);
             if (link != null && link.indexOf(':') > 0) {
                 postLinked(context, link, title, platform, minutes, date, sync);
                 return;
             }
-            boolean fresh = !FroglogStore.hasPending(context, sync);
-            FroglogStore.enqueuePending(context, title, platform, minutes, date, sync);
-            if (fresh) {
-                ask(context, title, platform, minutes, date, sync);
-            }
+            matchThenPost(context, title, platform, minutes, date, sync);
         } catch (Throwable t) {
             Log.e(TAG, "Session hook failed", t);
         }
@@ -86,6 +92,7 @@ public final class FroglogSessionBridge {
                     }
                     FroglogStore.markPosted(context, sync);
                     FroglogStore.removePending(context, sync);
+                    Log.i(TAG, "Logged Froglog session " + title + " · " + minutes + "m");
                 } catch (Exception e) {
                     Log.e(TAG, "Could not log linked session", e);
                     FroglogStore.enqueuePending(context, title, platform, minutes, date, sync);
@@ -94,6 +101,47 @@ public final class FroglogSessionBridge {
                 }
             }
         }, "froglog-session").start();
+    }
+
+    /**
+     * Presence can match a library title without a stored link. The finished
+     * session has to do the same, or 2048 stays a catalog row with no playtime.
+     */
+    private static void matchThenPost(final Context context, final String title, final String platform,
+            final int minutes, final String date, final String sync) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String link = resolveLibrary(context, title, platform);
+                if (link != null) {
+                    postLinked(context, link, title, platform, minutes, date, sync);
+                    return;
+                }
+                boolean fresh = !FroglogStore.hasPending(context, sync);
+                FroglogStore.enqueuePending(context, title, platform, minutes, date, sync);
+                if (fresh) {
+                    ask(context, title, platform, minutes, date, sync);
+                }
+            }
+        }, "froglog-session-match").start();
+    }
+
+    private static String resolveLibrary(Context context, String title, String platform) {
+        try {
+            FroglogClient.Recent recent = FroglogClient.library(FroglogStore.token(context));
+            if (recent == null || recent.games == null) {
+                return null;
+            }
+            FroglogGame game = FroglogMatch.best(recent.games, title, platform);
+            if (game == null) {
+                return null;
+            }
+            FroglogStore.link(context, FroglogMatch.linkKey(title, platform), game.id, game.live);
+            return (game.live ? "live:" : "game:") + game.id;
+        } catch (Exception e) {
+            Log.w(TAG, "Could not match finished session to Froglog library", e);
+            return null;
+        }
     }
 
     private static void ask(Context context, String title, String platform, int minutes, String date, String sync) {

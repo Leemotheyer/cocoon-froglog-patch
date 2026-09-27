@@ -7,5 +7,6 @@ public enum k0 {
     LEAFLET,
     LOG,
     PICNIC,
-    SETTINGS
+    SETTINGS,
+    FROGLOG
 }

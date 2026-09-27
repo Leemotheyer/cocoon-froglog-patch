@@ -44,20 +44,19 @@ public class FroglogStatsWidget extends AppWidgetProvider {
         int rate = res(context, "froglog_stats_rate");
         int message = res(context, "froglog_stats_message");
         views.setTextViewText(title, "Froglog");
+        views.setViewVisibility(rate, View.GONE);
         if (!FroglogStore.signedIn(context)) {
-            show(views, month, year, rate, message, "Sign in to see your Froglog stats");
+            show(views, month, year, rate, message, "Sign in");
         } else if (stats != null && stats.error != null) {
             show(views, month, year, rate, message, stats.error);
         } else if (stats == null) {
-            show(views, month, year, rate, message, "Could not load Froglog stats");
+            show(views, month, year, rate, message, "No stats");
         } else {
             views.setViewVisibility(message, View.GONE);
             views.setViewVisibility(month, View.VISIBLE);
             views.setViewVisibility(year, View.VISIBLE);
-            views.setViewVisibility(rate, View.VISIBLE);
-            views.setTextViewText(month, stats.monthLine);
-            views.setTextViewText(year, stats.yearLine);
-            views.setTextViewText(rate, stats.rateLine);
+            views.setTextViewText(month, stats.compactHours);
+            views.setTextViewText(year, "this month");
         }
         Intent open = new Intent(context, FroglogPodActivity.class);
         open.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);

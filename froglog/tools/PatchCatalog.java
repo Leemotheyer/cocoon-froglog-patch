@@ -1,61 +1,65 @@
-import com.android.tools.smali.dexlib2.DexFileFactory;
-import com.android.tools.smali.dexlib2.Opcode;
-import com.android.tools.smali.dexlib2.Opcodes;
-import com.android.tools.smali.dexlib2.builder.MethodImplementationBuilder;
-import com.android.tools.smali.dexlib2.builder.Label;
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction10x;
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction11n;
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction11x;
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction21c;
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction21t;
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction22c;
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction22t;
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction35c;
-import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
-import com.android.tools.smali.dexlib2.iface.ClassDef;
-import com.android.tools.smali.dexlib2.iface.DexFile;
-import com.android.tools.smali.dexlib2.iface.Field;
-import com.android.tools.smali.dexlib2.iface.Method;
-import com.android.tools.smali.dexlib2.iface.ExceptionHandler;
-import com.android.tools.smali.dexlib2.iface.MethodImplementation;
-import com.android.tools.smali.dexlib2.iface.TryBlock;
-import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
-import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
-import com.android.tools.smali.dexlib2.iface.instruction.SwitchElement;
-import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction10t;
-import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction20t;
-import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction21t;
-import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction22t;
-import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction30t;
-import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction31t;
-import com.android.tools.smali.dexlib2.iface.instruction.formats.PackedSwitchPayload;
-import com.android.tools.smali.dexlib2.iface.instruction.formats.SparseSwitchPayload;
-import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
-import com.android.tools.smali.dexlib2.iface.reference.Reference;
-import com.android.tools.smali.dexlib2.iface.reference.TypeReference;
-import com.android.tools.smali.dexlib2.immutable.ImmutableClassDef;
-import com.android.tools.smali.dexlib2.immutable.ImmutableExceptionHandler;
-import com.android.tools.smali.dexlib2.immutable.ImmutableMethod;
-import com.android.tools.smali.dexlib2.immutable.ImmutableTryBlock;
-import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction10t;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction10x;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction11x;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction20t;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction21c;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction21t;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22t;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22x;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction30t;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction31t;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction35c;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutablePackedSwitchPayload;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableSparseSwitchPayload;
-import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableSwitchElement;
-import com.android.tools.smali.dexlib2.immutable.reference.ImmutableFieldReference;
-import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference;
-import com.android.tools.smali.dexlib2.immutable.reference.ImmutableStringReference;
-import com.android.tools.smali.dexlib2.immutable.reference.ImmutableTypeReference;
+import org.jf.dexlib2.DexFileFactory;
+import org.jf.dexlib2.Opcode;
+import org.jf.dexlib2.Opcodes;
+import org.jf.dexlib2.builder.MethodImplementationBuilder;
+import org.jf.dexlib2.builder.Label;
+import org.jf.dexlib2.builder.instruction.BuilderInstruction10x;
+import org.jf.dexlib2.builder.instruction.BuilderInstruction11n;
+import org.jf.dexlib2.builder.instruction.BuilderInstruction11x;
+import org.jf.dexlib2.builder.instruction.BuilderInstruction21c;
+import org.jf.dexlib2.builder.instruction.BuilderInstruction21t;
+import org.jf.dexlib2.builder.instruction.BuilderInstruction22c;
+import org.jf.dexlib2.builder.instruction.BuilderInstruction22t;
+import org.jf.dexlib2.builder.instruction.BuilderInstruction35c;
+import org.jf.dexlib2.dexbacked.DexBackedDexFile;
+import org.jf.dexlib2.iface.ClassDef;
+import org.jf.dexlib2.iface.DexFile;
+import org.jf.dexlib2.iface.Field;
+import org.jf.dexlib2.iface.Method;
+import org.jf.dexlib2.iface.ExceptionHandler;
+import org.jf.dexlib2.iface.MethodImplementation;
+import org.jf.dexlib2.iface.TryBlock;
+import org.jf.dexlib2.iface.instruction.Instruction;
+import org.jf.dexlib2.iface.instruction.OneRegisterInstruction;
+import org.jf.dexlib2.iface.instruction.ReferenceInstruction;
+import org.jf.dexlib2.iface.instruction.SwitchElement;
+import org.jf.dexlib2.iface.instruction.formats.Instruction10t;
+import org.jf.dexlib2.iface.instruction.formats.Instruction20t;
+import org.jf.dexlib2.iface.instruction.formats.Instruction21t;
+import org.jf.dexlib2.iface.instruction.formats.Instruction22t;
+import org.jf.dexlib2.iface.instruction.formats.Instruction30t;
+import org.jf.dexlib2.iface.instruction.formats.Instruction31t;
+import org.jf.dexlib2.iface.instruction.formats.PackedSwitchPayload;
+import org.jf.dexlib2.iface.instruction.formats.SparseSwitchPayload;
+import org.jf.dexlib2.iface.reference.FieldReference;
+import org.jf.dexlib2.iface.reference.MethodReference;
+import org.jf.dexlib2.iface.reference.Reference;
+import org.jf.dexlib2.iface.reference.TypeReference;
+import org.jf.dexlib2.immutable.ImmutableClassDef;
+import org.jf.dexlib2.immutable.ImmutableExceptionHandler;
+import org.jf.dexlib2.immutable.ImmutableField;
+import org.jf.dexlib2.immutable.ImmutableMethod;
+import org.jf.dexlib2.immutable.ImmutableTryBlock;
+import org.jf.dexlib2.immutable.ImmutableMethodImplementation;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction3rc;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction10t;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction10x;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction11x;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction20t;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction21c;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction21t;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction22t;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction22x;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction30t;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction31t;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction35c;
+import org.jf.dexlib2.immutable.instruction.ImmutablePackedSwitchPayload;
+import org.jf.dexlib2.immutable.instruction.ImmutableSparseSwitchPayload;
+import org.jf.dexlib2.immutable.instruction.ImmutableSwitchElement;
+import org.jf.dexlib2.immutable.reference.ImmutableFieldReference;
+import org.jf.dexlib2.immutable.reference.ImmutableMethodReference;
+import org.jf.dexlib2.immutable.reference.ImmutableStringReference;
+import org.jf.dexlib2.immutable.reference.ImmutableTypeReference;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -72,16 +76,26 @@ import java.util.Set;
  * notify Froglog when one finished play session is inserted,
  * append the Froglog pod to the overlay list,
  * open that pod before Cocoon's router handles it, and
- * add followed Froglog users to the friends list.
+ * add a Froglog friends tab beside Steam and Android.
  * Recently played is not rewritten. insertAll is not rewritten.
  */
 public final class PatchCatalog {
     private static final String CATALOG = "Lmf/y1;";
     private static final String SESSION = "Lrip/moth/cocoonshell/data/local/GameSessionDao_Impl;";
     private static final String PODS = "Lxd/m0;";
+    private static final String POD_ACTION = "Lxd/k0;";
     private static final String ROUTER = "Lrip/moth/cocoonshell/utils/u6;";
+    private static final String OPEN_BY_ACTION =
+            "(Lxd/k0;Landroid/content/Context;Lza/i;I)Ljava/lang/Object;";
     private static final String FRIENDS = "Lef/d0;";
+    private static final String FRIEND_TABS = "Lef/w0;";
+    private static final String FRIEND_MAPS = "Lef/s5;";
     private static final String FRIEND_CLICK = "Lef/q3;";
+    private static final String THEME = "Lrip/moth/cocoonshell/ui/theme/ThemeSettings;";
+    private static final String SURFACE_PREFS = "Lfe/q1;";
+    private static final String GLASS_DRAW = "Lkf/n2;";
+    private static final String GLASS_HOST = "Ldg/m3;";
+    private static final String WIDGET_HOST = "Ltf/i1;";
     private static final String INSERT =
             "(Lrip/moth/cocoonshell/data/model/GameSession;Lxa/c;)Ljava/lang/Object;";
     private static final String OPEN_POD =
@@ -96,9 +110,17 @@ public final class PatchCatalog {
         ClassDef catalog = null;
         ClassDef session = null;
         ClassDef pods = null;
+        ClassDef podAction = null;
         ClassDef router = null;
         ClassDef friends = null;
+        ClassDef friendTabs = null;
+        ClassDef friendMaps = null;
         ClassDef friendClick = null;
+        ClassDef theme = null;
+        ClassDef surfacePrefs = null;
+        ClassDef glassDraw = null;
+        ClassDef glassHost = null;
+        ClassDef widgetHost = null;
         for (ClassDef cls : dex.getClasses()) {
             if (CATALOG.equals(cls.getType())) {
                 catalog = cls;
@@ -106,25 +128,57 @@ public final class PatchCatalog {
                 session = cls;
             } else if (PODS.equals(cls.getType())) {
                 pods = cls;
+            } else if (POD_ACTION.equals(cls.getType())) {
+                podAction = cls;
             } else if (ROUTER.equals(cls.getType())) {
                 router = cls;
             } else if (FRIENDS.equals(cls.getType())) {
                 friends = cls;
+            } else if (FRIEND_TABS.equals(cls.getType())) {
+                friendTabs = cls;
+            } else if (FRIEND_MAPS.equals(cls.getType())) {
+                friendMaps = cls;
             } else if (FRIEND_CLICK.equals(cls.getType())) {
                 friendClick = cls;
+            } else if (THEME.equals(cls.getType())) {
+                theme = cls;
+            } else if (SURFACE_PREFS.equals(cls.getType())) {
+                surfacePrefs = cls;
+            } else if (GLASS_DRAW.equals(cls.getType())) {
+                glassDraw = cls;
+            } else if (GLASS_HOST.equals(cls.getType())) {
+                glassHost = cls;
+            } else if (WIDGET_HOST.equals(cls.getType())) {
+                widgetHost = cls;
             }
         }
-        if (catalog == null || session == null || pods == null || router == null || friends == null || friendClick == null) {
+        if (catalog == null || session == null || pods == null || podAction == null || router == null
+                || friends == null || friendTabs == null || friendMaps == null || friendClick == null
+                || theme == null || surfacePrefs == null
+                || glassDraw == null || glassHost == null || widgetHost == null) {
             throw new IllegalStateException("catalog=" + (catalog != null) + " session=" + (session != null)
-                    + " pods=" + (pods != null) + " router=" + (router != null)
-                    + " friends=" + (friends != null) + " click=" + (friendClick != null));
+                    + " pods=" + (pods != null) + " podAction=" + (podAction != null)
+                    + " router=" + (router != null)
+                    + " friends=" + (friends != null) + " tabs=" + (friendTabs != null)
+                    + " maps=" + (friendMaps != null) + " click=" + (friendClick != null)
+                    + " theme=" + (theme != null) + " surfacePrefs=" + (surfacePrefs != null)
+                    + " glassDraw=" + (glassDraw != null) + " glassHost=" + (glassHost != null)
+                    + " widgetHost=" + (widgetHost != null));
         }
         final ClassDef catalogReplacement = patchCatalog(catalog);
         final ClassDef sessionReplacement = patchSession(session);
         final ClassDef podsReplacement = patchPods(pods);
+        final ClassDef podActionReplacement = patchPodAction(podAction);
         final ClassDef routerReplacement = patchRouterClass(router);
+        final ClassDef friendTabsReplacement = patchFriendTabEnum(friendTabs);
+        final ClassDef friendMapsReplacement = patchFriendTabMaps(friendMaps);
         final ClassDef friendsReplacement = patchFriends(friends);
         final ClassDef clickReplacement = patchFriendClick(friendClick);
+        final ClassDef themeReplacement = patchTheme(theme);
+        final ClassDef surfacePrefsReplacement = patchSurfacePrefs(surfacePrefs);
+        final ClassDef glassDrawReplacement = prefixGlassMethods(glassDraw, "b");
+        final ClassDef glassHostReplacement = prefixGlassMethods(glassHost, "h", "A0");
+        final ClassDef widgetHostReplacement = patchWidgetHost(widgetHost);
         final DexBackedDexFile source = dex;
         DexFileFactory.writeDexFile(args[1], new DexFile() {
             @Override
@@ -137,12 +191,28 @@ public final class PatchCatalog {
                         classes.add(sessionReplacement);
                     } else if (PODS.equals(cls.getType())) {
                         classes.add(podsReplacement);
+                    } else if (POD_ACTION.equals(cls.getType())) {
+                        classes.add(podActionReplacement);
                     } else if (ROUTER.equals(cls.getType())) {
                         classes.add(routerReplacement);
+                    } else if (FRIEND_TABS.equals(cls.getType())) {
+                        classes.add(friendTabsReplacement);
+                    } else if (FRIEND_MAPS.equals(cls.getType())) {
+                        classes.add(friendMapsReplacement);
                     } else if (FRIENDS.equals(cls.getType())) {
                         classes.add(friendsReplacement);
                     } else if (FRIEND_CLICK.equals(cls.getType())) {
                         classes.add(clickReplacement);
+                    } else if (THEME.equals(cls.getType())) {
+                        classes.add(themeReplacement);
+                    } else if (SURFACE_PREFS.equals(cls.getType())) {
+                        classes.add(surfacePrefsReplacement);
+                    } else if (GLASS_DRAW.equals(cls.getType())) {
+                        classes.add(glassDrawReplacement);
+                    } else if (GLASS_HOST.equals(cls.getType())) {
+                        classes.add(glassHostReplacement);
+                    } else if (WIDGET_HOST.equals(cls.getType())) {
+                        classes.add(widgetHostReplacement);
                     } else {
                         classes.add(cls);
                     }
@@ -228,8 +298,14 @@ public final class PatchCatalog {
 
     private static ClassDef patchRouterClass(ClassDef router) {
         List<Method> direct = new ArrayList<Method>();
+        boolean byAction = false;
         for (Method method : router.getDirectMethods()) {
-            direct.add(method);
+            if ("b".equals(method.getName()) && OPEN_BY_ACTION.equals(signature(method))) {
+                direct.add(patchRouterByAction(method));
+                byAction = true;
+            } else {
+                direct.add(method);
+            }
         }
         List<Method> virtual = new ArrayList<Method>();
         boolean patched = false;
@@ -237,14 +313,70 @@ public final class PatchCatalog {
             if ("a".equals(method.getName()) && OPEN_POD.equals(signature(method))) {
                 virtual.add(patchRouter(method));
                 patched = true;
+            } else if ("b".equals(method.getName()) && OPEN_BY_ACTION.equals(signature(method))) {
+                virtual.add(patchRouterByAction(method));
+                byAction = true;
             } else {
                 virtual.add(method);
             }
         }
-        if (!patched) {
-            throw new IllegalStateException("pod router not found");
+        if (!patched || !byAction) {
+            throw new IllegalStateException("pod router a=" + patched + " b=" + byAction);
         }
         return copyClass(router, direct, virtual);
+    }
+
+    private static ClassDef patchPodAction(ClassDef k0) {
+        List<Field> statics = new ArrayList<Field>();
+        boolean hasFroglog = false;
+        for (Field field : k0.getStaticFields()) {
+            if ("FROGLOG".equals(field.getName())) {
+                hasFroglog = true;
+            }
+            statics.add(field);
+        }
+        if (!hasFroglog) {
+            statics.add(new ImmutableField(
+                    POD_ACTION,
+                    "FROGLOG",
+                    POD_ACTION,
+                    0x4019,
+                    null,
+                    Collections.emptySet(),
+                    Collections.emptySet()));
+        }
+        List<Field> instance = new ArrayList<Field>();
+        for (Field field : k0.getInstanceFields()) {
+            instance.add(field);
+        }
+        List<Method> direct = new ArrayList<Method>();
+        boolean patched = false;
+        for (Method method : k0.getDirectMethods()) {
+            if ("<clinit>".equals(method.getName())) {
+                direct.add(patchK0Clinit(method));
+                patched = true;
+            } else {
+                direct.add(method);
+            }
+        }
+        if (!patched) {
+            throw new IllegalStateException("pod action initializer not found");
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        for (Method method : k0.getVirtualMethods()) {
+            virtual.add(method);
+        }
+        return new ImmutableClassDef(
+                k0.getType(),
+                k0.getAccessFlags(),
+                k0.getSuperclass(),
+                k0.getInterfaces(),
+                k0.getSourceFile(),
+                k0.getAnnotations(),
+                statics,
+                instance,
+                direct,
+                virtual);
     }
 
     private static ClassDef copyClass(ClassDef cls, List<Method> direct, List<Method> virtual) {
@@ -373,6 +505,109 @@ public final class PatchCatalog {
                 Collections.emptyList()));
     }
 
+    private static Method patchK0Clinit(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> original = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            original.add(instruction);
+        }
+        int filled = -1;
+        int start = -1;
+        int count = -1;
+        for (int i = 0; i < original.size(); i++) {
+            Instruction instruction = original.get(i);
+            if (instruction.getOpcode() != Opcode.FILLED_NEW_ARRAY_RANGE
+                    || !(instruction instanceof ReferenceInstruction)
+                    || !(instruction instanceof org.jf.dexlib2.iface.instruction.RegisterRangeInstruction)) {
+                continue;
+            }
+            Reference ref = ((ReferenceInstruction) instruction).getReference();
+            if (!(ref instanceof TypeReference) || !"[Lxd/k0;".equals(((TypeReference) ref).getType())) {
+                continue;
+            }
+            org.jf.dexlib2.iface.instruction.RegisterRangeInstruction range =
+                    (org.jf.dexlib2.iface.instruction.RegisterRangeInstruction) instruction;
+            filled = i;
+            start = range.getStartRegister();
+            count = range.getRegisterCount();
+        }
+        if (filled < 0 || start != 0 || count != 6) {
+            throw new IllegalStateException("pod enum array start=" + start + " count=" + count);
+        }
+        List<Instruction> extra = new ArrayList<Instruction>();
+        extra.add(new ImmutableInstruction21c(Opcode.NEW_INSTANCE, 6, new ImmutableTypeReference(POD_ACTION)));
+        extra.add(new ImmutableInstruction21c(Opcode.CONST_STRING, 7, new ImmutableStringReference("FROGLOG")));
+        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, 8, 6));
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_DIRECT,
+                3, 6, 7, 8, 0, 0,
+                new ImmutableMethodReference(
+                        "Ljava/lang/Enum;",
+                        "<init>",
+                        Arrays.asList("Ljava/lang/String;", "I"),
+                        "V")));
+        extra.add(new ImmutableInstruction21c(
+                Opcode.SPUT_OBJECT,
+                6,
+                new ImmutableFieldReference(POD_ACTION, "FROGLOG", POD_ACTION)));
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        rewritten.addAll(original.subList(0, filled));
+        rewritten.addAll(extra);
+        rewritten.add(new ImmutableInstruction3rc(
+                Opcode.FILLED_NEW_ARRAY_RANGE,
+                start,
+                7,
+                new ImmutableTypeReference("[Lxd/k0;")));
+        rewritten.addAll(original.subList(filled + 1, original.size()));
+        int regs = Math.max(impl.getRegisterCount(), 9);
+        System.out.println("pod action values " + (count + 1));
+        return replace(method, new ImmutableMethodImplementation(
+                regs,
+                rewritten,
+                Collections.emptyList(),
+                Collections.emptyList()));
+    }
+
+    private static Method patchRouterByAction(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        int first = impl.getRegisterCount() - parameterWords(method);
+        int action = (method.getAccessFlags() & 0x8) != 0 ? first : first + 1;
+        int context = action + 1;
+        if (action != 8) {
+            throw new IllegalStateException("router action register " + action);
+        }
+        List<Instruction> instructions = new ArrayList<Instruction>();
+        instructions.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC,
+                2, action, context, 0, 0, 0,
+                new ImmutableMethodReference(
+                        "Lrip/moth/cocoonshell/froglog/FroglogPods;",
+                        "openIfAction",
+                        Arrays.asList("Lxd/k0;", "Landroid/content/Context;"),
+                        "Z")));
+        instructions.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0));
+        instructions.add(new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 5));
+        instructions.add(new ImmutableInstruction21c(Opcode.SGET_OBJECT, 0,
+                new ImmutableFieldReference("Lta/z;", "a", "Lta/z;")));
+        instructions.add(new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0));
+        int prefix = 0;
+        for (int i = 0; i < instructions.size(); i++) {
+            prefix += instructions.get(i).getCodeUnits();
+        }
+        if (prefix != 9) {
+            throw new IllegalStateException("action router prefix " + prefix);
+        }
+        for (Instruction instruction : impl.getInstructions()) {
+            instructions.add(instruction);
+        }
+        System.out.println("action router instructions " + instructions.size() + " actionReg=" + action);
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                instructions,
+                Collections.emptyList(),
+                Collections.emptyList()));
+    }
+
     private static Method patchRouter(Method method) {
         MethodImplementation impl = method.getImplementation();
         int entry = impl.getRegisterCount() - parameterWords(method) + 1;
@@ -414,17 +649,26 @@ public final class PatchCatalog {
 
     private static ClassDef patchFriends(ClassDef friends) {
         List<Method> direct = new ArrayList<Method>();
-        boolean patched = false;
+        boolean patchedTabs = false;
+        boolean patchedPanel = false;
         for (Method method : friends.getDirectMethods()) {
-            if ("k0".equals(method.getName()) && "(Ljava/util/List;Ljava/util/Map;Z)Ljava/util/List;".equals(signature(method))) {
-                direct.add(patchFriendList(method));
-                patched = true;
+            if ("c0".equals(method.getName())
+                    && "(Lp1/o;FFLz0/e0;I)V".equals(signature(method))) {
+                direct.add(patchFriendTabs(method));
+                patchedTabs = true;
+            } else if ("b0".equals(method.getName())
+                    && signature(method).startsWith("(Ljava/util/List;Leg/l0;Lfe/u;Ljava/util/List;Lef/w0;")) {
+                direct.add(patchFriendPanel(method));
+                patchedPanel = true;
             } else {
                 direct.add(method);
             }
         }
-        if (!patched) {
-            throw new IllegalStateException("friend list builder not found");
+        if (!patchedTabs) {
+            throw new IllegalStateException("friend tabs builder not found");
+        }
+        if (!patchedPanel) {
+            throw new IllegalStateException("friend tab panel not found");
         }
         List<Method> virtual = new ArrayList<Method>();
         for (Method method : friends.getVirtualMethods()) {
@@ -454,30 +698,281 @@ public final class PatchCatalog {
         return copyClass(click, direct, virtual);
     }
 
-    private static Method patchFriendList(Method method) {
+    private static ClassDef patchFriendTabEnum(ClassDef tabs) {
+        List<Field> statics = new ArrayList<Field>();
+        boolean hasFroglog = false;
+        for (Field field : tabs.getStaticFields()) {
+            if ("FROGLOG".equals(field.getName())) {
+                hasFroglog = true;
+            }
+            statics.add(field);
+        }
+        if (!hasFroglog) {
+            statics.add(new ImmutableField(
+                    FRIEND_TABS,
+                    "FROGLOG",
+                    FRIEND_TABS,
+                    0x4019,
+                    null,
+                    Collections.emptySet(),
+                    Collections.emptySet()));
+        }
+        List<Field> instance = new ArrayList<Field>();
+        for (Field field : tabs.getInstanceFields()) {
+            instance.add(field);
+        }
+        List<Method> direct = new ArrayList<Method>();
+        boolean patched = false;
+        for (Method method : tabs.getDirectMethods()) {
+            if ("<clinit>".equals(method.getName())) {
+                direct.add(patchFriendTabClinit(method));
+                patched = true;
+            } else {
+                direct.add(method);
+            }
+        }
+        if (!patched) {
+            throw new IllegalStateException("friend tab initializer not found");
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        for (Method method : tabs.getVirtualMethods()) {
+            virtual.add(method);
+        }
+        return new ImmutableClassDef(
+                tabs.getType(),
+                tabs.getAccessFlags(),
+                tabs.getSuperclass(),
+                tabs.getInterfaces(),
+                tabs.getSourceFile(),
+                tabs.getAnnotations(),
+                statics,
+                instance,
+                direct,
+                virtual);
+    }
+
+    private static Method patchFriendTabClinit(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> original = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            original.add(instruction);
+        }
+        int filled = -1;
+        for (int i = 0; i < original.size(); i++) {
+            if (original.get(i).getOpcode() == Opcode.FILLED_NEW_ARRAY) {
+                filled = i;
+                break;
+            }
+        }
+        if (filled < 0) {
+            throw new IllegalStateException("friend tab values not found");
+        }
+        List<Instruction> extra = new ArrayList<Instruction>();
+        extra.add(new ImmutableInstruction21c(Opcode.NEW_INSTANCE, 2, new ImmutableTypeReference(FRIEND_TABS)));
+        extra.add(new ImmutableInstruction21c(Opcode.CONST_STRING, 3, new ImmutableStringReference("FROGLOG")));
+        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction11n(Opcode.CONST_4, 4, 2));
+        extra.add(new ImmutableInstruction21c(Opcode.CONST_STRING, 5, new ImmutableStringReference("Froglog")));
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_DIRECT,
+                4, 2, 3, 4, 5, 0,
+                new ImmutableMethodReference(
+                        FRIEND_TABS,
+                        "<init>",
+                        Arrays.asList("Ljava/lang/String;", "I", "Ljava/lang/String;"),
+                        "V")));
+        extra.add(new ImmutableInstruction21c(
+                Opcode.SPUT_OBJECT,
+                2,
+                new ImmutableFieldReference(FRIEND_TABS, "FROGLOG", FRIEND_TABS)));
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        rewritten.addAll(original.subList(0, filled));
+        rewritten.addAll(extra);
+        rewritten.add(new ImmutableInstruction35c(
+                Opcode.FILLED_NEW_ARRAY,
+                3, 0, 1, 2, 0, 0,
+                new ImmutableTypeReference("[Lef/w0;")));
+        rewritten.addAll(original.subList(filled + 1, original.size()));
+        System.out.println("friend tab values 3");
+        return replace(method, new ImmutableMethodImplementation(
+                Math.max(impl.getRegisterCount(), 6),
+                rewritten,
+                Collections.emptyList(),
+                Collections.emptyList()));
+    }
+
+    private static ClassDef patchFriendTabMaps(ClassDef maps) {
+        List<Method> direct = new ArrayList<Method>();
+        boolean patched = false;
+        for (Method method : maps.getDirectMethods()) {
+            if ("<clinit>".equals(method.getName())) {
+                direct.add(patchFriendTabMapClinit(method));
+                patched = true;
+            } else {
+                direct.add(method);
+            }
+        }
+        if (!patched) {
+            throw new IllegalStateException("friend tab map initializer not found");
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        for (Method method : maps.getVirtualMethods()) {
+            virtual.add(method);
+        }
+        return copyClass(maps, direct, virtual);
+    }
+
+    private static Method patchFriendTabMapClinit(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> original = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            original.add(instruction);
+        }
+        int sput = -1;
+        for (int i = 0; i < original.size(); i++) {
+            Instruction instruction = original.get(i);
+            if (instruction.getOpcode() != Opcode.SPUT_OBJECT || !(instruction instanceof ReferenceInstruction)) {
+                continue;
+            }
+            Reference ref = ((ReferenceInstruction) instruction).getReference();
+            if (ref instanceof FieldReference && "a".equals(((FieldReference) ref).getName())
+                    && FRIEND_MAPS.equals(((FieldReference) ref).getDefiningClass())) {
+                sput = i;
+                break;
+            }
+        }
+        if (sput < 0) {
+            throw new IllegalStateException("friend tab map store not found");
+        }
+        List<Instruction> extra = new ArrayList<Instruction>();
+        extra.add(new ImmutableInstruction21c(
+                Opcode.SGET_OBJECT,
+                3,
+                new ImmutableFieldReference(FRIEND_TABS, "FROGLOG", FRIEND_TABS)));
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_VIRTUAL,
+                1, 3, 0, 0, 0, 0,
+                new ImmutableMethodReference("Ljava/lang/Enum;", "ordinal", Collections.<String>emptyList(), "I")));
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, 3));
+        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction23x(Opcode.APUT, 1, 0, 3));
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        rewritten.addAll(original.subList(0, sput));
+        rewritten.addAll(extra);
+        rewritten.addAll(original.subList(sput, original.size()));
+        System.out.println("friend tab map includes Froglog");
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                rewritten,
+                Collections.emptyList(),
+                Collections.emptyList()));
+    }
+
+    private static Method patchFriendPanel(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> original = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            original.add(instruction);
+        }
+        List<Instruction> prefix = new ArrayList<Instruction>();
+        prefix.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 0, 72));
+        prefix.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 1, 68));
+        prefix.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC,
+                2, 0, 1, 0, 0, 0,
+                new ImmutableMethodReference(
+                        "Lrip/moth/cocoonshell/froglog/FroglogSocial;",
+                        "listForTab",
+                        Arrays.asList("Ljava/lang/Object;", "Ljava/util/List;"),
+                        "Ljava/util/List;")));
+        prefix.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 68));
+        int added = 0;
+        for (Instruction instruction : prefix) {
+            added += instruction.getCodeUnits();
+        }
+        if (added != 8) {
+            throw new IllegalStateException("friend panel prefix " + added);
+        }
+        int[] addresses = addresses(original);
+        int[] switchAt = switchAddresses(original, addresses);
+        List<Instruction> rewritten = new ArrayList<Instruction>(prefix);
+        for (int i = 0; i < original.size(); i++) {
+            rewritten.add(retarget(original.get(i), addresses[i], switchAt[i], 0, added));
+        }
+        System.out.println("friend panel instructions " + rewritten.size());
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                rewritten,
+                shiftTries(impl.getTryBlocks(), 0, added),
+                Collections.emptyList()));
+    }
+
+    private static Method patchFriendTabs(Method method) {
         MethodImplementation impl = method.getImplementation();
         List<Instruction> instructions = new ArrayList<Instruction>();
         for (Instruction instruction : impl.getInstructions()) {
             instructions.add(instruction);
         }
-        int ret = instructions.size() - 1;
-        if (ret < 0 || instructions.get(ret).getOpcode() != Opcode.RETURN_OBJECT) {
-            throw new IllegalStateException("friend list does not return an object");
+        int insert = -1;
+        for (int i = 0; i < instructions.size() - 1; i++) {
+            Instruction instruction = instructions.get(i);
+            if (instruction.getOpcode() != Opcode.INVOKE_STATIC || !(instruction instanceof ReferenceInstruction)) {
+                continue;
+            }
+            Reference ref = ((ReferenceInstruction) instruction).getReference();
+            if (!(ref instanceof MethodReference)) {
+                continue;
+            }
+            MethodReference methodRef = (MethodReference) ref;
+            if (!"Lr3/a;".equals(methodRef.getDefiningClass()) || !"k".equals(methodRef.getName())) {
+                continue;
+            }
+            if (instructions.get(i + 1).getOpcode() != Opcode.MOVE_RESULT_OBJECT) {
+                continue;
+            }
+            insert = i + 2;
+            break;
         }
-        instructions.add(ret, new ImmutableInstruction35c(
+        if (insert < 0) {
+            throw new IllegalStateException("friend tabs list freeze not found");
+        }
+        int tab = 6;
+        if (instructions.get(insert - 1) instanceof OneRegisterInstruction) {
+            tab = ((OneRegisterInstruction) instructions.get(insert - 1)).getRegisterA();
+        }
+        if (tab > 15) {
+            throw new IllegalStateException("friend tabs register " + tab);
+        }
+        List<Instruction> extra = new ArrayList<Instruction>();
+        extra.add(new ImmutableInstruction35c(
                 Opcode.INVOKE_STATIC,
-                1, 0, 0, 0, 0, 0,
+                1, tab, 0, 0, 0, 0,
                 new ImmutableMethodReference(
                         "Lrip/moth/cocoonshell/froglog/FroglogSocial;",
-                        "withFollows",
+                        "withFriendsTabs",
                         Collections.singletonList("Ljava/util/List;"),
                         "Ljava/util/List;")));
-        instructions.add(ret + 1, new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0));
-        System.out.println("friend list instructions " + instructions.size());
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, tab));
+        int added = 0;
+        for (Instruction instruction : extra) {
+            added += instruction.getCodeUnits();
+        }
+        if (added != 4) {
+            throw new IllegalStateException("friend tabs insert " + added);
+        }
+        int[] addresses = addresses(instructions);
+        int insertAt = addresses[insert];
+        int[] switchAt = switchAddresses(instructions, addresses);
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        for (int i = 0; i < instructions.size(); i++) {
+            if (i == insert) {
+                rewritten.addAll(extra);
+            }
+            rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], insertAt, added));
+        }
+        System.out.println("friend tabs instructions " + rewritten.size());
         return replace(method, new ImmutableMethodImplementation(
                 impl.getRegisterCount(),
-                instructions,
-                Collections.emptyList(),
+                rewritten,
+                shiftTries(impl.getTryBlocks(), insertAt, added),
                 Collections.emptyList()));
     }
 
@@ -774,6 +1269,217 @@ public final class PatchCatalog {
                         "Ljava/util/List;"), "V")));
         code.addInstruction(new BuilderInstruction10x(Opcode.RETURN_VOID));
         return replace(method, code.getMethodImplementation());
+    }
+
+    private static ClassDef prefixGlassMethods(ClassDef cls, String... names) {
+        java.util.HashSet<String> want = new java.util.HashSet<String>(Arrays.asList(names));
+        int patched = 0;
+        List<Method> direct = new ArrayList<Method>();
+        for (Method method : cls.getDirectMethods()) {
+            if (want.contains(method.getName()) && "V".equals(method.getReturnType())
+                    && method.getImplementation() != null) {
+                direct.add(prefixSkipGlass(method));
+                patched++;
+            } else {
+                direct.add(method);
+            }
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        for (Method method : cls.getVirtualMethods()) {
+            if (want.contains(method.getName()) && "V".equals(method.getReturnType())
+                    && method.getImplementation() != null) {
+                virtual.add(prefixSkipGlass(method));
+                patched++;
+            } else {
+                virtual.add(method);
+            }
+        }
+        if (patched != names.length) {
+            throw new IllegalStateException(cls.getType() + " glass methods " + patched);
+        }
+        return copyClass(cls, direct, virtual);
+    }
+
+    /** Return before any RuntimeShader use when the device is older than Android 13. */
+    private static Method prefixSkipGlass(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> original = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            original.add(instruction);
+        }
+        List<Instruction> prefix = new ArrayList<Instruction>();
+        prefix.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC,
+                0, 0, 0, 0, 0, 0,
+                new ImmutableMethodReference(
+                        "Lrip/moth/cocoonshell/froglog/GlassCompat;",
+                        "runtimeShadersAvailable",
+                        Collections.<String>emptyList(),
+                        "Z")));
+        prefix.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0));
+        prefix.add(new ImmutableInstruction21t(Opcode.IF_NEZ, 0, 4));
+        prefix.add(new ImmutableInstruction10x(Opcode.RETURN_VOID));
+        prefix.add(new ImmutableInstruction10x(Opcode.NOP));
+        int added = 0;
+        for (Instruction instruction : prefix) {
+            added += instruction.getCodeUnits();
+        }
+        if (added != 8) {
+            throw new IllegalStateException("glass prefix " + added);
+        }
+        int[] addresses = addresses(original);
+        int[] switchAt = switchAddresses(original, addresses);
+        List<Instruction> rewritten = new ArrayList<Instruction>(prefix);
+        for (int i = 0; i < original.size(); i++) {
+            rewritten.add(retarget(original.get(i), addresses[i], switchAt[i], 0, added));
+        }
+        System.out.println("glass skip " + method.getDefiningClass() + "->" + method.getName()
+                + " instructions " + rewritten.size());
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                rewritten,
+                shiftTries(impl.getTryBlocks(), 0, added),
+                Collections.emptyList()));
+    }
+
+    /**
+     * Android widgets cannot keep Compose drop shadows while the home screen
+     * pans. Style the host view instead so the squircle and elevation stay put.
+     */
+    private static ClassDef patchWidgetHost(ClassDef host) {
+        List<Method> direct = new ArrayList<Method>();
+        boolean clear = false;
+        for (Method method : host.getDirectMethods()) {
+            if ("f".equals(method.getName()) && "(Landroid/view/View;)V".equals(signature(method))) {
+                direct.add(patchAndroidWidgetHostView(method));
+                clear = true;
+            } else {
+                direct.add(method);
+            }
+        }
+        if (!clear) {
+            throw new IllegalStateException("widget host style not found");
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        for (Method method : host.getVirtualMethods()) {
+            virtual.add(method);
+        }
+        return copyClass(host, direct, virtual);
+    }
+
+    private static Method patchAndroidWidgetHostView(Method method) {
+        MethodImplementationBuilder code = new MethodImplementationBuilder(1);
+        code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_STATIC, 1, 0, 0, 0, 0, 0,
+                method("Lrip/moth/cocoonshell/froglog/GlassCompat;", "styleAndroidWidget",
+                        Collections.singletonList("Landroid/view/View;"), "V")));
+        code.addInstruction(new BuilderInstruction10x(Opcode.RETURN_VOID));
+        System.out.println("android widget host uses stable tile face");
+        return replace(method, code.getMethodImplementation());
+    }
+
+    private static ClassDef patchTheme(ClassDef theme) {
+        List<Method> direct = new ArrayList<Method>();
+        for (Method method : theme.getDirectMethods()) {
+            direct.add(method);
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        boolean material = false;
+        boolean tiles = false;
+        for (Method method : theme.getVirtualMethods()) {
+            if ("getSurfaceMaterial".equals(method.getName())
+                    && "()Ljava/lang/String;".equals(signature(method))) {
+                virtual.add(wrapThemeString(method, "surfaceMaterial", "safeSurfaceMaterial"));
+                material = true;
+            } else if ("getGlassOnTiles".equals(method.getName())
+                    && "()Ljava/lang/Boolean;".equals(signature(method))) {
+                virtual.add(wrapThemeString(method, "glassOnTiles", "safeGlassOnTiles"));
+                tiles = true;
+            } else {
+                virtual.add(method);
+            }
+        }
+        if (!material || !tiles) {
+            throw new IllegalStateException("theme material=" + material + " tiles=" + tiles);
+        }
+        return copyClass(theme, direct, virtual);
+    }
+
+    private static Method wrapThemeString(Method method, String fieldName, String helper) {
+        String fieldType = method.getReturnType();
+        MethodImplementationBuilder code = new MethodImplementationBuilder(2);
+        code.addInstruction(new BuilderInstruction22c(Opcode.IGET_OBJECT, 0, 1,
+                field(THEME, fieldName, fieldType)));
+        code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_STATIC, 1, 0, 0, 0, 0, 0,
+                method("Lrip/moth/cocoonshell/froglog/GlassCompat;", helper,
+                        Collections.singletonList(fieldType), fieldType)));
+        code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0));
+        code.addInstruction(new BuilderInstruction11x(Opcode.RETURN_OBJECT, 0));
+        System.out.println("theme " + fieldName + " wrapped");
+        return replace(method, code.getMethodImplementation());
+    }
+
+    private static ClassDef patchSurfacePrefs(ClassDef prefs) {
+        List<Method> direct = new ArrayList<Method>();
+        for (Method method : prefs.getDirectMethods()) {
+            direct.add(method);
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        boolean patched = false;
+        for (Method method : prefs.getVirtualMethods()) {
+            if ("J0".equals(method.getName()) && "()Lfe/s1;".equals(signature(method))) {
+                virtual.add(patchSurfaceName(method));
+                patched = true;
+            } else {
+                virtual.add(method);
+            }
+        }
+        if (!patched) {
+            throw new IllegalStateException("surface material preference reader not found");
+        }
+        return copyClass(prefs, direct, virtual);
+    }
+
+    private static Method patchSurfaceName(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> instructions = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            instructions.add(instruction);
+        }
+        int insert = -1;
+        for (int i = 0; i < instructions.size(); i++) {
+            if (instructions.get(i).getOpcode() == Opcode.INVOKE_STATIC
+                    && instructions.get(i) instanceof ReferenceInstruction) {
+                Reference ref = ((ReferenceInstruction) instructions.get(i)).getReference();
+                if (ref instanceof org.jf.dexlib2.iface.reference.MethodReference) {
+                    org.jf.dexlib2.iface.reference.MethodReference mr =
+                            (org.jf.dexlib2.iface.reference.MethodReference) ref;
+                    if ("valueOf".equals(mr.getName()) && "Lfe/s1;".equals(mr.getDefiningClass())) {
+                        insert = i;
+                        break;
+                    }
+                }
+            }
+        }
+        if (insert < 0) {
+            throw new IllegalStateException("surface valueOf not found");
+        }
+        int[] addresses = addresses(instructions);
+        int insertAt = addresses[insert];
+        instructions.add(insert, new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC,
+                1, 0, 0, 0, 0, 0,
+                new ImmutableMethodReference(
+                        "Lrip/moth/cocoonshell/froglog/GlassCompat;",
+                        "safeSurfaceName",
+                        Collections.singletonList("Ljava/lang/String;"),
+                        "Ljava/lang/String;")));
+        instructions.add(insert + 1, new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0));
+        System.out.println("surface prefs instructions " + instructions.size());
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                instructions,
+                shiftTries(impl.getTryBlocks(), insertAt, 4),
+                Collections.emptyList()));
     }
 
     private static ImmutableFieldReference field(String owner, String name, String type) {

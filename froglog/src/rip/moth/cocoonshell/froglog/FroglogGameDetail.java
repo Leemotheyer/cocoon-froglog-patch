@@ -3,11 +3,11 @@ package rip.moth.cocoonshell.froglog;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.io.InputStream;
@@ -29,24 +29,33 @@ public class FroglogGameDetail extends Activity {
         String review = extra(EXTRA_REVIEW, "");
         final String cover = extra(EXTRA_COVER, "");
 
-        LinearLayout root = column();
-        TextView heading = text(title, 22, true);
-        TextView line = text(meta.isEmpty() ? "No session yet" : meta, 14, false);
-        line.setTextColor(Color.parseColor("#C8C2B8"));
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.addView(FroglogTheme.title(this, title));
+        TextView line = FroglogTheme.text(this, meta.isEmpty() ? "No session yet" : meta, 14, false);
+        line.setTextColor(FroglogTheme.MUTED);
+        body.addView(line);
         final ImageView art = new ImageView(this);
         art.setAdjustViewBounds(true);
+        art.setBackground(FroglogTheme.rounded(FroglogTheme.FIELD, dp(16)));
         LinearLayout.LayoutParams artParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        artParams.bottomMargin = dp(12);
+        artParams.topMargin = dp(16);
+        artParams.bottomMargin = dp(16);
         art.setLayoutParams(artParams);
-        TextView body = text(review.isEmpty() ? "No review on this game." : review, 15, false);
-        root.addView(heading);
-        root.addView(gap());
-        root.addView(line);
-        root.addView(gap());
-        root.addView(art);
-        root.addView(body);
-        setContentView(root);
+        body.addView(art);
+        body.addView(FroglogTheme.section(this, "Review"));
+        body.addView(FroglogTheme.text(this, review.isEmpty() ? "No review on this game." : review, 15, false));
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(20), dp(24), dp(20), dp(24));
+        root.addView(FroglogTheme.card(this, body));
+        ScrollView scroll = new ScrollView(this);
+        FroglogTheme.page(scroll);
+        scroll.addView(root);
+        setContentView(scroll);
+        FroglogTheme.paintSystemBars(this);
         if (!cover.isEmpty()) {
             new Thread(new Runnable() {
                 @Override
@@ -94,31 +103,6 @@ public class FroglogGameDetail extends Activity {
                 conn.disconnect();
             }
         }
-    }
-
-    private LinearLayout column() {
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(24), dp(28), dp(24), dp(24));
-        root.setBackgroundColor(Color.parseColor("#121418"));
-        return root;
-    }
-
-    private TextView text(String value, int sp, boolean bold) {
-        TextView view = new TextView(this);
-        view.setText(value);
-        view.setTextSize(sp);
-        view.setTextColor(Color.parseColor("#F4F1EA"));
-        if (bold) {
-            view.setTypeface(view.getTypeface(), android.graphics.Typeface.BOLD);
-        }
-        return view;
-    }
-
-    private View gap() {
-        View view = new View(this);
-        view.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(12)));
-        return view;
     }
 
     private int dp(int value) {

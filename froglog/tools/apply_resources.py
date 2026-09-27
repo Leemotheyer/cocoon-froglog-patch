@@ -38,12 +38,15 @@ IDS = [
     "froglog_stats_year",
     "froglog_stats_rate",
     "froglog_stats_message",
+    "froglog_title_icon",
+    "froglog_stats_icon",
 ]
 
 PUBLIC = [
     ("drawable", "froglog_widget_bg", 0x7F060216),
     ("drawable", "froglog_cover_placeholder", 0x7F060217),
     ("drawable", "froglog", 0x7F060218),
+    ("drawable", "froglog_title_icon", 0x7F060219),
     ("layout", "froglog_widget", 0x7F0A001E),
     ("layout", "froglog_stats", 0x7F0A001F),
     ("string", "widget_type_froglog", 0x7F0E072D),
@@ -59,7 +62,7 @@ STRINGS = """
     <string name="widget_type_froglog">Froglog</string>
     <string name="widget_type_froglog_desc">Your recent Froglog games and play time</string>
     <string name="widget_type_froglog_stats">Froglog stats</string>
-    <string name="widget_type_froglog_stats_desc">Hours and games finished this month and this year</string>
+    <string name="widget_type_froglog_stats_desc">Hours played this month</string>
     <string name="pods_overlay_froglog">Froglog</string>
 """
 
@@ -67,7 +70,7 @@ STRINGS_FR = """
     <string name="widget_type_froglog">Froglog</string>
     <string name="widget_type_froglog_desc">Vos parties Froglog récentes et le temps de jeu</string>
     <string name="widget_type_froglog_stats">Stats Froglog</string>
-    <string name="widget_type_froglog_stats_desc">Heures et jeux terminés ce mois-ci et cette année</string>
+    <string name="widget_type_froglog_stats_desc">Heures jouées ce mois-ci</string>
     <string name="pods_overlay_froglog">Froglog</string>
 """
 
@@ -84,7 +87,7 @@ MANIFEST = """
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/froglog_stats_info"/>
         </receiver>
-        <activity android:exported="true" android:name="rip.moth.cocoonshell.froglog.FroglogWidgetConfig" android:theme="@android:style/Theme.DeviceDefault.NoActionBar"/>
+        <activity android:exported="true" android:name="rip.moth.cocoonshell.froglog.FroglogWidgetConfig" android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
         <activity android:exported="true" android:name="rip.moth.cocoonshell.froglog.FroglogPodActivity" android:theme="@style/Theme.Cocoon"/>
         <activity android:exported="false" android:name="rip.moth.cocoonshell.froglog.FroglogFriendActivity" android:theme="@style/Theme.Cocoon"/>
         <activity android:exported="false" android:name="rip.moth.cocoonshell.froglog.FroglogGameDetail" android:theme="@android:style/Theme.DeviceDefault.NoActionBar"/>
@@ -92,8 +95,12 @@ MANIFEST = """
         <activity android:exported="false" android:name="rip.moth.cocoonshell.froglog.FroglogMapActivity" android:theme="@style/Theme.Cocoon"/>
         <activity android:exported="false" android:name="rip.moth.cocoonshell.froglog.FroglogAddGame" android:theme="@android:style/Theme.DeviceDefault.NoActionBar"/>
         <activity android:exported="false" android:name="rip.moth.cocoonshell.froglog.FroglogLibraryPicker" android:theme="@android:style/Theme.DeviceDefault.NoActionBar"/>
-        <provider android:authorities="rip.moth.cocoonshell.froglog.init" android:exported="false" android:initOrder="100" android:name="rip.moth.cocoonshell.froglog.FroglogInitProvider"/>
+        <provider android:authorities="rip.moth.cocoonshell.froglog.startup" android:exported="false" android:initOrder="100" android:name="rip.moth.cocoonshell.froglog.FroglogInitProvider"/>
 """
+
+PACKAGE = "rip.moth.cocoonshell.froglog"
+ORIGINAL_PACKAGE = "rip.moth.cocoonshell"
+APP_LABEL = "Cocoon Froglog"
 
 
 def insert_before(path: Path, marker: str, snippet: str, label: str) -> None:
@@ -116,12 +123,24 @@ def main() -> None:
         "xml/froglog_stats_info.xml",
         "drawable/froglog_widget_bg.xml",
         "drawable/froglog_cover_placeholder.xml",
-        "drawable/froglog.xml",
+        "drawable/froglog_title_icon.xml",
     ):
         source = RES / relative
         target = decoded / "res" / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
+
+    pod_icon = ROOT.parent / "assets" / "froglogpod.jpg"
+    if not pod_icon.exists():
+        pod_icon = RES / "drawable" / "froglog.jpg"
+    if not pod_icon.exists():
+        raise SystemExit("missing assets/froglogpod.jpg")
+    target_icon = decoded / "res" / "drawable" / "froglog.jpg"
+    target_icon.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(pod_icon, target_icon)
+    leftover_vector = decoded / "res" / "drawable" / "froglog.xml"
+    if leftover_vector.exists():
+        leftover_vector.unlink()
 
     id_lines = "\n".join(f'    <item type="id" name="{name}" />' for name in IDS) + "\n"
     insert_before(decoded / "res/values/ids.xml", "</resources>", id_lines, "froglog_root")
@@ -132,15 +151,51 @@ def main() -> None:
         f'    <public type="{typ}" name="{name}" id="{rid:#010x}" />' for typ, name, rid in PUBLIC
     ) + "\n"
     insert_before(decoded / "res/values/public.xml", "</resources>", public_lines, "froglog_widget_info")
+
+    manifest = decoded / "AndroidManifest.xml"
+    manifest_text = manifest.read_text(encoding="utf-8")
+    manifest_text = manifest_text.replace(
+        f'package="{ORIGINAL_PACKAGE}"',
+        f'package="{PACKAGE}"',
+        1,
+    )
+    manifest_text = manifest_text.replace(
+        f'android:authorities="{ORIGINAL_PACKAGE}.',
+        f'android:authorities="{PACKAGE}.',
+    )
+    manifest_text = manifest_text.replace(
+        f'android:taskAffinity="{ORIGINAL_PACKAGE}"',
+        f'android:taskAffinity="{PACKAGE}"',
+    )
+    if f'package="{PACKAGE}"' not in manifest_text:
+        raise SystemExit("manifest package was not renamed")
+    leftover = f'android:authorities="{ORIGINAL_PACKAGE}.'
+    renamed = f'android:authorities="{PACKAGE}.'
+    if leftover in manifest_text.replace(renamed, ""):
+        raise SystemExit("a FileProvider authority still uses the original package")
+    manifest.write_text(manifest_text, encoding="utf-8")
     insert_before(decoded / "AndroidManifest.xml", "    </application>", MANIFEST, "FroglogRecentWidget")
+
+    strings = decoded / "res/values/strings.xml"
+    strings_text = strings.read_text(encoding="utf-8")
+    for name in ("app_name", "app_name_short"):
+        marker = f'<string name="{name}">'
+        start = strings_text.find(marker)
+        if start < 0:
+            continue
+        end = strings_text.find("</string>", start)
+        strings_text = strings_text[:start] + f'{marker}{APP_LABEL}' + strings_text[end:]
+    strings.write_text(strings_text, encoding="utf-8")
 
     yml = decoded / "apktool.yml"
     text = yml.read_text(encoding="utf-8")
-    text = text.replace("versionCode: 1\n", "versionCode: 8\n", 1)
-    text = text.replace("versionName: 3.06-1\n", "versionName: 3.06-1-froglog7\n", 1)
+    text = text.replace("versionCode: 1\n", "versionCode: 9\n", 1)
+    text = text.replace("versionName: 3.06-1\n", "versionName: 3.06-1-froglog8\n", 1)
     text = text.replace("- assets/dexopt/baseline.prof\n", "")
     text = text.replace("- assets/dexopt/baseline.profm\n", "")
-    if "versionCode: 8\n" not in text or "versionName: 3.06-1-froglog7\n" not in text:
+    if "renameManifestPackage:" not in text:
+        text = text.replace("apkFileName:", f"renameManifestPackage: {PACKAGE}\napkFileName:", 1)
+    if "versionCode: 9\n" not in text or "versionName: 3.06-1-froglog8\n" not in text:
         raise SystemExit("version was not bumped")
     yml.write_text(text, encoding="utf-8")
     for profile in ("assets/dexopt/baseline.prof", "assets/dexopt/baseline.profm"):

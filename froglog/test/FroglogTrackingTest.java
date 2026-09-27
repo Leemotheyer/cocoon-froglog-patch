@@ -13,6 +13,7 @@ public final class FroglogTrackingTest {
         ready.put("title", "Hades");
         ready.put("status", "In Progress");
         ready.put("session_tracking", true);
+        ready.put("start_date", "2026-01-01");
         ready.put("total_hours", 3);
         expect(true, FroglogTracking.preparePayload(ready, "2026-09-01") == null);
 
@@ -33,6 +34,7 @@ public final class FroglogTrackingTest {
         finished.put("id", 8);
         finished.put("status", "Completed");
         finished.put("session_tracking", true);
+        finished.put("start_date", "2025-12-01");
         finished.put("dnf", false);
         finished.put("end_date", "2026-01-01");
         JSONObject resumed = FroglogTracking.preparePayload(finished, "2026-09-01");
@@ -48,6 +50,20 @@ public final class FroglogTrackingTest {
         imported.put("start_date", JSONObject.NULL);
         JSONObject started = FroglogTracking.preparePayload(imported, "2026-09-27");
         expect("2026-09-27", started.getString("start_date"));
+
+        JSONObject fresh = new JSONObject();
+        fresh.put("id", 3);
+        fresh.put("status", "In Progress");
+        fresh.put("session_tracking", true);
+        JSONObject dated = FroglogTracking.preparePayload(fresh, "2026-09-27");
+        expect("2026-09-27", dated.getString("start_date"));
+
+        expect(Integer.valueOf(5), Integer.valueOf(FroglogTracking.playMinutes(5, 0, 0)));
+        expect(Integer.valueOf(0), Integer.valueOf(FroglogTracking.playMinutes(0, 1000, 1000)));
+        expect(Integer.valueOf(0), Integer.valueOf(FroglogTracking.playMinutes(0, 1000, 1000 + 10_000)));
+        expect(Integer.valueOf(1), Integer.valueOf(FroglogTracking.playMinutes(0, 1000, 1000 + 22_000)));
+        expect(Integer.valueOf(1), Integer.valueOf(FroglogTracking.playMinutes(0, 1000, 1000 + 60_000)));
+        expect(Integer.valueOf(2), Integer.valueOf(FroglogTracking.playMinutes(0, 1000, 1000 + 90_000)));
 
         FroglogGame one = new FroglogGame(5, true, "Hades", "PC", null, "Live", "", null, 0, "", 0);
         FroglogGame two = new FroglogGame(6, true, "Hades", "PC", null, "Live", "", null, 0, "", 0);

@@ -2,10 +2,8 @@ package rip.moth.cocoonshell.froglog;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -19,36 +17,32 @@ public class FroglogLibraryPicker extends Activity {
         super.onCreate(savedInstanceState);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(24), dp(28), dp(24), dp(24));
-        TextView title = new TextView(this);
-        title.setText("Add a Cocoon game");
-        title.setTextSize(22);
-        title.setTextColor(Color.parseColor("#F4F1EA"));
-        title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
-        root.addView(title);
+        root.setPadding(dp(20), dp(24), dp(20), dp(24));
+        root.addView(FroglogTheme.title(this, "Add a Cocoon game"));
+        TextView copy = FroglogTheme.text(this, "Choose a recent game from your Cocoon library.", 14, false);
+        copy.setTextColor(FroglogTheme.MUTED);
+        root.addView(copy);
         List<CocoonLibrary.Game> games = CocoonLibrary.recent(this);
         if (games.isEmpty()) {
-            TextView empty = new TextView(this);
-            empty.setText("Cocoon's library has no recent games to add yet.");
-            empty.setTextColor(Color.parseColor("#C8C2B8"));
-            empty.setPadding(0, dp(16), 0, 0);
-            root.addView(empty);
+            TextView empty = FroglogTheme.text(this, "Cocoon's library has no recent games to add yet.", 14, false);
+            empty.setTextColor(FroglogTheme.MUTED);
+            LinearLayout wrap = new LinearLayout(this);
+            wrap.setOrientation(LinearLayout.VERTICAL);
+            wrap.addView(empty);
+            root.addView(FroglogTheme.card(this, wrap));
         }
         for (int i = 0; i < games.size(); i++) {
             final CocoonLibrary.Game game = games.get(i);
-            Button button = new Button(this);
-            button.setAllCaps(false);
-            button.setText(game.title + (game.platformName == null ? "" : " · " + game.platformName));
-            button.setTextColor(Color.parseColor("#121418"));
-            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-            bg.setColor(Color.parseColor("#8BD17C"));
-            bg.setCornerRadius(dp(12));
-            button.setBackground(bg);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.topMargin = dp(12);
-            button.setLayoutParams(params);
-            button.setOnClickListener(new View.OnClickListener() {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.VERTICAL);
+            row.addView(FroglogTheme.text(this, game.title, 16, true));
+            if (game.platformName != null && !game.platformName.isEmpty()) {
+                TextView meta = FroglogTheme.text(this, game.platformName, 13, false);
+                meta.setTextColor(FroglogTheme.MUTED);
+                row.addView(meta);
+            }
+            View card = FroglogTheme.card(this, row);
+            card.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     Intent intent = new Intent(FroglogLibraryPicker.this, FroglogAddGame.class);
@@ -60,12 +54,13 @@ public class FroglogLibraryPicker extends Activity {
                     startActivity(intent);
                 }
             });
-            root.addView(button);
+            root.addView(card);
         }
         ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(Color.parseColor("#121418"));
+        FroglogTheme.page(scroll);
         scroll.addView(root);
         setContentView(scroll);
+        FroglogTheme.paintSystemBars(this);
     }
 
     private int dp(int value) {

@@ -84,19 +84,16 @@ public class FroglogRecentWidget extends AppWidgetProvider {
         String filter = FroglogStore.filter(context);
         views.setTextViewText(id(context, "froglog_filter"), FroglogGames.filterLabel(filter));
         boolean signedIn = FroglogStore.signedIn(context);
+        views.setViewVisibility(id(context, "froglog_subtitle"), View.GONE);
         if (!signedIn) {
-            showMessage(context, views, "Sign in to see your recent Froglog games");
-            views.setTextViewText(id(context, "froglog_subtitle"), "Recent games");
+            showMessage(context, views, "Sign in to Froglog");
         } else if (recent != null && recent.error != null) {
             showMessage(context, views, recent.error);
-            views.setTextViewText(id(context, "froglog_subtitle"), username);
         } else if (recent == null || recent.games.isEmpty()) {
-            showMessage(context, views, "No Froglog games in " + FroglogGames.filterLabel(filter));
-            views.setTextViewText(id(context, "froglog_subtitle"), username);
+            showMessage(context, views, "No play history yet");
         } else {
             views.setViewVisibility(id(context, "froglog_message"), View.GONE);
             views.setViewVisibility(id(context, "froglog_row"), View.VISIBLE);
-            views.setTextViewText(id(context, "froglog_subtitle"), username);
             List<FroglogGame> games = recent.games;
             for (int i = 0; i < SLOTS; i++) {
                 int slot = id(context, "froglog_slot" + i);
@@ -213,7 +210,7 @@ public class FroglogRecentWidget extends AppWidgetProvider {
             slots--;
             cover = Math.min(innerH, (innerW - gap * (slots - 1)) / slots);
         }
-        cover = Math.max(36, Math.min(cover, 56));
+        cover = Math.max(40, Math.min(cover, 72));
         return new Fit(cover, slots, compact);
     }
 

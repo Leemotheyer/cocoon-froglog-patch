@@ -12,8 +12,8 @@ import java.util.Map;
 
 /**
  * Turns {@code GET /api/activity} into the people the viewer follows.
- * That feed is already limited to follows plus the viewer. Online rows only
- * upgrade a person who is already in the feed.
+ * Last-played rows stay in this list for the Froglog pod. Only a live
+ * now-playing row from {@code /activity/online} sets {@code playing}.
  */
 public final class FroglogFollows {
     private FroglogFollows() {}
@@ -38,10 +38,22 @@ public final class FroglogFollows {
             }
         }
         ArrayList<FroglogFollow> people = new ArrayList<FroglogFollow>();
+        LinkedHashMap<String, Boolean> seen = new LinkedHashMap<String, Boolean>();
         for (JSONObject item : latest.values()) {
             String username = item.optString("username", "").trim();
-            JSONObject live = online.get(username.toLowerCase(Locale.ROOT));
+            String key = username.toLowerCase(Locale.ROOT);
+            JSONObject live = online.get(key);
             people.add(person(item, live));
+            seen.put(key, Boolean.TRUE);
+            if (people.size() >= 12) {
+                return people;
+            }
+        }
+        for (Map.Entry<String, JSONObject> entry : online.entrySet()) {
+            if (seen.containsKey(entry.getKey()) || sameUser(entry.getKey(), self)) {
+                continue;
+            }
+            people.add(person(entry.getValue(), entry.getValue()));
             if (people.size() >= 12) {
                 break;
             }
@@ -57,10 +69,10 @@ public final class FroglogFollows {
         }
         String avatar = firstText(item, "avatar_url", "avatarUrl");
         String game = firstText(item, "game_title", "gameTitle");
-        boolean playing = false;
+        boolean playing = nowPlaying(live);
         String status;
-        if (live != null) {
-            String liveTitle = firstText(live, "title", "game_title");
+        if (playing) {
+            String liveTitle = liveTitle(live);
             if (liveTitle != null) {
                 game = liveTitle;
             }
@@ -72,7 +84,6 @@ public final class FroglogFollows {
             if (liveName != null) {
                 name = liveName;
             }
-            playing = game != null;
             status = game == null ? "On Froglog" : "Playing " + game;
         } else if (game != null) {
             status = label(item.optString("type", "")) + " · " + game;
@@ -135,7 +146,7 @@ public final class FroglogFollows {
             return Collections.emptyMap();
         }
         try {
-            JSONArray array = new JSONArray(json);
+            JSONArray array = onlineArray(json);
             LinkedHashMap<String, JSONObject> map = new LinkedHashMap<String, JSONObject>();
             for (int i = 0; i < array.length(); i++) {
                 JSONObject item = array.optJSONObject(i);
@@ -143,7 +154,7 @@ public final class FroglogFollows {
                     continue;
                 }
                 String username = item.optString("username", "").trim();
-                if (!username.isEmpty()) {
+                if (!username.isEmpty() && nowPlaying(item)) {
                     map.put(username.toLowerCase(Locale.ROOT), item);
                 }
             }
@@ -151,6 +162,42 @@ public final class FroglogFollows {
         } catch (Exception ignored) {
             return Collections.emptyMap();
         }
+    }
+
+    private static JSONArray onlineArray(String json) throws Exception {
+        String trimmed = json.trim();
+        if (trimmed.startsWith("[")) {
+            return new JSONArray(trimmed);
+        }
+        JSONObject object = new JSONObject(trimmed);
+        String[] keys = {"online", "users", "people", "now_playing", "nowPlaying"};
+        for (int i = 0; i < keys.length; i++) {
+            JSONArray array = object.optJSONArray(keys[i]);
+            if (array != null) {
+                return array;
+            }
+        }
+        return new JSONArray();
+    }
+
+    /** Froglog's Online Now card is in-game only. Last-seen activity is not presence. */
+    static boolean nowPlaying(JSONObject live) {
+        if (live == null) {
+            return false;
+        }
+        String type = live.optString("type", "").trim().toLowerCase(Locale.ROOT);
+        if ("session_logged".equals(type) || "session".equals(type)
+                || "game_completed".equals(type) || "completed".equals(type)
+                || "game_started".equals(type) || "started".equals(type)) {
+            return false;
+        }
+        return liveTitle(live) != null
+                || firstText(live, "started_at", "startedAt") != null
+                || live.has("game_id") && !live.isNull("game_id");
+    }
+
+    private static String liveTitle(JSONObject live) {
+        return firstText(live, "title", "now_playing", "nowPlaying");
     }
 
     private static boolean newer(JSONObject item, JSONObject previous) {

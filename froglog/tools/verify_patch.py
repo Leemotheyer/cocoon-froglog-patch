@@ -1,4 +1,5 @@
 """Confirm the catalog patch adds Froglog and leaves the other picker path in place."""
+import os
 import re
 import subprocess
 import sys
@@ -9,8 +10,19 @@ LABEL = re.compile(r":(cond|goto|pswitch_data|sswitch_data|array)_([0-9a-f]+)")
 
 
 def disassemble(baksmali: str, dex: Path, out: Path, *classes: str) -> None:
+    cmd = ["java", "-cp", baksmali, "org.jf.baksmali.Main"]
+    if Path(baksmali).is_file() and baksmali.endswith("baksmali.jar"):
+        try:
+            subprocess.check_call(
+                ["java", "-jar", baksmali, "d", "--classes", ",".join(classes), "-o", str(out), str(dex)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            return
+        except subprocess.CalledProcessError:
+            pass
     subprocess.check_call(
-        ["java", "-jar", baksmali, "d", "--classes", ",".join(classes), "-o", str(out), str(dex)],
+        cmd + ["d", "--classes", ",".join(classes), "-o", str(out), str(dex)],
         stdout=subprocess.DEVNULL,
     )
 
@@ -54,6 +66,7 @@ def main() -> None:
         "Lrip/moth/cocoonshell/utils/u6;",
         "Lef/d0;",
         "Lef/q3;",
+        "Ltf/i1;",
     )
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -70,6 +83,7 @@ def main() -> None:
         friends_before = (root / "before" / "ef" / "d0.smali").read_text(encoding="utf-8")
         friends_after = (root / "after" / "ef" / "d0.smali").read_text(encoding="utf-8")
         click_after = (root / "after" / "ef" / "q3.smali").read_text(encoding="utf-8")
+        widget_after = (root / "after" / "tf" / "i1.smali").read_text(encoding="utf-8")
 
     clinit_before = instructions(method(before, ".method static constructor <clinit>()V"))
     clinit_after = instructions(method(after, ".method static constructor <clinit>()V"))
@@ -155,9 +169,19 @@ def main() -> None:
     friends_header = ".method public static final k0(Ljava/util/List;Ljava/util/Map;Z)Ljava/util/List;"
     friends_old = instructions(method(friends_before, friends_header))
     friends_new = instructions(method(friends_after, friends_header))
-    follows = "invoke-static {v0}, Lrip/moth/cocoonshell/froglog/FroglogSocial;->withFollows(Ljava/util/List;)Ljava/util/List;"
-    if friends_new != friends_old[:-1] + [follows, "move-result-object v0", "return-object v0"]:
-        raise SystemExit("friend list changed more than the Froglog follows")
+    if friends_new != friends_old:
+        raise SystemExit("Steam friend list should stay Steam-only")
+    if "withFollows" in friends_after:
+        raise SystemExit("Froglog follows were merged into the Steam list")
+    tabs = "Lrip/moth/cocoonshell/froglog/FroglogSocial;->withFriendsTabs(Ljava/util/List;)Ljava/util/List;"
+    if tabs not in friends_after:
+        raise SystemExit("friend tabs are missing the Froglog tab")
+    freeze = "Lr3/a;->k(Ljava/util/List;)Lva/b;"
+    if freeze not in friends_after or friends_after.find(tabs) < friends_after.find(freeze):
+        raise SystemExit("friend tabs hook is not after the tab list freeze")
+    panel = "Lrip/moth/cocoonshell/froglog/FroglogSocial;->listForTab(Ljava/lang/Object;Ljava/util/List;)Ljava/util/List;"
+    if panel not in friends_after:
+        raise SystemExit("friend panel is missing the Froglog tab list")
 
     click_header = ".method public final invoke(Ljava/lang/Object;)Ljava/lang/Object;"
     click = instructions(method(click_after, click_header))
@@ -174,6 +198,16 @@ def main() -> None:
         raise SystemExit("friend click does not return after opening Froglog")
     if "check-cast v0, Lef/d6;" not in click or "invoke-virtual {v2}, Ljava/lang/Number;->longValue()J" not in click:
         raise SystemExit("steam friend click was removed")
+
+    android_widget = method(
+        widget_after,
+        ".method public static final a(Lrip/moth/cocoonshell/data/model/Widget;FFZLp1/o;Lz0/e0;I)V",
+    )
+    if "Lwf/d2;->f(Lp1/o;Le0/e;Lz0/e0;)Lp1/o;" in android_widget:
+        raise SystemExit("android widgets still use Compose drop shadows")
+    host_view = method(widget_after, ".method public static final f(Landroid/view/View;)V")
+    if "Lrip/moth/cocoonshell/froglog/GlassCompat;->styleAndroidWidget(Landroid/view/View;)V" not in host_view:
+        raise SystemExit("android widget host does not keep a stable tile face")
     print("patch check ok")
 
 

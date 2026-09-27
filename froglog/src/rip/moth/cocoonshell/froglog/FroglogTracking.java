@@ -28,7 +28,8 @@ public final class FroglogTracking {
             obj.put("end_date", JSONObject.NULL);
             obj.put("status_override", JSONObject.NULL);
             changed = true;
-        } else if ("Imported".equals(status) && blank(obj, "start_date")) {
+        }
+        if (blank(obj, "start_date")) {
             String date = sessionDate != null && sessionDate.length() >= 10 ? sessionDate.substring(0, 10) : "";
             if (!date.isEmpty()) {
                 obj.put("start_date", date);
@@ -45,6 +46,26 @@ public final class FroglogTracking {
             changed = true;
         }
         return changed ? obj : null;
+    }
+
+    /**
+     * Minutes to post for a finished play. Cocoon's duration field is often 0 when
+     * Now Playing fired but Track playtime did not, so elapsed time is the fallback.
+     * A play that lasted at least one presence poll (15s) counts as one minute.
+     */
+    public static int playMinutes(int reported, long startTimeMs, long endTimeMs) {
+        if (reported >= 1) {
+            return reported;
+        }
+        if (startTimeMs <= 0 || endTimeMs <= startTimeMs) {
+            return 0;
+        }
+        long elapsed = endTimeMs - startTimeMs;
+        if (elapsed < 15L * 1000L) {
+            return 0;
+        }
+        int minutes = (int) ((elapsed + 59999L) / 60000L);
+        return minutes < 1 ? 1 : minutes;
     }
 
     /** The live-service id when exactly one row shares the title. Two matches is not a match. */
