@@ -21,7 +21,7 @@ The Froglog recent tile uses the same 3×2 grid size as Recently played. Covers 
 
 ## Install
 
-The packaged file is `dist/cocoon-306-froglog.apk` after `./froglog/build.sh`. It is not committed. This build is sha256 `814cb1198ea45d20438eb0ed707fb8448f449cbcbc69c7c223766788019f51f9`.
+The packaged file is `dist/cocoon-306-froglog.apk` after `./froglog/build.sh`. It is not committed. This build is sha256 `814cb1198ea45d20438eb0ed707fb8448f449cbcbc69c7c223766788019f51f9` and is attached to the GitHub release [v3.06-1-froglog7](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.06-1-froglog7) as `cocoon-306-froglog.apk`.
 
 On an Android 14 emulator, `3.06-1-froglog6` reached the main screen and then died while laying out the friends panel: `VerifyError` in `ef.q3.invoke`, unaligned packed-switch payload. `3.06-1-froglog7` keeps that screen up. The same emulator run does not cover Froglog sign-in or posting a session.
 
