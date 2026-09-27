@@ -24,7 +24,7 @@ The Froglog recent tile uses the same 3×2 grid size as Recently played. Stats i
 
 ## Install
 
-The packaged file is `dist/cocoon-306-froglog.apk` after `./froglog/build.sh`. It is not committed. This build is sha256 `d94cb4d02574e2afc7725a42deea78c1122dfd7c5380ce60bc1ab8ae7f4d044b`. `SKIP_SETUP=1 ./froglog/build.sh` writes a test APK that marks setup complete so BlueStacks can reach the home screen without the onboarding wizard. The default build leaves setup in place for Android 13.
+Download [`cocoon-306-froglog.apk`](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/download/v3.06-1-froglog8/cocoon-306-froglog.apk) from [GitHub Releases](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.06-1-froglog8) (`3.06-1-froglog8`, sha256 `679e7ad4ee1c925d5484d0cf9af990ea96c7ce90a806e0133b1edaa6bf86bb4d`). Or build `dist/cocoon-306-froglog.apk` with `./froglog/build.sh` (not committed). `SKIP_SETUP=1 ./froglog/build.sh` writes a test APK that marks setup complete so BlueStacks can reach the home screen without the onboarding wizard. The default build leaves setup in place for Android 13.
 
 On Android 9 BlueStacks, `3.06-1-froglog8` reaches the home screen, the all-apps drawer, and the Froglog pod. Official Cocoon can stay installed at the same time. Android 13 glass has not been re-checked on a physical device yet.
 
