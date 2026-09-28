@@ -26,7 +26,7 @@ The Froglog recent tile uses the same 3×2 grid size as Recently played. Stats i
 
 ## Install
 
-`./froglog/build.sh` writes `dist/cocoon-306-froglog-<versionName>.apk` (not committed), for example `dist/cocoon-306-froglog-3.06-1-froglog10.apk`. GitHub release assets use the same naming. The current release is [v3.06-1-froglog10](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.06-1-froglog10). `SKIP_SETUP=1 ./froglog/build.sh` still marks setup complete for BlueStacks test builds. The default build leaves setup in place for Android 13.
+`./froglog/build.sh` writes `dist/cocoon-306-froglog-<versionName>.apk` (not committed), for example `dist/cocoon-306-froglog-3.06-1-froglog10.apk`. GitHub release assets use the same naming. The current release is [v3.06-1-froglog10](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.06-1-froglog10) (`cocoon-306-froglog-3.06-1-froglog10.apk`, sha256 `edf063acd007312e19acabb2148b18dbb0e5416e0c69a0d385ac38b7a77eab48`). `SKIP_SETUP=1 ./froglog/build.sh` still marks setup complete for BlueStacks test builds. The default build leaves setup in place for Android 13.
 
 1. Official Cocoon can stay installed. A previous Froglog build with this same debug key can update over itself.
 2. Install the versioned APK from Releases or from `dist/` after a local build.
