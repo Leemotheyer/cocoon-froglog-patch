@@ -42,6 +42,18 @@ public final class FroglogTrackingTest {
         expect(JSONObject.NULL, resumed.get("status_override"));
         expect(false, Boolean.valueOf(resumed.getBoolean("dnf")));
         expect(false, Boolean.valueOf(resumed.has("initial_session_hours")));
+        expect(null, FroglogTracking.preparePayload(finished, "2026-09-01", false));
+
+        JSONObject untracked = new JSONObject();
+        untracked.put("id", 14342);
+        untracked.put("status", "");
+        untracked.put("session_tracking", false);
+        untracked.put("start_date", JSONObject.NULL);
+        untracked.put("public_session_count", "0");
+        JSONObject repaired = FroglogTracking.preparePayload(untracked, "2026-09-27", false);
+        expect("2026-09-27", repaired.getString("start_date"));
+        expect(true, Boolean.valueOf(repaired.getBoolean("session_tracking")));
+        expect(false, Boolean.valueOf(repaired.has("public_session_count")));
 
         JSONObject imported = new JSONObject();
         imported.put("id", 2);

@@ -21,6 +21,7 @@ public final class FroglogPresence {
     private static boolean visibilityOn;
     private static FroglogClient.Recent library;
     private static long libraryAt;
+    private static String unmatched;
 
     private FroglogPresence() {}
 
@@ -185,6 +186,13 @@ public final class FroglogPresence {
         }
         FroglogGame game = FroglogMatch.best(recent.games, playing.title, playing.platformId);
         if (game == null) {
+            synchronized (LOCK) {
+                if (!key.equals(unmatched)) {
+                    unmatched = key;
+                    Log.i(TAG, "Cocoon is playing " + playing.title + " (" + playing.platformId
+                            + ") but it is not in the Froglog library yet");
+                }
+            }
             return null;
         }
         FroglogStore.link(context, key, game.id, game.live);

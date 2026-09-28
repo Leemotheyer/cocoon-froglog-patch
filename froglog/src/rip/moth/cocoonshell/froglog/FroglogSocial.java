@@ -179,7 +179,8 @@ public final class FroglogSocial {
             if (following == null) {
                 Log.w(TAG, "Froglog follow list unavailable, using the activity feed");
             }
-            cache = FroglogFollows.people(activity, online, following, self);
+            List<FroglogFollow> people = FroglogFollows.people(activity, online, following, self);
+            cache = FroglogAvatars.localize(CatalogHook.context, people);
             int live = 0;
             for (int i = 0; i < cache.size(); i++) {
                 if (cache.get(i).playing) {

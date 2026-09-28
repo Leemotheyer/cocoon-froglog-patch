@@ -1,5 +1,6 @@
 package rip.moth.cocoonshell.froglog;
 
+import java.text.Normalizer;
 import java.util.List;
 
 /** Picks the Froglog library entry that corresponds to a Cocoon game. */
@@ -67,9 +68,14 @@ public final class FroglogMatch {
         return score;
     }
 
-    /** Same cleanup as {@link #normalize}, then edition suffixes such as "definitive edition". */
+    /**
+     * Same cleanup as {@link #normalize}, then edition suffixes such as "definitive edition".
+     * Emulator ROM names are also reduced to the game's title: No-Intro tags like
+     * {@code (USA, Europe) (Rev 1)} go, accents fold, and {@code Legend of Zelda, The} reads
+     * as {@code The Legend of Zelda}.
+     */
     public static String normalizeTitle(String value) {
-        String normalized = normalize(value);
+        String normalized = normalize(romTitle(value));
         for (int i = 0; i < EDITION_SUFFIXES.length; i++) {
             String suffix = EDITION_SUFFIXES[i];
             if (normalized.endsWith(suffix)) {
@@ -77,6 +83,18 @@ public final class FroglogMatch {
             }
         }
         return normalized;
+    }
+
+    static String romTitle(String value) {
+        if (value == null) {
+            return "";
+        }
+        String title = value.replaceAll("[\\(\\[][^\\)\\]]*[\\)\\]]", " ").trim();
+        if (title.isEmpty()) {
+            title = value;
+        }
+        title = title.replaceAll("^(.+?), (The|A|An)(\\s*(?:[-:].*)?)$", "$2 $1$3");
+        return Normalizer.normalize(title, Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
     }
 
     public static String normalize(String value) {

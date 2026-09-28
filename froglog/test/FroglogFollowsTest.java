@@ -13,8 +13,8 @@ public final class FroglogFollowsTest {
                 + "{\"username\":\"bo\",\"display_username\":\"Bo\",\"type\":\"game_started\",\"created_at\":\"2026-09-03\",\"game_title\":\"Celeste\"}"
                 + "]}";
         String online = "{\"online\":["
-                + "{\"username\":\"bo\",\"displayUsername\":\"Bo\",\"title\":\"Celeste II\",\"avatarUrl\":\"https://img/bo\"},"
-                + "{\"username\":\"cy\",\"displayUsername\":\"Cy\",\"title\":\"Hades II\"}"
+                + "{\"username\":\"bo\",\"displayUsername\":\"Bo\",\"online\":true,\"title\":\"Celeste II\",\"avatarUrl\":\"https://img/bo\"},"
+                + "{\"username\":\"cy\",\"displayUsername\":\"Cy\",\"online\":true,\"title\":\"Hades II\",\"avatarUrl\":\"/uploads/avatars/cy.gif\"}"
                 + "]}";
         List<FroglogFollow> people = FroglogFollows.people(activity, online, "me");
         // cy is online but not followed, so /activity/online alone does not add them.
@@ -32,6 +32,7 @@ public final class FroglogFollowsTest {
         expect(2, followed.size());
         expect("cy", followed.get(0).username);
         expect("Playing Hades II", followed.get(0).status);
+        expect("https://api.froglog.co.uk/uploads/avatars/cy.gif", followed.get(0).avatarUrl);
         expect("ada", followed.get(1).username);
         expect(0, FroglogFollows.people("{\"activity\":[]}", "[]", "me").size());
         String lastSeen = "{\"activity\":["
@@ -42,8 +43,12 @@ public final class FroglogFollowsTest {
         expect("lee", offline.get(0).username);
         expect("Logged · FINAL FANTASY XIV Online Free Trial", offline.get(0).status);
         expect(false, offline.get(0).playing);
+        List<FroglogFollow> seen = FroglogFollows.people(lastSeen,
+                "[{\"username\":\"lee\",\"displayUsername\":\"Lee\",\"online\":false,"
+                        + "\"title\":\"FINAL FANTASY XIV Online Free Trial\"}]", "me");
+        expect(false, seen.get(0).playing);
         List<FroglogFollow> untitled = FroglogFollows.people(lastSeen,
-                "[{\"username\":\"lee\",\"displayUsername\":\"Lee\",\"title\":null}]", "me");
+                "[{\"username\":\"lee\",\"displayUsername\":\"Lee\",\"online\":true,\"title\":null}]", "me");
         expect(true, untitled.get(0).playing);
         expect("In game", untitled.get(0).status);
         expect(null, untitled.get(0).game);

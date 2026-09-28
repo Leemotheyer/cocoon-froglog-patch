@@ -67,7 +67,7 @@ public final class CocoonLibrary {
             db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
             cursor = db.rawQuery(
                     "SELECT clientSessionId, gameName, platformId, startTime, endTime, durationMinutes, date "
-                            + "FROM game_sessions WHERE endTime > ? ORDER BY endTime ASC LIMIT 200",
+                            + "FROM game_sessions WHERE endTime > ? ORDER BY endTime DESC LIMIT 300",
                     new String[] {String.valueOf(sinceMs)});
             while (cursor.moveToNext()) {
                 sessions.add(new Session(cursor.getString(0), cursor.getString(1), cursor.getString(2),

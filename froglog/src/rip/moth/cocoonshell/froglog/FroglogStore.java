@@ -52,6 +52,27 @@ public final class FroglogStore {
         prefs(context).edit().putString("link_" + key, (live ? "live:" : "game:") + gameId).apply();
     }
 
+    /** Every {@code game:12} or {@code live:12} a Cocoon title has been linked to. */
+    public static java.util.Set<String> linkedGames(Context context) {
+        java.util.TreeSet<String> out = new java.util.TreeSet<String>();
+        for (java.util.Map.Entry<String, ?> entry : prefs(context).getAll().entrySet()) {
+            Object value = entry.getValue();
+            if (entry.getKey().startsWith("link_") && value instanceof String
+                    && (((String) value).startsWith("game:") || ((String) value).startsWith("live:"))) {
+                out.add((String) value);
+            }
+        }
+        return out;
+    }
+
+    public static boolean repaired(Context context, String game) {
+        return prefs(context).getBoolean("repaired_v1_" + game, false);
+    }
+
+    public static void markRepaired(Context context, String game) {
+        prefs(context).edit().putBoolean("repaired_v1_" + game, true).apply();
+    }
+
     public static void decline(Context context, String key) {
         prefs(context).edit().putString("link_" + key, "no").apply();
     }

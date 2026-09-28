@@ -163,12 +163,19 @@ if [[ ! -f "$KS" ]]; then
     -dname "CN=Froglog Widget,O=Cocoon Mod,C=UK"
 fi
 
-OUT="$DIST/cocoon-306-froglog.apk"
+SIGNED="$WORK/cocoon-froglog-signed.apk"
 "$APKSIGNER" sign --ks "$KS" --ks-pass "pass:$KS_PASS" --key-pass "pass:$KS_PASS" \
-  --ks-key-alias "$KS_ALIAS" --out "$OUT" "$WORK/cocoon-froglog-aligned.apk"
-"$APKSIGNER" verify --verbose "$OUT"
-"$AAPT" dump badging "$OUT" > "$WORK/badging.txt"
+  --ks-key-alias "$KS_ALIAS" --out "$SIGNED" "$WORK/cocoon-froglog-aligned.apk"
+"$APKSIGNER" verify --verbose "$SIGNED"
+"$AAPT" dump badging "$SIGNED" > "$WORK/badging.txt"
 head -n 5 "$WORK/badging.txt"
+VERSION="$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" "$WORK/badging.txt" | head -n 1)"
+if [[ -z "$VERSION" ]]; then
+  echo "could not read versionName from badging" >&2
+  exit 1
+fi
+OUT="$DIST/cocoon-306-froglog-${VERSION}.apk"
+cp "$SIGNED" "$OUT"
 
 OUT_PY="$OUT"
 if command -v cygpath >/dev/null 2>&1; then

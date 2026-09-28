@@ -295,15 +295,17 @@ public final class FroglogClient {
     public static void updateSessionHours(String token, String remote, double hours) throws Exception {
         String[] parts = remote.split(":");
         boolean live = "live".equals(parts[0]);
-        String path = BASE + (live ? "/live-service/" : "/games/") + Long.parseLong(parts[1])
-                + "/sessions/" + Long.parseLong(parts[2]);
-        JSONObject body = new JSONObject();
-        body.put("hours", hours);
-        HttpResult result = request("PUT", path, token, body.toString());
-        Log.i("FroglogWidget", "SESSION PUT " + path + " " + body + " -> " + result.code);
-        if (result.code < 200 || result.code >= 300) {
-            throw call(result, "Could not update the session (" + result.code + ")");
+        long id = Long.parseLong(parts[1]);
+        long sessionId = Long.parseLong(parts[2]);
+        org.json.JSONArray rows = sessions(token, live, id);
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject row = rows.optJSONObject(i);
+            if (row != null && row.optLong("id", -1L) == sessionId) {
+                putSession(token, live, id, row, hours, true);
+                return;
+            }
         }
+        throw new CallException(404, "The Froglog session was removed");
     }
 
     public static long createGame(String token, String title, String platform, String coverUrl, boolean isPublic) throws Exception {
@@ -413,12 +415,82 @@ public final class FroglogClient {
         }
     }
 
+    /** Froglog has no {@code GET /games/:id}. LilyPad reads the library list and picks the row. */
     private static JSONObject getGame(String token, long id) throws Exception {
-        HttpResult result = request("GET", BASE + "/games/" + id, token, null);
+        HttpResult result = request("GET", BASE + "/games", token, null);
         if (result.code < 200 || result.code >= 300) {
-            throw call(result, "Could not load the Froglog game (" + result.code + ")");
+            throw call(result, "Could not load the Froglog library (" + result.code + ")");
         }
-        return new JSONObject(result.body);
+        org.json.JSONArray games = new org.json.JSONArray(result.body.isEmpty() ? "[]" : result.body);
+        for (int i = 0; i < games.length(); i++) {
+            JSONObject game = games.optJSONObject(i);
+            if (game != null && game.optLong("id", -1L) == id) {
+                return game;
+            }
+        }
+        throw new CallException(404, "Game " + id + " is not in the Froglog library");
+    }
+
+    private static org.json.JSONArray sessions(String token, boolean live, long id) throws Exception {
+        HttpResult result = request("GET", BASE + (live ? "/live-service/" : "/games/") + id + "/sessions", token, null);
+        if (result.code < 200 || result.code >= 300) {
+            throw call(result, "Could not load the sessions (" + result.code + ")");
+        }
+        return new org.json.JSONArray(result.body.isEmpty() ? "[]" : result.body);
+    }
+
+    /** The website's session edit sends every field, so a partial body is never used. */
+    private static void putSession(String token, boolean live, long id, JSONObject row, double hours, boolean isPublic)
+            throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("date", row.optString("date", ""));
+        body.put("hours", hours);
+        body.put("notes", row.isNull("notes") ? JSONObject.NULL : row.opt("notes"));
+        body.put("is_public", isPublic);
+        body.put("spoiler", row.optBoolean("spoiler", false));
+        String path = BASE + (live ? "/live-service/" : "/games/") + id + "/sessions/" + row.optLong("id");
+        HttpResult result = request("PUT", path, token, body.toString());
+        Log.i("FroglogWidget", "SESSION PUT " + path + " " + body + " -> " + result.code);
+        if (result.code < 200 || result.code >= 300) {
+            throw call(result, "Could not update the session (" + result.code + ")");
+        }
+    }
+
+    /**
+     * Fixes a game Cocoon logged to before tracking was set up: session tracking on, a start
+     * date so it reads In Progress, and Cocoon's own sessions public. A finished game stays finished.
+     */
+    public static void repairGame(String token, long id, boolean live) throws Exception {
+        org.json.JSONArray rows = sessions(token, live, id);
+        String earliest = null;
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject row = rows.optJSONObject(i);
+            String date = row == null ? "" : row.optString("date", "");
+            if (date.length() >= 10 && (earliest == null || date.substring(0, 10).compareTo(earliest) < 0)) {
+                earliest = date.substring(0, 10);
+            }
+        }
+        if (!live) {
+            if (earliest == null) {
+                earliest = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date());
+            }
+            JSONObject payload = FroglogTracking.preparePayload(getGame(token, id), earliest, false);
+            if (payload != null) {
+                putGame(token, id, payload);
+                Log.i("FroglogWidget", "Repaired Froglog game " + id + " tracking and start date");
+                rows = sessions(token, false, id);
+            }
+        }
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject row = rows.optJSONObject(i);
+            if (row == null || row.optBoolean("is_public", false)) {
+                continue;
+            }
+            if (!row.optString("sync_ref", "").startsWith("cocoon:")) {
+                continue;
+            }
+            putSession(token, live, id, row, row.optDouble("hours", 0), true);
+        }
     }
 
     private static void putGame(String token, long id, JSONObject body) throws Exception {
@@ -433,16 +505,12 @@ public final class FroglogClient {
         body.put("date", date);
         body.put("hours", hours);
         body.put("notes", notes == null || notes.isEmpty() ? "Logged from Cocoon" : notes);
-        String path;
-        if (live) {
-            path = BASE + "/live-service/" + id + "/sessions";
-        } else {
-            body.put("is_public", false);
-            if (syncRef != null) {
-                body.put("sync_ref", syncRef);
-            }
-            path = BASE + "/games/" + id + "/sessions";
+        body.put("spoiler", false);
+        body.put("is_public", true);
+        if (syncRef != null) {
+            body.put("sync_ref", syncRef);
         }
+        String path = BASE + (live ? "/live-service/" : "/games/") + id + "/sessions";
         Log.i("FroglogWidget", "SESSION POST " + path + " " + body);
         HttpResult result = request("POST", path, token, body.toString());
         Log.i("FroglogWidget", "SESSION RESP " + result.code + " " + result.body);

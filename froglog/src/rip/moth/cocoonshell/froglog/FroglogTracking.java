@@ -13,17 +13,23 @@ public final class FroglogTracking {
     private FroglogTracking() {}
 
     public static JSONObject preparePayload(JSONObject game, String sessionDate) throws Exception {
+        return preparePayload(game, sessionDate, true);
+    }
+
+    /** {@code reopen} puts a Completed or DNF game back in progress, as logging a new session does. */
+    public static JSONObject preparePayload(JSONObject game, String sessionDate, boolean reopen) throws Exception {
         if (game == null) {
             return null;
         }
         JSONObject obj = new JSONObject(game.toString());
         obj.remove("total_hours");
         obj.remove("session_count");
+        obj.remove("public_session_count");
         obj.remove("last_session_date");
         obj.remove("initial_session_hours");
         boolean changed = false;
         String status = obj.optString("status", "");
-        if ("Completed".equals(status) || "DNF".equals(status)) {
+        if (reopen && ("Completed".equals(status) || "DNF".equals(status))) {
             obj.put("dnf", false);
             obj.put("end_date", JSONObject.NULL);
             obj.put("status_override", JSONObject.NULL);

@@ -22,6 +22,7 @@ import java.util.List;
 public final class FroglogSync {
     private static final String TAG = "FroglogWidget";
     private static final long BACKFILL_MS = 48L * 60L * 60L * 1000L;
+    private static final long WINDOW_MS = 14L * 24L * 60L * 60L * 1000L;
     private static final long RETRY_MS = 60L * 1000L;
     public static final String OFFLINE = "Waiting for a connection";
 
@@ -77,6 +78,7 @@ public final class FroglogSync {
                         scan(context);
                         if (force || System.currentTimeMillis() >= retryAfter) {
                             flush(context);
+                            repair(context);
                         }
                     }
                 } catch (Throwable t) {
@@ -95,48 +97,46 @@ public final class FroglogSync {
         }
     }
 
+    /**
+     * Rereads every recent row instead of moving a watermark. A session left paused finalizes
+     * with its pause time as endTime, which can be earlier than a session that closed after it.
+     * {@code sessionsSince} only stops the first run from sending older history.
+     */
     static void scan(Context context) {
-        long since = FroglogStore.sessionsSince(context);
-        if (since <= 0) {
-            since = System.currentTimeMillis() - BACKFILL_MS;
-            FroglogStore.setSessionsSince(context, since);
+        long floor = FroglogStore.sessionsSince(context);
+        if (floor <= 0) {
+            floor = System.currentTimeMillis() - BACKFILL_MS;
+            FroglogStore.setSessionsSince(context, floor);
         }
+        long since = Math.max(floor, System.currentTimeMillis() - WINDOW_MS);
         List<CocoonLibrary.Session> rows = CocoonLibrary.sessionsSince(context, since);
         if (rows == null) {
             Log.w(TAG, "Could not read Cocoon play sessions");
             return;
         }
-        if (rows.isEmpty()) {
-            return;
-        }
-        Log.i(TAG, "Cocoon sessions to check: " + rows.size());
-        long newest = since;
         for (int i = 0; i < rows.size(); i++) {
             CocoonLibrary.Session row = rows.get(i);
-            newest = Math.max(newest, row.endTime);
             if (row.title.isEmpty()) {
                 continue;
             }
             int minutes = FroglogTracking.playMinutes(row.durationMinutes, row.startTime, row.endTime);
             if (minutes < 1) {
-                Log.i(TAG, "Skipped Cocoon session under a minute: " + row.title);
                 continue;
             }
             String sync = syncRef(row);
-            boolean grew = FroglogStore.posted(context, sync) && FroglogStore.remote(context, sync) != null
+            boolean posted = FroglogStore.posted(context, sync);
+            boolean grew = posted && FroglogStore.remote(context, sync) != null
                     && minutes > FroglogStore.postedMinutes(context, sync);
-            if (!grew && (FroglogStore.posted(context, sync) || FroglogStore.posted(context, row.title + ":" + row.startTime)
+            if (!grew && (posted || FroglogStore.posted(context, row.title + ":" + row.startTime)
                     || FroglogStore.hasPending(context, sync))) {
-                Log.i(TAG, "Cocoon session already handled: " + row.title + " · " + minutes + "m");
                 continue;
             }
             if ("no".equals(FroglogStore.link(context, FroglogMatch.linkKey(row.title, row.platformId)))) {
                 continue;
             }
             FroglogStore.enqueuePending(context, row.title, row.platformId, minutes, date(row), sync);
-            Log.i(TAG, "Queued Cocoon session " + row.title + " · " + minutes + "m");
+            Log.i(TAG, "Queued Cocoon session " + row.title + " (" + row.platformId + ") · " + minutes + "m");
         }
-        FroglogStore.setSessionsSince(context, newest);
     }
 
     static void flush(Context context) {
@@ -165,6 +165,7 @@ public final class FroglogSync {
                     FroglogStore.removePending(context, item.sync);
                     retryAfter = 0;
                     Log.i(TAG, "Updated Froglog session " + item.title + " to " + item.minutes + "m");
+                    submitted(context, item, "Froglog session updated");
                 } catch (IOException e) {
                     offline(context, item, OFFLINE);
                     return;
@@ -202,6 +203,7 @@ public final class FroglogSync {
                 FroglogStore.removePending(context, item.sync);
                 retryAfter = 0;
                 Log.i(TAG, "Logged Froglog session " + item.title + " · " + item.minutes + "m on " + item.date);
+                submitted(context, item, "Session auto-submitted to Froglog");
             } catch (IOException e) {
                 offline(context, item, OFFLINE);
                 return;
@@ -209,6 +211,26 @@ public final class FroglogSync {
                 String message = e.getMessage() == null ? "Could not log the session" : e.getMessage();
                 FroglogStore.pendingError(context, item.sync, message);
                 Log.w(TAG, "Could not log Froglog session " + item.title + ": " + message);
+            }
+        }
+    }
+
+    /** Once per linked game. Earlier builds could not read a game, so its tracking was never set up. */
+    static void repair(Context context) {
+        String token = FroglogStore.token(context);
+        for (String game : FroglogStore.linkedGames(context)) {
+            if (FroglogStore.repaired(context, game)) {
+                continue;
+            }
+            try {
+                long id = Long.parseLong(game.substring(game.indexOf(':') + 1));
+                FroglogClient.repairGame(token, id, game.startsWith("live:"));
+                FroglogStore.markRepaired(context, game);
+            } catch (IOException e) {
+                return;
+            } catch (Exception e) {
+                Log.w(TAG, "Could not repair Froglog game " + game + ": " + e.getMessage());
+                FroglogStore.markRepaired(context, game);
             }
         }
     }
@@ -282,6 +304,23 @@ public final class FroglogSync {
         open.setData(android.net.Uri.parse("froglog://session/" + item.sync));
         PendingIntent pending = PendingIntent.getActivity(context, item.sync.hashCode(), open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        notify(context, item.sync, "Map this session to Froglog", item.title + " · " + duration(item.minutes), pending);
+    }
+
+    /** LilyPad confirms a regular auto-submit the same way. Tapping opens the Froglog pod. */
+    private static void submitted(Context context, FroglogQueue.Item item, String verb) {
+        try {
+            Intent open = new Intent(context, FroglogPodActivity.class);
+            open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent pending = PendingIntent.getActivity(context, 0x46524f47, open,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            notify(context, item.sync, verb, item.title + " · " + duration(item.minutes), pending);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Could not show the Froglog session notice", e);
+        }
+    }
+
+    private static void notify(Context context, String sync, String title, String text, PendingIntent pending) {
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= 26) {
@@ -292,10 +331,17 @@ public final class FroglogSync {
             builder = new Notification.Builder(context);
         }
         builder.setSmallIcon(android.R.drawable.ic_menu_agenda)
-                .setContentTitle("Map this session to Froglog")
-                .setContentText(item.title + " · " + item.minutes + "m")
+                .setContentTitle(title)
+                .setContentText(text)
                 .setAutoCancel(true)
                 .setContentIntent(pending);
-        manager.notify(Math.abs(item.sync.hashCode()), builder.build());
+        manager.notify(Math.abs(sync.hashCode()), builder.build());
+    }
+
+    static String duration(int minutes) {
+        if (minutes < 60) {
+            return minutes + "m";
+        }
+        return (minutes / 60) + "h " + (minutes % 60) + "m";
     }
 }

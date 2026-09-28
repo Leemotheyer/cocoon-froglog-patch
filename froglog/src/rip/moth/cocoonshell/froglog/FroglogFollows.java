@@ -16,6 +16,8 @@ import java.util.Map;
  * now-playing row from {@code /activity/online} sets {@code playing}.
  */
 public final class FroglogFollows {
+    static final String AVATAR_HOST = "https://api.froglog.co.uk";
+
     private FroglogFollows() {}
 
     public static List<FroglogFollow> people(String activityJson, String onlineJson, String self) {
@@ -141,7 +143,10 @@ public final class FroglogFollows {
         } else {
             status = label(item.optString("type", ""));
         }
-        return new FroglogFollow(username, name, avatar, status, game, playing);
+        if (avatar == null && live == null) {
+            avatar = firstText(item, "avatarUrl", "avatar");
+        }
+        return new FroglogFollow(username, name, absoluteAvatar(avatar), status, game, playing);
     }
 
     static String label(String type) {
@@ -232,20 +237,38 @@ public final class FroglogFollows {
     }
 
     /**
-     * Froglog's Online Now card is in-game only, so every {@code /activity/online} row is
-     * someone playing, with or without a title. Activity-feed rows are last-seen, never presence.
+     * {@code /activity/online} lists followed people with their last-seen game too. Froglog's
+     * Online Now card keeps only rows whose {@code online} flag is set, and so does this.
      */
     static boolean nowPlaying(JSONObject live) {
         if (live == null) {
             return false;
         }
-        String type = live.optString("type", "").trim().toLowerCase(Locale.ROOT);
-        if ("session_logged".equals(type) || "session".equals(type)
-                || "game_completed".equals(type) || "completed".equals(type)
-                || "game_started".equals(type) || "started".equals(type)) {
-            return false;
+        Object online = live.opt("online");
+        if (online instanceof Boolean) {
+            return ((Boolean) online).booleanValue();
         }
-        return true;
+        if (online instanceof Number) {
+            return ((Number) online).intValue() != 0;
+        }
+        return online instanceof String && "true".equalsIgnoreCase(((String) online).trim());
+    }
+
+    /** Froglog sends avatars as paths on the API host, e.g. {@code /uploads/avatars/x.gif}. */
+    static String absoluteAvatar(String url) {
+        if (url == null) {
+            return null;
+        }
+        if (url.startsWith("//")) {
+            return "https:" + url;
+        }
+        if (url.startsWith("/")) {
+            return AVATAR_HOST + url;
+        }
+        if (!url.contains("://")) {
+            return AVATAR_HOST + "/" + url;
+        }
+        return url;
     }
 
     private static String liveTitle(JSONObject live) {

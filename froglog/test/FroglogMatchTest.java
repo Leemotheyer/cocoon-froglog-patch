@@ -20,6 +20,16 @@ public final class FroglogMatchTest {
         FroglogGame mapped = FroglogMatch.best(Arrays.asList(finished, hades), "Hades: Definitive Edition", "PC");
         expect("In Progress", mapped.status);
         expect(Long.valueOf(3), Long.valueOf(mapped.id));
+        FroglogGame emerald = game(11, "Pokémon Emerald Version", "Game Boy Advance");
+        FroglogGame alttp = game(12, "The Legend of Zelda: A Link to the Past", "SNES");
+        FroglogGame smw = game(13, "Super Mario World", "SNES");
+        java.util.List<FroglogGame> roms = Arrays.asList(emerald, alttp, smw);
+        expect(Long.valueOf(11), Long.valueOf(FroglogMatch.best(roms,
+                "Pokemon - Emerald Version (USA, Europe) (Rev 1)", "gba").id));
+        expect(Long.valueOf(12), Long.valueOf(FroglogMatch.best(roms,
+                "Legend of Zelda, The - A Link to the Past (USA)", "snes").id));
+        expect(Long.valueOf(13), Long.valueOf(FroglogMatch.best(roms, "Super Mario World [!]", "snes").id));
+        expect("the legend of zelda|switch", FroglogMatch.linkKey("The Legend of Zelda", "Switch"));
         System.out.println("FroglogMatchTest ok");
     }
 
