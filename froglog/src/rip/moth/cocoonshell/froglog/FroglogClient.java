@@ -431,6 +431,10 @@ public final class FroglogClient {
         throw new CallException(404, "Game " + id + " is not in the Froglog library");
     }
 
+    public static org.json.JSONArray gameSessions(String token, boolean live, long id) throws Exception {
+        return sessions(token, live, id);
+    }
+
     private static org.json.JSONArray sessions(String token, boolean live, long id) throws Exception {
         HttpResult result = request("GET", BASE + (live ? "/live-service/" : "/games/") + id + "/sessions", token, null);
         if (result.code < 200 || result.code >= 300) {

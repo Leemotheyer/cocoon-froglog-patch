@@ -13,9 +13,17 @@ public final class FroglogGame {
     public final int sessionCount;
     public final String meta;
     public final long sortKey;
+    /** The library row as the API sent it, for the detail screen. Null when built locally. */
+    public final String json;
 
     public FroglogGame(long id, boolean live, String title, String platform, String coverUrl,
             String status, String review, Double rating, int sessionCount, String meta, long sortKey) {
+        this(id, live, title, platform, coverUrl, status, review, rating, sessionCount, meta, sortKey, null);
+    }
+
+    public FroglogGame(long id, boolean live, String title, String platform, String coverUrl,
+            String status, String review, Double rating, int sessionCount, String meta, long sortKey,
+            String json) {
         this.id = id;
         this.live = live;
         this.title = title;
@@ -27,5 +35,6 @@ public final class FroglogGame {
         this.sessionCount = sessionCount;
         this.meta = meta;
         this.sortKey = sortKey;
+        this.json = json;
     }
 }

@@ -494,12 +494,7 @@ public class FroglogPodActivity extends Activity {
         row.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent detail = new Intent(FroglogPodActivity.this, FroglogGameDetail.class);
-                detail.putExtra(FroglogGameDetail.EXTRA_TITLE, game.title);
-                detail.putExtra(FroglogGameDetail.EXTRA_META, game.meta);
-                detail.putExtra(FroglogGameDetail.EXTRA_REVIEW, game.review);
-                detail.putExtra(FroglogGameDetail.EXTRA_COVER, game.coverUrl == null ? "" : game.coverUrl);
-                startActivity(detail);
+                startActivity(FroglogGameDetail.intent(FroglogPodActivity.this, game, true));
             }
         });
         loadArt(art, game.coverUrl);
