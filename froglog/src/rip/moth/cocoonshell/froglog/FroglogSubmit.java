@@ -12,7 +12,7 @@ public final class FroglogSubmit {
     private FroglogSubmit() {}
 
     public static String send(Context context, String token, FroglogGame game, String title, String platform, String notes) {
-        FroglogStore.link(context, FroglogMatch.linkKey(title, platform), game.id, game.live);
+        FroglogStore.link(context, title, platform, game.id, game.live);
         List<FroglogQueue.Item> waiting = FroglogQueue.matching(FroglogStore.pending(context), title, platform);
         if (waiting.isEmpty()) {
             return null;
@@ -32,7 +32,7 @@ public final class FroglogSubmit {
                 if (logged.live != target.live || logged.id != target.id) {
                     target = new FroglogGame(logged.id, logged.live, target.title, target.platform, target.coverUrl,
                             target.status, target.review, target.rating, target.sessionCount, target.meta, target.sortKey);
-                    FroglogStore.link(context, FroglogMatch.linkKey(title, platform), logged.id, logged.live);
+                    FroglogStore.link(context, title, platform, logged.id, logged.live);
                 }
                 FroglogStore.markPosted(context, item.sync, item.minutes, logged.remote());
                 FroglogStore.removePending(context, item.sync);

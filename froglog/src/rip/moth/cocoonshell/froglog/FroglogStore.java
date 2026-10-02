@@ -45,11 +45,25 @@ public final class FroglogStore {
     }
 
     public static String link(Context context, String key) {
-        return prefs(context).getString("link_" + key, null);
+        return prefs(context).getString(FroglogLinks.LINK + key, null);
     }
 
-    public static void link(Context context, String key, long gameId, boolean live) {
-        prefs(context).edit().putString("link_" + key, (live ? "live:" : "game:") + gameId).apply();
+    /** Links a Cocoon title and keeps its readable name for the mappings screen. */
+    public static void link(Context context, String title, String platform, long gameId, boolean live) {
+        String key = FroglogMatch.linkKey(title, platform);
+        prefs(context).edit()
+                .putString(FroglogLinks.LINK + key, FroglogLinks.value(gameId, live))
+                .putString(FroglogLinks.NAME + key, FroglogLinks.encodeName(title, platform))
+                .apply();
+    }
+
+    /** Forgets a link or a decline, so the next session for that title is matched again. */
+    public static void unlink(Context context, String key) {
+        prefs(context).edit().remove(FroglogLinks.LINK + key).remove(FroglogLinks.NAME + key).commit();
+    }
+
+    public static List<FroglogLinks.Mapping> mappings(Context context, java.util.Map<String, String[]> fallback) {
+        return FroglogLinks.read(prefs(context).getAll(), fallback);
     }
 
     /** Every {@code game:12} or {@code live:12} a Cocoon title has been linked to. */
@@ -73,8 +87,12 @@ public final class FroglogStore {
         prefs(context).edit().putBoolean("repaired_v1_" + game, true).apply();
     }
 
-    public static void decline(Context context, String key) {
-        prefs(context).edit().putString("link_" + key, "no").apply();
+    public static void decline(Context context, String title, String platform) {
+        String key = FroglogMatch.linkKey(title, platform);
+        prefs(context).edit()
+                .putString(FroglogLinks.LINK + key, FroglogLinks.DECLINED)
+                .putString(FroglogLinks.NAME + key, FroglogLinks.encodeName(title, platform))
+                .apply();
     }
 
     public static boolean posted(Context context, String syncRef) {

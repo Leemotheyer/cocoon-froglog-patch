@@ -167,6 +167,45 @@ public final class CocoonLibrary {
         }
     }
 
+    /**
+     * Every visible library game, most recently played first. Sessions carry either the
+     * title or the display name, so a game whose two differ is listed under both.
+     */
+    public static List<Game> all(Context context) {
+        ArrayList<Game> games = new ArrayList<Game>();
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
+        try {
+            String path = context.getDatabasePath("cocoon_db").getPath();
+            db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
+            cursor = db.rawQuery(
+                    "SELECT games.title, games.displayName, games.platformId, platforms.name "
+                            + "FROM games LEFT JOIN platforms ON platforms.id = games.platformId "
+                            + "WHERE games.isHidden = 0 ORDER BY games.lastPlayed DESC",
+                    null);
+            while (cursor.moveToNext()) {
+                String title = cursor.getString(0) == null ? "" : cursor.getString(0).trim();
+                String display = cursor.getString(1) == null ? "" : cursor.getString(1).trim();
+                if (!title.isEmpty()) {
+                    games.add(new Game(title, cursor.getString(2), cursor.getString(3)));
+                }
+                if (!display.isEmpty() && !display.equals(title)) {
+                    games.add(new Game(display, cursor.getString(2), cursor.getString(3)));
+                }
+            }
+        } catch (RuntimeException ignored) {
+            return games;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+            if (db != null) {
+                db.close();
+            }
+        }
+        return games;
+    }
+
     public static List<Game> recent(Context context) {
         ArrayList<Game> games = new ArrayList<Game>();
         SQLiteDatabase db = null;

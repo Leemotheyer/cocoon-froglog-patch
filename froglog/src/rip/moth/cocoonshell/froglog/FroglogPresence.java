@@ -195,7 +195,7 @@ public final class FroglogPresence {
             }
             return null;
         }
-        FroglogStore.link(context, key, game.id, game.live);
+        FroglogStore.link(context, playing.title, playing.platformId, game.id, game.live);
         return new Target(game.id, game.live, game.title);
     }
 

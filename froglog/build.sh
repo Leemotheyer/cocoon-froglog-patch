@@ -78,18 +78,21 @@ javac --release 11 -encoding UTF-8 -cp "$JSON_JAR" -d "$WORK/froglog-test" \
   "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogFollow.java" \
   "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogFollows.java" \
   "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogNowPlaying.java" \
+  "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogLinks.java" \
   "$ROOT/froglog/test/FroglogGamesTest.java" \
   "$ROOT/froglog/test/FroglogMatchTest.java" \
   "$ROOT/froglog/test/FroglogFollowsTest.java" \
   "$ROOT/froglog/test/FroglogQueueTest.java" \
   "$ROOT/froglog/test/FroglogTrackingTest.java" \
-  "$ROOT/froglog/test/FroglogNowPlayingTest.java"
+  "$ROOT/froglog/test/FroglogNowPlayingTest.java" \
+  "$ROOT/froglog/test/FroglogLinksTest.java"
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogGamesTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogMatchTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogFollowsTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogQueueTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogTrackingTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogNowPlayingTest
+java -cp "$WORK/froglog-test:$JSON_JAR" FroglogLinksTest
 
 FLAGS_SRC="$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogFlags.java"
 set_skip_setup() {

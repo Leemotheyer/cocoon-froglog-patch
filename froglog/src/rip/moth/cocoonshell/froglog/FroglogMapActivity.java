@@ -142,7 +142,7 @@ public class FroglogMapActivity extends Activity {
         actions.addView(action("Don't ask for this game", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                FroglogStore.decline(FroglogMapActivity.this, FroglogMatch.linkKey(title, platform));
+                FroglogStore.decline(FroglogMapActivity.this, title, platform);
                 FroglogStore.removePendingKey(FroglogMapActivity.this, title, platform);
                 finish();
             }
