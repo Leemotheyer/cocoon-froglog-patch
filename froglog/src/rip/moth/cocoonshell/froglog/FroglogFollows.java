@@ -34,6 +34,7 @@ public final class FroglogFollows {
         Map<String, JSONObject> online = onlineByUser(onlineJson);
         Map<String, JSONObject> following = followingByUser(followingJson);
         LinkedHashMap<String, JSONObject> latest = new LinkedHashMap<String, JSONObject>();
+        Map<String, JSONObject> avatarRows = new LinkedHashMap<String, JSONObject>();
         for (int i = 0; i < activity.length(); i++) {
             JSONObject item = activity.optJSONObject(i);
             if (item == null) {
@@ -51,6 +52,11 @@ public final class FroglogFollows {
             if (previous == null || newer(item, previous)) {
                 latest.put(key, item);
             }
+            // Not every activity type carries the avatar, so the newest row may not have one.
+            JSONObject avatarRow = avatarRows.get(key);
+            if (activityAvatar(item) != null && (avatarRow == null || newer(item, avatarRow))) {
+                avatarRows.put(key, item);
+            }
         }
         LinkedHashMap<String, JSONObject> followed = new LinkedHashMap<String, JSONObject>(latest);
         if (following != null) {
@@ -63,7 +69,8 @@ public final class FroglogFollows {
         ArrayList<FroglogFollow> playing = new ArrayList<FroglogFollow>();
         ArrayList<FroglogFollow> rest = new ArrayList<FroglogFollow>();
         for (Map.Entry<String, JSONObject> entry : followed.entrySet()) {
-            FroglogFollow person = person(entry.getValue(), online.get(entry.getKey()));
+            FroglogFollow person = person(entry.getValue(), online.get(entry.getKey()),
+                    activityAvatar(avatarRows.get(entry.getKey())));
             (person.playing ? playing : rest).add(person);
         }
         ArrayList<FroglogFollow> people = new ArrayList<FroglogFollow>(playing);
@@ -116,21 +123,25 @@ public final class FroglogFollows {
         }
     }
 
-    private static FroglogFollow person(JSONObject item, JSONObject live) {
+    private static FroglogFollow person(JSONObject item, JSONObject live, String feedAvatar) {
         String username = item.optString("username", "").trim();
         String name = firstText(item, "nickname", "display_username", "displayUsername");
         if (name == null) {
             name = username;
         }
-        String avatar = firstText(item, "avatar_url", "avatarUrl");
+        String avatar = activityAvatar(item);
+        if (avatar == null) {
+            avatar = feedAvatar;
+        }
         String game = firstText(item, "game_title", "gameTitle");
         boolean playing = live != null;
         String status;
         if (playing) {
             // The feed's game_title is last-played. Only the online row names the game open now.
             game = liveTitle(live);
-            String liveAvatar = firstText(live, "avatarUrl", "avatar_url");
-            if (avatar == null) {
+            // Froglog's Online Now card draws this field, so it is the one known to be current.
+            String liveAvatar = activityAvatar(live);
+            if (liveAvatar != null) {
                 avatar = liveAvatar;
             }
             String liveName = firstText(live, "displayUsername", "display_username", "nickname");
@@ -143,10 +154,11 @@ public final class FroglogFollows {
         } else {
             status = label(item.optString("type", ""));
         }
-        if (avatar == null && live == null) {
-            avatar = firstText(item, "avatarUrl", "avatar");
-        }
         return new FroglogFollow(username, name, absoluteAvatar(avatar), status, game, playing);
+    }
+
+    private static String activityAvatar(JSONObject item) {
+        return item == null ? null : firstText(item, "avatarUrl", "avatar_url", "avatar");
     }
 
     static String label(String type) {

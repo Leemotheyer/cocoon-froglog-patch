@@ -44,25 +44,31 @@ public final class FroglogAvatars {
         return out;
     }
 
-    static String still(Context context, String url) {
+    /**
+     * The pod and the friends refresh both localize the same people. Running them one at a
+     * time keeps one writer from removing the PNG another has just handed to a friend row.
+     */
+    static synchronized String still(Context context, String url) {
         if (url == null || url.isEmpty() || !url.startsWith("http")) {
             return url;
         }
         File dir = new File(context.getCacheDir(), "froglog-avatars");
         File file = new File(dir, hash(url) + ".png");
-        if (file.isFile() && file.length() > 0 && System.currentTimeMillis() - file.lastModified() < FRESH_MS) {
+        if (usable(file) && System.currentTimeMillis() - file.lastModified() < FRESH_MS) {
             return Uri.fromFile(file).toString();
         }
+        File tmp = null;
         try {
             byte[] bytes = download(url);
             Bitmap bitmap = decode(bytes);
             if (bitmap == null) {
-                return file.isFile() ? Uri.fromFile(file).toString() : url;
+                Log.w(TAG, "Froglog avatar is not an image: " + url);
+                return usable(file) ? Uri.fromFile(file).toString() : url;
             }
             if (!dir.isDirectory() && !dir.mkdirs()) {
                 return url;
             }
-            File tmp = new File(dir, file.getName() + ".tmp");
+            tmp = File.createTempFile(file.getName(), ".tmp", dir);
             FileOutputStream stream = new FileOutputStream(tmp);
             try {
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
@@ -70,17 +76,22 @@ public final class FroglogAvatars {
                 stream.close();
                 bitmap.recycle();
             }
-            if (!tmp.renameTo(file)) {
-                file.delete();
-                if (!tmp.renameTo(file)) {
-                    return url;
-                }
+            if (!usable(tmp) || !tmp.renameTo(file)) {
+                return usable(file) ? Uri.fromFile(file).toString() : url;
             }
             return Uri.fromFile(file).toString();
         } catch (Exception e) {
             Log.w(TAG, "Could not cache Froglog avatar " + url + ": " + e.getMessage());
-            return file.isFile() ? Uri.fromFile(file).toString() : url;
+            return usable(file) ? Uri.fromFile(file).toString() : url;
+        } finally {
+            if (tmp != null && tmp.exists()) {
+                tmp.delete();
+            }
         }
+    }
+
+    private static boolean usable(File file) {
+        return file.isFile() && file.length() > 0;
     }
 
     /** BitmapFactory reads only the first frame of a GIF, which is the still we want. */
@@ -103,34 +114,48 @@ public final class FroglogAvatars {
         return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
     }
 
+    /** Redirects are followed by hand because HttpURLConnection will not switch between http and https. */
     private static byte[] download(String url) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        conn.setConnectTimeout(15000);
-        conn.setReadTimeout(20000);
-        conn.setInstanceFollowRedirects(true);
-        conn.setRequestProperty("User-Agent", "CocoonFroglogWidget/1.0");
-        try {
-            int code = conn.getResponseCode();
-            if (code < 200 || code >= 300) {
-                throw new IllegalStateException("HTTP " + code);
-            }
-            InputStream in = conn.getInputStream();
+        String next = url;
+        for (int hop = 0; hop < 5; hop++) {
+            HttpURLConnection conn = (HttpURLConnection) new URL(next).openConnection();
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(20000);
+            conn.setInstanceFollowRedirects(false);
+            conn.setRequestProperty("User-Agent", "CocoonFroglogWidget/1.0");
+            conn.setRequestProperty("Accept", "image/*");
             try {
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = in.read(buf)) >= 0) {
-                    out.write(buf, 0, n);
-                    if (out.size() > MAX_BYTES) {
-                        throw new IllegalStateException("avatar too large");
-                    }
+                int code = conn.getResponseCode();
+                if (code >= 300 && code < 400 && conn.getHeaderField("Location") != null) {
+                    next = new URL(new URL(next), conn.getHeaderField("Location")).toString();
+                    continue;
                 }
-                return out.toByteArray();
+                return body(conn, code);
             } finally {
-                in.close();
+                conn.disconnect();
             }
+        }
+        throw new IllegalStateException("too many redirects");
+    }
+
+    private static byte[] body(HttpURLConnection conn, int code) throws Exception {
+        if (code < 200 || code >= 300) {
+            throw new IllegalStateException("HTTP " + code);
+        }
+        InputStream in = conn.getInputStream();
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) >= 0) {
+                out.write(buf, 0, n);
+                if (out.size() > MAX_BYTES) {
+                    throw new IllegalStateException("avatar too large");
+                }
+            }
+            return out.toByteArray();
         } finally {
-            conn.disconnect();
+            in.close();
         }
     }
 
