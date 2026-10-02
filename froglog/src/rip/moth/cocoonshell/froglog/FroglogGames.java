@@ -136,7 +136,8 @@ public final class FroglogGames {
             int sessions = obj.optInt("session_count", 0);
             String platform = text(obj, "platform");
             out.add(new FroglogGame(obj.optLong("id", -1), live, title, platform, cover, status,
-                    text(obj, "review"), rating, sessions, meta(platform, status, rating, sessions, hours, when), rank));
+                    text(obj, "review"), rating, sessions, meta(platform, status, rating, sessions, hours, when), rank,
+                    obj.toString()));
         }
     }
 

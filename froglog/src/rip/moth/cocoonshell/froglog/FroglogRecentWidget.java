@@ -120,11 +120,7 @@ public class FroglogRecentWidget extends AppWidgetProvider {
                     views.setImageViewResource(art,
                             context.getResources().getIdentifier("froglog_cover_placeholder", "drawable", context.getPackageName()));
                 }
-                Intent detail = new Intent(context, FroglogGameDetail.class);
-                detail.putExtra(FroglogGameDetail.EXTRA_TITLE, game.title);
-                detail.putExtra(FroglogGameDetail.EXTRA_META, game.meta);
-                detail.putExtra(FroglogGameDetail.EXTRA_REVIEW, game.review);
-                detail.putExtra(FroglogGameDetail.EXTRA_COVER, game.coverUrl == null ? "" : game.coverUrl);
+                Intent detail = FroglogGameDetail.intent(context, game, true);
                 detail.setData(Uri.parse("froglog://game/" + widgetId + "/" + i));
                 views.setOnClickPendingIntent(slot, PendingIntent.getActivity(context, widgetId * 10 + i, detail,
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
