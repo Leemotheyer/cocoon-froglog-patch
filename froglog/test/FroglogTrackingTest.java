@@ -77,6 +77,13 @@ public final class FroglogTrackingTest {
         expect(Integer.valueOf(1), Integer.valueOf(FroglogTracking.playMinutes(0, 1000, 1000 + 60_000)));
         expect(Integer.valueOf(2), Integer.valueOf(FroglogTracking.playMinutes(0, 1000, 1000 + 90_000)));
 
+        long now = 10_000_000L;
+        expect(true, Boolean.valueOf(FroglogTracking.holdSession(now - 5 * 60_000, now, true, true)));
+        expect(false, Boolean.valueOf(FroglogTracking.holdSession(now - 5 * 60_000, now, false, true)));
+        expect(false, Boolean.valueOf(FroglogTracking.holdSession(now - 5 * 60_000, now, true, false)));
+        expect(true, Boolean.valueOf(FroglogTracking.holdSession(now - 5_000, now, true, false)));
+        expect(false, Boolean.valueOf(FroglogTracking.holdSession(now - FroglogTracking.SETTLE_MS, now, true, false)));
+
         FroglogGame one = new FroglogGame(5, true, "Hades", "PC", null, "Live", "", null, 0, "", 0);
         FroglogGame two = new FroglogGame(6, true, "Hades", "PC", null, "Live", "", null, 0, "", 0);
         expect(Long.valueOf(5), FroglogTracking.uniqueLiveId(Arrays.asList(one), "Hades: Definitive Edition"));

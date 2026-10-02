@@ -12,7 +12,9 @@ import android.os.Build;
 import android.util.Log;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Copies every finished Cocoon session (the rows the Log pod lists) into the Froglog queue,
@@ -114,9 +116,20 @@ public final class FroglogSync {
             Log.w(TAG, "Could not read Cocoon play sessions");
             return;
         }
+        HashSet<Long> games = new HashSet<Long>();
+        for (int i = 0; i < rows.size(); i++) {
+            games.add(Long.valueOf(rows.get(i).gameId));
+        }
+        Set<Long> open = games.isEmpty() ? games : CocoonLibrary.openGames(context, games);
+        long now = System.currentTimeMillis();
+        HashSet<Long> seen = new HashSet<Long>();
         for (int i = 0; i < rows.size(); i++) {
             CocoonLibrary.Session row = rows.get(i);
+            boolean newest = seen.add(Long.valueOf(row.gameId));
             if (row.title.isEmpty()) {
+                continue;
+            }
+            if (FroglogTracking.holdSession(row.endTime, now, newest, open.contains(Long.valueOf(row.gameId)))) {
                 continue;
             }
             int minutes = FroglogTracking.playMinutes(row.durationMinutes, row.startTime, row.endTime);

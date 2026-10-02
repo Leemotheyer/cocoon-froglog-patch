@@ -5,7 +5,12 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import rip.moth.cocoonshell.utils.a2;
 
 /** Reads Cocoon's own game library. It does not write to that database. */
 public final class CocoonLibrary {
@@ -38,6 +43,7 @@ public final class CocoonLibrary {
     /** One finished row from {@code game_sessions}, the table Cocoon's Log pod lists. */
     public static final class Session {
         public final String clientSessionId;
+        public final long gameId;
         public final String title;
         public final String platformId;
         public final long startTime;
@@ -45,9 +51,10 @@ public final class CocoonLibrary {
         public final int durationMinutes;
         public final String date;
 
-        public Session(String clientSessionId, String title, String platformId, long startTime, long endTime,
-                int durationMinutes, String date) {
+        public Session(String clientSessionId, long gameId, String title, String platformId, long startTime,
+                long endTime, int durationMinutes, String date) {
             this.clientSessionId = clientSessionId == null ? "" : clientSessionId;
+            this.gameId = gameId;
             this.title = title == null ? "" : title.trim();
             this.platformId = platformId == null ? "" : platformId;
             this.startTime = startTime;
@@ -66,12 +73,13 @@ public final class CocoonLibrary {
             String path = context.getDatabasePath("cocoon_db").getPath();
             db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
             cursor = db.rawQuery(
-                    "SELECT clientSessionId, gameName, platformId, startTime, endTime, durationMinutes, date "
+                    "SELECT clientSessionId, gameId, gameName, platformId, startTime, endTime, durationMinutes, date "
                             + "FROM game_sessions WHERE endTime > ? ORDER BY endTime DESC LIMIT 300",
                     new String[] {String.valueOf(sinceMs)});
             while (cursor.moveToNext()) {
-                sessions.add(new Session(cursor.getString(0), cursor.getString(1), cursor.getString(2),
-                        cursor.getLong(3), cursor.getLong(4), cursor.getInt(5), cursor.getString(6)));
+                sessions.add(new Session(cursor.getString(0), cursor.getLong(1), cursor.getString(2),
+                        cursor.getString(3), cursor.getLong(4), cursor.getLong(5), cursor.getInt(6),
+                        cursor.getString(7)));
             }
         } catch (RuntimeException e) {
             android.util.Log.w("FroglogWidget", "game_sessions read failed", e);
@@ -85,6 +93,43 @@ public final class CocoonLibrary {
             }
         }
         return sessions;
+    }
+
+    /**
+     * Games Cocoon still treats as open, running or paused. Shortcut games never get a
+     * {@code pending_game_sessions} row, so the in-memory tracker is asked as well.
+     */
+    public static Set<Long> openGames(Context context, Collection<Long> gameIds) {
+        HashSet<Long> open = new HashSet<Long>();
+        for (Long id : gameIds) {
+            try {
+                if (a2.r(id.longValue())) {
+                    open.add(id);
+                }
+            } catch (Throwable ignored) {
+                break;
+            }
+        }
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
+        try {
+            String path = context.getDatabasePath("cocoon_db").getPath();
+            db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
+            cursor = db.rawQuery("SELECT DISTINCT gameId FROM pending_game_sessions WHERE finalizedAtMs IS NULL", null);
+            while (cursor.moveToNext()) {
+                open.add(Long.valueOf(cursor.getLong(0)));
+            }
+        } catch (RuntimeException ignored) {
+            return open;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+            if (db != null) {
+                db.close();
+            }
+        }
+        return open;
     }
 
     /**
