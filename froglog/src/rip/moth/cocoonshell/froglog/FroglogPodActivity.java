@@ -186,11 +186,22 @@ public class FroglogPodActivity extends Activity {
                 load();
             }
         });
+        Button mappings = FroglogTheme.secondary(this, "Game mappings", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(FroglogPodActivity.this, FroglogMappingsActivity.class));
+            }
+        });
+        LinearLayout.LayoutParams mappingsParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        mappingsParams.topMargin = dp(8);
+        mappings.setLayoutParams(mappingsParams);
         LinearLayout.LayoutParams outParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         outParams.topMargin = dp(8);
         out.setLayoutParams(outParams);
         actions.addView(add);
+        actions.addView(mappings);
         actions.addView(out);
         account.addView(actions);
     }

@@ -191,13 +191,13 @@ public final class FroglogSync {
                     ask(context, item);
                     continue;
                 }
-                FroglogStore.link(context, key, game.id, game.live);
+                FroglogStore.link(context, item.title, item.platform, game.id, game.live);
             }
             try {
                 FroglogClient.Logged logged = FroglogClient.logSession(token, game, item.date,
                         FroglogMatch.hoursFromMinutes(item.minutes), "cocoon:" + item.sync, FroglogSubmit.NOTES);
                 if (logged.live != game.live || logged.id != game.id) {
-                    FroglogStore.link(context, key, logged.id, logged.live);
+                    FroglogStore.link(context, item.title, item.platform, logged.id, logged.live);
                 }
                 FroglogStore.markPosted(context, item.sync, item.minutes, logged.remote());
                 FroglogStore.removePending(context, item.sync);
