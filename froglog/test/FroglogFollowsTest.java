@@ -34,6 +34,18 @@ public final class FroglogFollowsTest {
         expect("Playing Hades II", followed.get(0).status);
         expect("https://api.froglog.co.uk/uploads/avatars/cy.gif", followed.get(0).avatarUrl);
         expect("ada", followed.get(1).username);
+        expect("https://img/ada", followed.get(1).avatarUrl);
+
+        String stale = "{\"activity\":["
+                + "{\"username\":\"di\",\"avatar_url\":\"/uploads/avatars/old.png\",\"type\":\"session_logged\",\"created_at\":\"2026-09-01\"},"
+                + "{\"username\":\"di\",\"type\":\"game_started\",\"game_title\":\"Hades\",\"created_at\":\"2026-09-05\"}"
+                + "]}";
+        List<FroglogFollow> live = FroglogFollows.people(stale,
+                "[{\"username\":\"di\",\"online\":true,\"title\":\"Hades\",\"avatarUrl\":\"/uploads/avatars/new.gif\"}]", "me");
+        expect("https://api.froglog.co.uk/uploads/avatars/new.gif", live.get(0).avatarUrl);
+        List<FroglogFollow> quiet = FroglogFollows.people(stale,
+                "[{\"username\":\"di\",\"online\":true,\"title\":\"Hades\"}]", "me");
+        expect("https://api.froglog.co.uk/uploads/avatars/old.png", quiet.get(0).avatarUrl);
         expect(0, FroglogFollows.people("{\"activity\":[]}", "[]", "me").size());
         String lastSeen = "{\"activity\":["
                 + "{\"username\":\"lee\",\"display_username\":\"Lee\",\"game_title\":\"FINAL FANTASY XIV Online Free Trial\",\"type\":\"session_logged\",\"created_at\":\"2026-09-27\"}"
