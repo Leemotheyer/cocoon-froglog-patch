@@ -28,7 +28,8 @@ public final class FroglogSubmit {
             }
             try {
                 FroglogClient.Logged logged = FroglogClient.logSession(token, target, item.date,
-                        FroglogMatch.hoursFromMinutes(item.minutes), "cocoon:" + item.sync, note);
+                        FroglogMatch.hoursFromMinutes(item.minutes), "cocoon:" + item.sync, note,
+                        FroglogStore.sessionsPublic(context));
                 if (logged.live != target.live || logged.id != target.id) {
                     target = new FroglogGame(logged.id, logged.live, target.title, target.platform, target.coverUrl,
                             target.status, target.review, target.rating, target.sessionCount, target.meta, target.sortKey);

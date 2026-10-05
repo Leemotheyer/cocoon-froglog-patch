@@ -15,11 +15,16 @@ public final class FroglogTracking {
     private FroglogTracking() {}
 
     public static JSONObject preparePayload(JSONObject game, String sessionDate) throws Exception {
-        return preparePayload(game, sessionDate, true);
+        return preparePayload(game, sessionDate, true, true);
+    }
+
+    public static JSONObject preparePayload(JSONObject game, String sessionDate, boolean reopen) throws Exception {
+        return preparePayload(game, sessionDate, reopen, true);
     }
 
     /** {@code reopen} puts a Completed or DNF game back in progress, as logging a new session does. */
-    public static JSONObject preparePayload(JSONObject game, String sessionDate, boolean reopen) throws Exception {
+    public static JSONObject preparePayload(JSONObject game, String sessionDate, boolean reopen,
+            boolean sessionsPublic) throws Exception {
         if (game == null) {
             return null;
         }
@@ -47,10 +52,14 @@ public final class FroglogTracking {
         if (!trackingOn(obj)) {
             double hours = hoursPlayed(obj);
             obj.put("session_tracking", true);
-            obj.put("sessions_public", true);
+            obj.put("sessions_public", sessionsPublic);
             if (hours > 0) {
                 obj.put("initial_session_hours", hours);
             }
+            changed = true;
+        } else if (obj.has("sessions_public") && !obj.isNull("sessions_public")
+                && flagOn(obj, "sessions_public") != sessionsPublic) {
+            obj.put("sessions_public", sessionsPublic);
             changed = true;
         }
         return changed ? obj : null;
@@ -113,7 +122,11 @@ public final class FroglogTracking {
     }
 
     private static boolean trackingOn(JSONObject obj) {
-        Object raw = obj.opt("session_tracking");
+        return flagOn(obj, "session_tracking");
+    }
+
+    private static boolean flagOn(JSONObject obj, String key) {
+        Object raw = obj.opt(key);
         if (raw instanceof Boolean) {
             return ((Boolean) raw).booleanValue();
         }

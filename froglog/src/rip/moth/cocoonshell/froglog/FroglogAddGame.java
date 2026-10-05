@@ -209,7 +209,8 @@ public class FroglogAddGame extends Activity {
                     final FroglogGame created = new FroglogGame(outcome.createdId, false, name, platformName, cover, "In Progress", "", null, 0, "", 0);
                     try {
                         FroglogClient.ensureTracking(token, created.id, new java.text.SimpleDateFormat(
-                                "yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date()));
+                                "yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date()),
+                                FroglogStore.sessionsPublic(FroglogAddGame.this));
                     } catch (Exception ignored) {
                         // Session close still stamps the date. The row exists either way.
                     }

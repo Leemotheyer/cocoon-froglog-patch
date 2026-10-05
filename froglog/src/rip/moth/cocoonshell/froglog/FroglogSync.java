@@ -173,7 +173,8 @@ public final class FroglogSync {
                     continue;
                 }
                 try {
-                    FroglogClient.updateSessionHours(token, remote, FroglogMatch.hoursFromMinutes(item.minutes));
+                    FroglogClient.updateSessionHours(token, remote, FroglogMatch.hoursFromMinutes(item.minutes),
+                            FroglogStore.sessionsPublic(context));
                     FroglogStore.markPosted(context, item.sync, item.minutes, remote);
                     FroglogStore.removePending(context, item.sync);
                     retryAfter = 0;
@@ -208,7 +209,8 @@ public final class FroglogSync {
             }
             try {
                 FroglogClient.Logged logged = FroglogClient.logSession(token, game, item.date,
-                        FroglogMatch.hoursFromMinutes(item.minutes), "cocoon:" + item.sync, FroglogSubmit.NOTES);
+                        FroglogMatch.hoursFromMinutes(item.minutes), "cocoon:" + item.sync, FroglogSubmit.NOTES,
+                        FroglogStore.sessionsPublic(context));
                 if (logged.live != game.live || logged.id != game.id) {
                     FroglogStore.link(context, item.title, item.platform, logged.id, logged.live);
                 }
@@ -237,7 +239,8 @@ public final class FroglogSync {
             }
             try {
                 long id = Long.parseLong(game.substring(game.indexOf(':') + 1));
-                FroglogClient.repairGame(token, id, game.startsWith("live:"));
+                FroglogClient.repairGame(token, id, game.startsWith("live:"),
+                        FroglogStore.sessionsPublic(context));
                 FroglogStore.markRepaired(context, game);
             } catch (IOException e) {
                 return;

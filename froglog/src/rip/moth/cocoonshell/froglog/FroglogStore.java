@@ -11,6 +11,8 @@ public final class FroglogStore {
     private static final String TOKEN = "token";
     private static final String USERNAME = "username";
     private static final String PENDING = "pending";
+    /** Default {@code is_public} on sessions Cocoon posts to Froglog. */
+    private static final String SESSIONS_PUBLIC = "sessions_public";
 
     private FroglogStore() {}
 
@@ -42,6 +44,14 @@ public final class FroglogStore {
 
     public static void setFilter(Context context, String filter) {
         prefs(context).edit().putString("filter", filter).apply();
+    }
+
+    public static boolean sessionsPublic(Context context) {
+        return prefs(context).getBoolean(SESSIONS_PUBLIC, true);
+    }
+
+    public static void setSessionsPublic(Context context, boolean sessionsPublic) {
+        prefs(context).edit().putBoolean(SESSIONS_PUBLIC, sessionsPublic).apply();
     }
 
     public static String link(Context context, String key) {

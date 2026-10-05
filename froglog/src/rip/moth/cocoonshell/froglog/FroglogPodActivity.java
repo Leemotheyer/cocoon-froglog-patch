@@ -133,6 +133,32 @@ public class FroglogPodActivity extends Activity {
         return row;
     }
 
+    private View sessionVisibilityRow() {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(4), 0, dp(4));
+        TextView label = text("Default session visibility", 14, false);
+        label.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(label);
+        final TextView value = text(sessionVisibilityLabel(FroglogStore.sessionsPublic(this)), 14, true);
+        value.setTextColor(GREEN);
+        row.addView(value);
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean next = !FroglogStore.sessionsPublic(FroglogPodActivity.this);
+                FroglogStore.setSessionsPublic(FroglogPodActivity.this, next);
+                value.setText(sessionVisibilityLabel(next));
+            }
+        });
+        return row;
+    }
+
+    private static String sessionVisibilityLabel(boolean sessionsPublic) {
+        return sessionsPublic ? "Public" : "Private";
+    }
+
     private void bindAccount() {
         account.removeAllViews();
         account.addView(section("Account"));
@@ -165,6 +191,8 @@ public class FroglogPodActivity extends Activity {
         TextView copy = text("Signed in. People you follow show in Cocoon's friends list. This library includes private games. New games holds sessions that still need a Froglog entry.", 13, false);
         copy.setTextColor(MUTED);
         account.addView(copy);
+        account.addView(gap(10));
+        account.addView(sessionVisibilityRow());
         account.addView(gap(10));
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.VERTICAL);

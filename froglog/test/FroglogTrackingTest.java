@@ -70,6 +70,14 @@ public final class FroglogTrackingTest {
         JSONObject dated = FroglogTracking.preparePayload(fresh, "2026-09-27");
         expect("2026-09-27", dated.getString("start_date"));
 
+        JSONObject trackedPrivate = new JSONObject();
+        trackedPrivate.put("session_tracking", true);
+        trackedPrivate.put("sessions_public", false);
+        JSONObject opened = FroglogTracking.preparePayload(trackedPrivate, "2026-09-01", true, true);
+        expect(true, Boolean.valueOf(opened.getBoolean("sessions_public")));
+        JSONObject keptPrivate = FroglogTracking.preparePayload(plain, "2026-09-01", true, false);
+        expect(false, Boolean.valueOf(keptPrivate.getBoolean("sessions_public")));
+
         expect(Integer.valueOf(5), Integer.valueOf(FroglogTracking.playMinutes(5, 0, 0)));
         expect(Integer.valueOf(0), Integer.valueOf(FroglogTracking.playMinutes(0, 1000, 1000)));
         expect(Integer.valueOf(0), Integer.valueOf(FroglogTracking.playMinutes(0, 1000, 1000 + 10_000)));

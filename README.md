@@ -36,6 +36,7 @@ The Froglog recent tile uses the same 3×2 grid size as Recently played. Stats i
 6. Play a game from Cocoon. When it ends, the session posts to the matching Froglog game. Offline, it waits under **Waiting to upload**. If Froglog does not know the game yet, it waits under **New games**. Map it to a library game, create one, or dismiss it. Later sessions for that Cocoon game post on their own.
 7. To add a library game that is not on Froglog yet, open the Froglog pod, then **Add a Cocoon game**.
 8. To check or fix where a game logs, open the Froglog pod, then **Game mappings**.
+9. In the Froglog pod account section, tap **Default session visibility** to choose **Public** (default) or **Private** for new Cocoon sessions posted to Froglog.
 
 ## Rebuild
 

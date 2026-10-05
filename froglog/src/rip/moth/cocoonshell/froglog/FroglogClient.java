@@ -292,7 +292,8 @@ public final class FroglogClient {
     }
 
     /** Sets the hours of a session already on Froglog. {@code remote} is {@link Logged#remote()}. */
-    public static void updateSessionHours(String token, String remote, double hours) throws Exception {
+    public static void updateSessionHours(String token, String remote, double hours, boolean sessionsPublic)
+            throws Exception {
         String[] parts = remote.split(":");
         boolean live = "live".equals(parts[0]);
         long id = Long.parseLong(parts[1]);
@@ -301,7 +302,7 @@ public final class FroglogClient {
         for (int i = 0; i < rows.length(); i++) {
             JSONObject row = rows.optJSONObject(i);
             if (row != null && row.optLong("id", -1L) == sessionId) {
-                putSession(token, live, id, row, hours, true);
+                putSession(token, live, id, row, hours, sessionsPublic);
                 return;
             }
         }
@@ -345,8 +346,9 @@ public final class FroglogClient {
         return FroglogCreate.interpret(result.code, result.body);
     }
 
-    public static Logged logSession(String token, FroglogGame game, String date, double hours, String syncRef) throws Exception {
-        return logSession(token, game, date, hours, syncRef, "Logged from Cocoon");
+    public static Logged logSession(String token, FroglogGame game, String date, double hours, String syncRef)
+            throws Exception {
+        return logSession(token, game, date, hours, syncRef, "Logged from Cocoon", true);
     }
 
     /**
@@ -361,7 +363,13 @@ public final class FroglogClient {
         return FroglogMatch.best(recent.games, title, platform);
     }
 
-    public static Logged logSession(String token, FroglogGame game, String date, double hours, String syncRef, String notes) throws Exception {
+    public static Logged logSession(String token, FroglogGame game, String date, double hours, String syncRef,
+            String notes) throws Exception {
+        return logSession(token, game, date, hours, syncRef, notes, true);
+    }
+
+    public static Logged logSession(String token, FroglogGame game, String date, double hours, String syncRef,
+            String notes, boolean sessionsPublic) throws Exception {
         boolean live = game.live;
         long id = game.id;
         FroglogGame owned = ownedGame(token, game.title, game.platform);
@@ -372,7 +380,7 @@ public final class FroglogClient {
         if (!live) {
             try {
                 JSONObject raw = getGame(token, id);
-                JSONObject payload = FroglogTracking.preparePayload(raw, date);
+                JSONObject payload = FroglogTracking.preparePayload(raw, date, true, sessionsPublic);
                 if (payload != null) {
                     putGame(token, id, payload);
                 }
@@ -388,7 +396,7 @@ public final class FroglogClient {
             }
         }
         try {
-            long session = postSession(token, live, id, date, hours, syncRef, notes);
+            long session = postSession(token, live, id, date, hours, syncRef, notes, sessionsPublic);
             return new Logged(id, live, session);
         } catch (CallException missing) {
             if (missing.code != 404 || live) {
@@ -398,7 +406,7 @@ public final class FroglogClient {
             if (recovered == null) {
                 throw missing;
             }
-            long session = postSession(token, true, recovered.longValue(), date, hours, syncRef, notes);
+            long session = postSession(token, true, recovered.longValue(), date, hours, syncRef, notes, sessionsPublic);
             return new Logged(recovered.longValue(), true, session);
         }
     }
@@ -407,9 +415,9 @@ public final class FroglogClient {
      * Turns on session tracking and stamps {@code start_date} when the library row
      * is still empty. Presence can call this before a finished session exists.
      */
-    public static void ensureTracking(String token, long id, String date) throws Exception {
+    public static void ensureTracking(String token, long id, String date, boolean sessionsPublic) throws Exception {
         JSONObject raw = getGame(token, id);
-        JSONObject payload = FroglogTracking.preparePayload(raw, date);
+        JSONObject payload = FroglogTracking.preparePayload(raw, date, true, sessionsPublic);
         if (payload != null) {
             putGame(token, id, payload);
         }
@@ -464,7 +472,7 @@ public final class FroglogClient {
      * Fixes a game Cocoon logged to before tracking was set up: session tracking on, a start
      * date so it reads In Progress, and Cocoon's own sessions public. A finished game stays finished.
      */
-    public static void repairGame(String token, long id, boolean live) throws Exception {
+    public static void repairGame(String token, long id, boolean live, boolean sessionsPublic) throws Exception {
         org.json.JSONArray rows = sessions(token, live, id);
         String earliest = null;
         for (int i = 0; i < rows.length(); i++) {
@@ -478,7 +486,7 @@ public final class FroglogClient {
             if (earliest == null) {
                 earliest = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date());
             }
-            JSONObject payload = FroglogTracking.preparePayload(getGame(token, id), earliest, false);
+            JSONObject payload = FroglogTracking.preparePayload(getGame(token, id), earliest, false, sessionsPublic);
             if (payload != null) {
                 putGame(token, id, payload);
                 Log.i("FroglogWidget", "Repaired Froglog game " + id + " tracking and start date");
@@ -487,13 +495,13 @@ public final class FroglogClient {
         }
         for (int i = 0; i < rows.length(); i++) {
             JSONObject row = rows.optJSONObject(i);
-            if (row == null || row.optBoolean("is_public", false)) {
+            if (row == null || row.optBoolean("is_public", false) == sessionsPublic) {
                 continue;
             }
             if (!row.optString("sync_ref", "").startsWith("cocoon:")) {
                 continue;
             }
-            putSession(token, live, id, row, row.optDouble("hours", 0), true);
+            putSession(token, live, id, row, row.optDouble("hours", 0), sessionsPublic);
         }
     }
 
@@ -504,13 +512,14 @@ public final class FroglogClient {
         }
     }
 
-    private static long postSession(String token, boolean live, long id, String date, double hours, String syncRef, String notes) throws Exception {
+    private static long postSession(String token, boolean live, long id, String date, double hours, String syncRef,
+            String notes, boolean sessionsPublic) throws Exception {
         JSONObject body = new JSONObject();
         body.put("date", date);
         body.put("hours", hours);
         body.put("notes", notes == null || notes.isEmpty() ? "Logged from Cocoon" : notes);
         body.put("spoiler", false);
-        body.put("is_public", true);
+        body.put("is_public", sessionsPublic);
         if (syncRef != null) {
             body.put("sync_ref", syncRef);
         }
