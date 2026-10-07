@@ -168,12 +168,20 @@ def main() -> None:
         f'android:taskAffinity="{ORIGINAL_PACKAGE}"',
         f'android:taskAffinity="{PACKAGE}"',
     )
+    # A signature permission may only be defined by one installed signer, and
+    # AndroidX derives this name from getPackageName().
+    manifest_text = manifest_text.replace(
+        f'android:name="{ORIGINAL_PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"',
+        f'android:name="{PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"',
+    )
     if f'package="{PACKAGE}"' not in manifest_text:
         raise SystemExit("manifest package was not renamed")
     leftover = f'android:authorities="{ORIGINAL_PACKAGE}.'
     renamed = f'android:authorities="{PACKAGE}.'
     if leftover in manifest_text.replace(renamed, ""):
         raise SystemExit("a FileProvider authority still uses the original package")
+    if f'<permission android:name="{ORIGINAL_PACKAGE}.' in manifest_text:
+        raise SystemExit("a permission still uses the original package and blocks side-by-side install")
     manifest.write_text(manifest_text, encoding="utf-8")
     insert_before(decoded / "AndroidManifest.xml", "    </application>", MANIFEST, "FroglogRecentWidget")
 
