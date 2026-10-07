@@ -193,11 +193,36 @@ public class FroglogMapActivity extends FroglogActivity {
         TextView use = action("Log to " + found.title, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                send(found, title, platform);
+                confirmSend(found);
             }
         });
         actions.addView(use, 0);
         actions.addView(gap(8), 1);
+        View preview = FroglogCards.gameRow(this, found.title, found.meta, found.coverUrl, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                confirmSend(found);
+            }
+        });
+        actions.addView(preview, 0);
+        actions.addView(gap(8), 1);
+    }
+
+    private void confirmSend(final FroglogGame game) {
+        FroglogCards.Detail detail = FroglogCards.Detail.of(game);
+        String title = extra(EXTRA_TITLE);
+        int minutes = getIntent().getIntExtra(EXTRA_MINUTES, 0);
+        detail.note = (minutes > 0 ? minutes + "m of " : "") + (title.isEmpty() ? "this session" : title)
+                + " logs here, and later sessions follow.";
+        if ("Completed".equals(game.status) || "DNF".equals(game.status)) {
+            detail.note += " Logging marks it in progress again.";
+        }
+        FroglogCards.confirm(this, detail, "Log to this game", new Runnable() {
+            @Override
+            public void run() {
+                send(game, extra(EXTRA_TITLE), extra(EXTRA_PLATFORM));
+            }
+        });
     }
 
     private void showLibrary(String query) {
@@ -230,25 +255,13 @@ public class FroglogMapActivity extends FroglogActivity {
                 continue;
             }
             shown++;
-            LinearLayout wrap = new LinearLayout(this);
-            wrap.setOrientation(LinearLayout.VERTICAL);
-            wrap.addView(text(game.title, 16, true));
-            String meta = (game.platform == null || game.platform.isEmpty() ? "" : game.platform)
-                    + (game.live ? (game.platform == null || game.platform.isEmpty() ? "" : " · ") + "Live" : "")
-                    + (game.status == null || game.status.isEmpty() ? "" : ((game.platform == null || game.platform.isEmpty()) && !game.live ? "" : " · ") + game.status);
-            if (!meta.isEmpty()) {
-                TextView line = text(meta, 13, false);
-                line.setTextColor(FroglogTheme.MUTED);
-                wrap.addView(line);
-            }
-            View card = FroglogTheme.card(this, wrap);
-            card.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    send(game, extra(EXTRA_TITLE), extra(EXTRA_PLATFORM));
-                }
-            });
-            libraryRows.addView(card);
+            libraryRows.addView(FroglogCards.gameRow(this, game.title, game.meta, game.coverUrl,
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            confirmSend(game);
+                        }
+                    }));
         }
         if (shown == 0) {
             TextView empty = text(library.isEmpty() ? "Your Froglog library is empty." : "Nothing in the library matches that.", 14, false);

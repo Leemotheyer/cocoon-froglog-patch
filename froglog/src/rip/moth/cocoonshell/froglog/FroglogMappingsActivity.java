@@ -22,7 +22,13 @@ import java.util.Map;
  * stop a mapping. A change applies to sessions that have not been sent yet.
  */
 public class FroglogMappingsActivity extends FroglogActivity {
+    /** Opens straight on one Cocoon game, as from its context menu. Back then closes the screen. */
+    public static final String EXTRA_TITLE = "title";
+    public static final String EXTRA_PLATFORM = "platform";
+    public static final String EXTRA_PLATFORM_NAME = "platform_name";
     private static final int ROWS = 60;
+
+    private boolean direct;
 
     private ScrollView scroll;
     private LinearLayout root;
@@ -50,12 +56,39 @@ public class FroglogMappingsActivity extends FroglogActivity {
         setContentView(scroll);
         FroglogTheme.paintSystemBars(this);
         readCocoon();
-        showList();
+        String title = getIntent() == null ? null : getIntent().getStringExtra(EXTRA_TITLE);
+        if (title != null && !title.isEmpty()) {
+            direct = true;
+            String platform = getIntent().getStringExtra(EXTRA_PLATFORM);
+            String platformName = getIntent().getStringExtra(EXTRA_PLATFORM_NAME);
+            if (platform != null && platformName != null && !platformName.isEmpty()) {
+                platformNames.put(platform, platformName);
+            }
+            showEdit(title, platform == null ? "" : platform);
+        } else {
+            showList();
+        }
         loadLibrary();
+    }
+
+    private boolean resumed;
+
+    /** A game added from here is only in the library after a reload. */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (resumed) {
+            loadLibrary();
+        }
+        resumed = true;
     }
 
     @Override
     public void onBackPressed() {
+        if (direct) {
+            super.onBackPressed();
+            return;
+        }
         if (!"list".equals(screen)) {
             showList();
             return;
@@ -152,24 +185,27 @@ public class FroglogMappingsActivity extends FroglogActivity {
     }
 
     private View mappingRow(final FroglogLinks.Mapping mapping) {
-        LinearLayout lines = column();
-        lines.addView(FroglogTheme.text(this, mapping.title, 16, true));
         String platform = platformLabel(mapping.platform);
         String target;
+        String cover = null;
         if (mapping.declined) {
-            target = "Sessions are not sent to Froglog";
+            target = "Not sent to Froglog";
         } else {
             target = "Logs to " + froglogLabel(mapping);
-        }
-        lines.addView(muted(platform.isEmpty() ? target : platform + " · " + target, 13));
-        View row = card(lines);
-        row.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showEdit(mapping.title, mapping.platform);
+            FroglogGame game = FroglogLinks.find(library, mapping);
+            cover = game == null ? null : game.coverUrl;
+            String visibility = FroglogStore.visibility(this, FroglogLinks.value(mapping.gameId, mapping.live));
+            if (!FroglogStore.VISIBILITY_DEFAULT.equals(visibility)) {
+                target += " · " + (FroglogStore.VISIBILITY_PUBLIC.equals(visibility) ? "always public" : "always private");
             }
-        });
-        return row;
+        }
+        return FroglogCards.gameRow(this, mapping.title, platform.isEmpty() ? target : platform + " · " + target,
+                cover, new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showEdit(mapping.title, mapping.platform);
+                    }
+                });
     }
 
     private void showPicker() {
@@ -213,7 +249,7 @@ public class FroglogMappingsActivity extends FroglogActivity {
                 lines.addView(muted(label, 13));
             }
             View row = card(lines);
-            row.setOnClickListener(new View.OnClickListener() {
+            FroglogTheme.row(row, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     showEdit(game.title, platform);
@@ -251,8 +287,42 @@ public class FroglogMappingsActivity extends FroglogActivity {
             now = "Logs to " + froglogLabel(current) + ".";
         }
         status = muted(now, 14);
-        root.addView(status);
+        if (current != null && !current.declined) {
+            final FroglogGame mappedGame = FroglogLinks.find(library, current);
+            if (mappedGame != null) {
+                root.addView(FroglogCards.gameRow(this, mappedGame.title, mappedGame.meta, mappedGame.coverUrl,
+                        new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                startActivity(FroglogGameDetail.intent(FroglogMappingsActivity.this, mappedGame, true));
+                            }
+                        }));
+            } else {
+                root.addView(status);
+            }
+            root.addView(visibilityCard(FroglogLinks.value(current.gameId, current.live)));
+        } else {
+            root.addView(status);
+        }
         LinearLayout actions = column();
+        if (FroglogStore.signedIn(this)) {
+            actions.addView(wide(FroglogTheme.button(this,
+                    current == null || current.declined ? "Search and add to Froglog" : "Add as a new Froglog game",
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            openAdd(title, platform, null);
+                        }
+                    })));
+            actions.addView(gap(8));
+            actions.addView(wide(FroglogTheme.secondary(this, "Add to Up Next", new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    openAdd(title, platform, FroglogAddGame.MODE_UP_NEXT);
+                }
+            })));
+            actions.addView(gap(8));
+        }
         if (current != null) {
             actions.addView(wide(FroglogTheme.secondary(this, current.declined ? "Log this game again" : "Remove mapping",
                     new View.OnClickListener() {
@@ -331,26 +401,17 @@ public class FroglogMappingsActivity extends FroglogActivity {
             shown++;
             boolean selected = current != null && !current.declined
                     && current.gameId == game.id && current.live == game.live;
-            LinearLayout lines = column();
-            lines.addView(FroglogTheme.text(this, game.title, 16, true));
             String meta = gameMeta(game);
             if (selected) {
                 meta = meta.isEmpty() ? "Current mapping" : "Current mapping · " + meta;
             }
-            if (!meta.isEmpty()) {
-                lines.addView(muted(meta, 13));
-            }
-            View row = card(lines);
-            if (!selected) {
-                row.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        FroglogStore.link(FroglogMappingsActivity.this, title, platform, game.id, game.live);
-                        FroglogSync.kick(FroglogMappingsActivity.this);
-                        showList();
-                    }
-                });
-            }
+            View row = FroglogCards.gameRow(this, game.title, meta, game.coverUrl, selected ? null
+                    : new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            confirmLink(game, title, platform);
+                        }
+                    });
             rows.addView(row);
         }
         if (shown == 0) {
@@ -358,6 +419,38 @@ public class FroglogMappingsActivity extends FroglogActivity {
                     ? "Your Froglog library is empty. Use Add a Cocoon game in the pod to create an entry."
                     : "Nothing in the library matches that.", 14)));
         }
+    }
+
+    private void confirmLink(final FroglogGame game, final String title, final String platform) {
+        FroglogCards.Detail detail = FroglogCards.Detail.of(game);
+        detail.note = "Sessions for " + title + " that have not been sent yet will log here.";
+        FroglogCards.confirm(this, detail, "Map to this game", new Runnable() {
+            @Override
+            public void run() {
+                FroglogStore.link(FroglogMappingsActivity.this, title, platform, game.id, game.live);
+                FroglogSync.kick(FroglogMappingsActivity.this);
+                if (direct) {
+                    showEdit(title, platform);
+                } else {
+                    showList();
+                }
+            }
+        });
+    }
+
+    private void openAdd(String title, String platform, String mode) {
+        android.content.Intent add = new android.content.Intent(this, FroglogAddGame.class);
+        add.putExtra(FroglogAddGame.EXTRA_TITLE, title);
+        add.putExtra(FroglogAddGame.EXTRA_PLATFORM, platform);
+        add.putExtra(FroglogAddGame.EXTRA_PLATFORM_LABEL, platformLabel(platform));
+        if (mode != null) {
+            add.putExtra(FroglogAddGame.EXTRA_MODE, mode);
+        }
+        startActivity(add);
+    }
+
+    private View visibilityCard(String target) {
+        return FroglogCards.visibilityCard(this, target);
     }
 
     private FroglogLinks.Mapping current(String key) {

@@ -1,8 +1,9 @@
 package rip.moth.cocoonshell.froglog;
 
-import android.app.Activity;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -11,37 +12,57 @@ import android.widget.TextView;
 
 import java.util.List;
 
-/** Search Froglog, then create the Cocoon game if it is missing. */
+/**
+ * Search Froglog's catalog, look at a result's card, then create the Cocoon game (and send its
+ * waiting sessions) or, in Up Next mode, add it to the Froglog wishlist.
+ */
 public class FroglogAddGame extends FroglogActivity {
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_PLATFORM = "platform";
     public static final String EXTRA_PLATFORM_LABEL = "platform_label";
+    /** {@link #MODE_UP_NEXT} adds to the Froglog wishlist instead of the library. */
+    public static final String EXTRA_MODE = "mode";
+    public static final String MODE_UP_NEXT = "up_next";
 
     private EditText title;
     private EditText platform;
     private TextView status;
     private LinearLayout results;
     private String coverUrl;
+    private FroglogClient.Hit chosen;
     private boolean confirmNew;
+    private boolean upNext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        upNext = MODE_UP_NEXT.equals(extra(EXTRA_MODE));
         title = FroglogTheme.field(this, "Game title");
         title.setText(extra(EXTRA_TITLE));
+        title.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+        title.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                search();
+                return true;
+            }
+        });
         String shownPlatform = extra(EXTRA_PLATFORM_LABEL);
         platform = FroglogTheme.field(this, "Platform");
         platform.setText(shownPlatform.isEmpty() ? extra(EXTRA_PLATFORM) : shownPlatform);
-        status = FroglogTheme.text(this, "Search Froglog, then add the game as public or private.", 14, false);
-        status.setTextColor(FroglogTheme.MUTED);
+        status = FroglogTheme.muted(this, upNext
+                ? "Search Froglog, then pick the game to add to Up Next."
+                : "Search Froglog, then pick a result to see its details.", 14);
         results = new LinearLayout(this);
         results.setOrientation(LinearLayout.VERTICAL);
 
         LinearLayout form = new LinearLayout(this);
         form.setOrientation(LinearLayout.VERTICAL);
         form.addView(title);
-        form.addView(gap());
-        form.addView(platform);
+        if (!upNext) {
+            form.addView(gap());
+            form.addView(platform);
+        }
         form.addView(gap());
         form.addView(button("Search", new View.OnClickListener() {
             @Override
@@ -50,31 +71,50 @@ public class FroglogAddGame extends FroglogActivity {
             }
         }));
         form.addView(gap());
-        form.addView(button("Add as public", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                create(true);
-            }
-        }));
-        form.addView(gap());
-        form.addView(FroglogTheme.secondary(this, "Add as private", new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                create(false);
-            }
-        }));
+        if (upNext) {
+            form.addView(FroglogTheme.secondary(this, "Add the title as typed", new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    chosen = null;
+                    addToUpNext(null);
+                }
+            }));
+        } else {
+            LinearLayout pair = new LinearLayout(this);
+            pair.setOrientation(LinearLayout.HORIZONTAL);
+            Button pub = FroglogTheme.secondary(this, "Add as typed, public", new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    chosen = null;
+                    coverUrl = null;
+                    create(true);
+                }
+            });
+            Button priv = FroglogTheme.secondary(this, "Private", new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    chosen = null;
+                    coverUrl = null;
+                    create(false);
+                }
+            });
+            LinearLayout.LayoutParams left = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f);
+            LinearLayout.LayoutParams right = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            right.leftMargin = dp(8);
+            pair.addView(pub, left);
+            pair.addView(priv, right);
+            form.addView(pair);
+        }
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(20), dp(24), dp(20), dp(24));
-        root.addView(FroglogTheme.title(this, "Add to Froglog"));
-        TextView copy = FroglogTheme.text(this, "Match a catalog game, or add the title as typed.", 14, false);
-        copy.setTextColor(FroglogTheme.MUTED);
-        root.addView(copy);
+        root.addView(FroglogTheme.section(this, upNext ? "Froglog Up Next" : "Add to Froglog"));
+        String cocoon = extra(EXTRA_TITLE);
+        root.addView(FroglogTheme.title(this, cocoon.isEmpty() ? (upNext ? "Add to Up Next" : "Add a game") : cocoon));
         root.addView(FroglogTheme.card(this, form));
         root.addView(gap());
         root.addView(status);
-        root.addView(gap());
         root.addView(results);
         ScrollView scroll = new ScrollView(this);
         FroglogTheme.page(scroll);
@@ -88,7 +128,7 @@ public class FroglogAddGame extends FroglogActivity {
 
     private void search() {
         if (!FroglogStore.signedIn(this)) {
-            status.setText("Sign in to Froglog from the widget first.");
+            status.setText("Sign in to Froglog from the pod first.");
             return;
         }
         final String query = title.getText().toString().trim();
@@ -100,20 +140,21 @@ public class FroglogAddGame extends FroglogActivity {
         results.removeAllViews();
         final String token = FroglogStore.token(this);
         final String platformText = platform.getText().toString().trim();
+        final boolean wishlist = upNext;
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final FroglogClient.Recent library = FroglogClient.library(token);
-                final FroglogGame existing = library.error == null
-                        ? FroglogMatch.best(library.games, query, platformText) : null;
+                FroglogGame existing = null;
+                if (!wishlist) {
+                    FroglogClient.Recent library = FroglogClient.library(token);
+                    existing = library.error == null ? FroglogMatch.best(library.games, query, platformText) : null;
+                }
                 String searchError = null;
                 List<FroglogClient.Hit> hits = java.util.Collections.emptyList();
-                if (existing == null) {
-                    try {
-                        hits = FroglogClient.search(token, query);
-                    } catch (Exception e) {
-                        searchError = e.getMessage();
-                    }
+                try {
+                    hits = FroglogClient.search(token, query);
+                } catch (Exception e) {
+                    searchError = e.getMessage();
                 }
                 final FroglogGame found = existing;
                 final List<FroglogClient.Hit> foundHits = hits;
@@ -121,60 +162,163 @@ public class FroglogAddGame extends FroglogActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        showSearch(found, foundHits, error);
+                        if (!isFinishing()) {
+                            showSearch(found, foundHits, error);
+                        }
                     }
                 });
             }
         }, "froglog-search").start();
     }
 
-    private void showSearch(FroglogGame existing, List<FroglogClient.Hit> hits, String error) {
+    private void showSearch(final FroglogGame existing, List<FroglogClient.Hit> hits, String error) {
         results.removeAllViews();
         if (existing != null) {
-            status.setText("Already in your Froglog library as " + existing.title + ". The session can be linked without creating it again.");
-            final FroglogGame game = existing;
-            results.addView(button("Link " + existing.title, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    linkAndSend(game);
-                }
-            }));
-            return;
+            results.addView(FroglogTheme.section(this, "Already in your library"));
+            results.addView(FroglogCards.gameRow(this, existing.title, existing.meta, existing.coverUrl,
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            showExisting(existing);
+                        }
+                    }));
+            results.addView(gap());
         }
         if (error != null) {
             status.setText(error);
             return;
         }
         if (hits.isEmpty()) {
-            status.setText("No catalog match. You can still add the title above.");
+            status.setText(existing != null
+                    ? "Log to the library entry above, or add the title as typed."
+                    : "No catalog match. You can still add the title as typed.");
             return;
         }
-        status.setText("Pick a match or add the title as typed.");
+        status.setText(existing != null
+                ? "Use the library entry, or pick a catalog result to add a new one."
+                : "Pick a result to see its details.");
+        results.addView(FroglogTheme.section(this, "Froglog catalog"));
         for (int i = 0; i < hits.size(); i++) {
             final FroglogClient.Hit hit = hits.get(i);
-            String label = hit.title + (hit.platform == null ? "" : " · " + hit.platform);
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.VERTICAL);
-            row.addView(FroglogTheme.text(this, label, 15, true));
-            View card = FroglogTheme.card(this, row);
-            card.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    title.setText(hit.title);
-                    if (hit.platform != null) {
-                        platform.setText(hit.platform);
-                    }
-                    coverUrl = hit.coverUrl;
-                    status.setText("Using " + hit.title + ". Choose public or private.");
-                }
-            });
-            results.addView(card);
+            StringBuilder meta = new StringBuilder();
+            if (hit.released != null && hit.released.length() >= 4) {
+                meta.append(hit.released.substring(0, 4));
+            }
+            if (hit.developers != null) {
+                meta.append(meta.length() == 0 ? "" : " · ").append(hit.developers);
+            }
+            if (hit.platform != null) {
+                meta.append(meta.length() == 0 ? "" : " · ").append(hit.platform);
+            }
+            results.addView(FroglogCards.gameRow(this, hit.title, meta.toString(), hit.coverUrl,
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            showHit(hit);
+                        }
+                    }));
         }
+    }
+
+    private void showExisting(final FroglogGame game) {
+        FroglogCards.Detail detail = FroglogCards.Detail.of(game);
+        detail.note = "Sessions for " + cocoonTitle() + " will log to this entry.";
+        FroglogCards.confirm(this, detail, "Log to this game", new Runnable() {
+            @Override
+            public void run() {
+                linkAndSend(game);
+            }
+        });
+    }
+
+    private void showHit(final FroglogClient.Hit hit) {
+        FroglogCards.Detail detail = FroglogCards.Detail.of(hit);
+        if (upNext) {
+            FroglogCards.confirm(this, detail, new FroglogCards.Action("Add to Up Next", new Runnable() {
+                @Override
+                public void run() {
+                    addToUpNext(hit);
+                }
+            }));
+            return;
+        }
+        detail.note = "Adds " + hit.title + " to your Froglog library and logs " + cocoonTitle() + " there.";
+        FroglogCards.confirm(this, detail,
+                new FroglogCards.Action("Add to Froglog", new Runnable() {
+                    @Override
+                    public void run() {
+                        pick(hit);
+                        create(true);
+                    }
+                }),
+                new FroglogCards.Action("Add as private", new Runnable() {
+                    @Override
+                    public void run() {
+                        pick(hit);
+                        create(false);
+                    }
+                }),
+                new FroglogCards.Action("Add to Up Next instead", new Runnable() {
+                    @Override
+                    public void run() {
+                        addToUpNext(hit);
+                    }
+                }));
+    }
+
+    private void pick(FroglogClient.Hit hit) {
+        chosen = hit;
+        title.setText(hit.title);
+        if (hit.platform != null && platform.getText().toString().trim().isEmpty()) {
+            platform.setText(hit.platform);
+        }
+        coverUrl = hit.coverUrl;
+    }
+
+    private void addToUpNext(final FroglogClient.Hit hit) {
+        if (!FroglogStore.signedIn(this)) {
+            status.setText("Sign in to Froglog from the pod first.");
+            return;
+        }
+        final String name = hit != null ? hit.title : title.getText().toString().trim();
+        if (name.isEmpty()) {
+            status.setText("Enter the game title.");
+            return;
+        }
+        status.setText("Adding " + name + " to Up Next…");
+        final String token = FroglogStore.token(this);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String error = null;
+                try {
+                    FroglogClient.addToWishlist(token, name, hit);
+                } catch (Exception e) {
+                    error = e.getMessage() == null ? "Could not add it to Up Next" : e.getMessage();
+                }
+                final String failure = error;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isFinishing()) {
+                            return;
+                        }
+                        if (failure == null) {
+                            android.widget.Toast.makeText(FroglogAddGame.this, name + " is in Up Next",
+                                    android.widget.Toast.LENGTH_SHORT).show();
+                            finish();
+                        } else {
+                            status.setText(failure);
+                        }
+                    }
+                });
+            }
+        }, "froglog-up-next").start();
     }
 
     private void create(final boolean isPublic) {
         if (!FroglogStore.signedIn(this)) {
-            status.setText("Sign in to Froglog from the widget first.");
+            status.setText("Sign in to Froglog from the pod first.");
             return;
         }
         final String name = title.getText().toString().trim();
@@ -186,6 +330,7 @@ public class FroglogAddGame extends FroglogActivity {
         status.setText(confirmNew ? "Logging it as a separate game…" : "Adding…");
         final String token = FroglogStore.token(this);
         final String cover = coverUrl;
+        final FroglogClient.Hit catalog = chosen;
         final boolean separate = confirmNew;
         final String clientRef = "cocoon:" + FroglogMatch.linkKey(cocoonTitle(), extra(EXTRA_PLATFORM));
         new Thread(new Runnable() {
@@ -193,7 +338,7 @@ public class FroglogAddGame extends FroglogActivity {
             public void run() {
                 try {
                     final FroglogCreate.Outcome outcome = FroglogClient.createGameKeyed(
-                            token, name, platformName, cover, isPublic, clientRef, separate);
+                            token, name, platformName, cover, isPublic, clientRef, separate, catalog);
                     if (outcome.needsChoice()) {
                         runOnUiThread(new Runnable() {
                             @Override
@@ -210,7 +355,7 @@ public class FroglogAddGame extends FroglogActivity {
                     try {
                         FroglogClient.ensureTracking(token, created.id, new java.text.SimpleDateFormat(
                                 "yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date()),
-                                FroglogStore.sessionsPublic(FroglogAddGame.this));
+                                FroglogStore.sessionsPublic(FroglogAddGame.this, created));
                     } catch (Exception ignored) {
                         // Session close still stamps the date. The row exists either way.
                     }
@@ -270,6 +415,8 @@ public class FroglogAddGame extends FroglogActivity {
                     @Override
                     public void run() {
                         if (error == null) {
+                            android.widget.Toast.makeText(FroglogAddGame.this, cocoonTitle() + " logs to " + game.title,
+                                    android.widget.Toast.LENGTH_SHORT).show();
                             finish();
                         } else {
                             status.setText(error + " It stays in New games so you can retry.");

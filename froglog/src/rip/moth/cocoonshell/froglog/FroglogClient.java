@@ -65,13 +65,137 @@ public final class FroglogClient {
     public static final class Hit {
         public final String title;
         public final String platform;
+        /** Portrait cover when the index has one, else the wide background. */
         public final String coverUrl;
+        public String heroUrl;
+        public String portraitUrl;
+        public long igdbId;
+        public String igdbSlug;
+        public long steamAppId;
+        public String description;
+        public String developers;
+        public String devCountry;
+        public String genres;
+        public String platforms;
+        public String released;
+        public int relDateCategory = -1;
 
         public Hit(String title, String platform, String coverUrl) {
             this.title = title;
             this.platform = platform;
             this.coverUrl = coverUrl;
         }
+
+        /** Catalog fields in the names POST /games and POST /wishlist take. */
+        public JSONObject catalogFields() throws Exception {
+            JSONObject out = new JSONObject();
+            putText(out, "description", description);
+            putText(out, "img", heroUrl != null ? heroUrl : coverUrl);
+            putText(out, "cover_image", portraitUrl != null ? portraitUrl : coverUrl);
+            putText(out, "genre", genres);
+            putText(out, "dev", developers);
+            putText(out, "studio_country", devCountry);
+            putText(out, "rel_date", released);
+            if (relDateCategory >= 0) {
+                out.put("rel_date_category", relDateCategory);
+            }
+            if (steamAppId > 0) {
+                out.put("steam_app_id", steamAppId);
+            }
+            putText(out, "igdb_slug", igdbSlug);
+            if (igdbId > 0) {
+                out.put("igdb_id", igdbId);
+            }
+            return out;
+        }
+
+        /** Label and value pairs for the detail card. */
+        public java.util.List<String[]> rows() {
+            java.util.ArrayList<String[]> rows = new java.util.ArrayList<String[]>();
+            addRow(rows, "Released", released);
+            addRow(rows, "Developer", developers);
+            addRow(rows, "Country", devCountry);
+            addRow(rows, "Genres", genres);
+            addRow(rows, "Platforms", platforms);
+            return rows;
+        }
+
+        private static void addRow(java.util.List<String[]> rows, String label, String value) {
+            if (value != null && !value.trim().isEmpty()) {
+                rows.add(new String[] {label, value.trim()});
+            }
+        }
+    }
+
+    private static void putText(JSONObject out, String key, String value) throws Exception {
+        if (value != null && !value.trim().isEmpty()) {
+            out.put(key, value.trim());
+        }
+    }
+
+    static Hit parseHit(JSONObject obj) {
+        String title = obj.optString("name", "").trim();
+        if (title.isEmpty()) {
+            return null;
+        }
+        org.json.JSONArray platforms = obj.optJSONArray("platforms");
+        String platform = null;
+        StringBuilder allPlatforms = new StringBuilder();
+        if (platforms != null) {
+            for (int p = 0; p < platforms.length(); p++) {
+                JSONObject entry = platforms.optJSONObject(p);
+                JSONObject nested = entry == null ? null : entry.optJSONObject("platform");
+                String name = nested == null ? (entry == null ? null : entry.optString("name", null)) : nested.optString("name", null);
+                if (name == null || name.isEmpty()) {
+                    continue;
+                }
+                if (platform == null) {
+                    platform = name;
+                }
+                allPlatforms.append(allPlatforms.length() == 0 ? "" : ", ").append(name);
+            }
+        }
+        String background = clean(obj.optString("background_image", null));
+        String portrait = clean(obj.optString("cover_image", null));
+        Hit hit = new Hit(title, platform, portrait != null ? portrait : background);
+        hit.heroUrl = background;
+        hit.portraitUrl = portrait;
+        hit.igdbId = obj.optLong("id", 0);
+        hit.igdbSlug = clean(obj.optString("igdb_slug", null));
+        hit.steamAppId = obj.optLong("steam_app_id", 0);
+        hit.description = clean(obj.optString("description_raw", obj.optString("description", null)));
+        hit.developers = names(obj.optJSONArray("developers"));
+        hit.devCountry = clean(obj.optString("dev_country", null));
+        hit.genres = names(obj.optJSONArray("genres"));
+        hit.platforms = allPlatforms.length() == 0 ? null : allPlatforms.toString();
+        hit.released = clean(obj.optString("released", null));
+        if (obj.has("rel_date_category") && !obj.isNull("rel_date_category")) {
+            hit.relDateCategory = obj.optInt("rel_date_category", -1);
+        }
+        return hit;
+    }
+
+    private static String names(org.json.JSONArray array) {
+        if (array == null) {
+            return null;
+        }
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject entry = array.optJSONObject(i);
+            String name = entry == null ? array.optString(i, "") : entry.optString("name", "");
+            if (name != null && !name.trim().isEmpty() && !"null".equals(name)) {
+                out.append(out.length() == 0 ? "" : ", ").append(name.trim());
+            }
+        }
+        return out.length() == 0 ? null : out.toString();
+    }
+
+    private static String clean(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() || "null".equals(trimmed) ? null : trimmed;
     }
 
     public static Session login(String username, String password) throws Exception {
@@ -280,26 +404,149 @@ public final class FroglogClient {
         org.json.JSONArray array = new org.json.JSONArray(result.body == null || result.body.isEmpty() ? "[]" : result.body);
         for (int i = 0; i < array.length(); i++) {
             JSONObject obj = array.optJSONObject(i);
-            if (obj == null) {
-                continue;
+            Hit hit = obj == null ? null : parseHit(obj);
+            if (hit != null) {
+                hits.add(hit);
             }
-            String title = obj.optString("name", "").trim();
-            if (title.isEmpty()) {
-                continue;
-            }
-            String platform = null;
-            org.json.JSONArray platforms = obj.optJSONArray("platforms");
-            if (platforms != null && platforms.length() > 0) {
-                JSONObject first = platforms.optJSONObject(0);
-                JSONObject nested = first == null ? null : first.optJSONObject("platform");
-                if (nested != null) {
-                    platform = nested.optString("name", null);
-                }
-            }
-            String cover = obj.optString("background_image", null);
-            hits.add(new Hit(title, platform, cover == null || cover.isEmpty() ? null : cover));
         }
         return hits;
+    }
+
+    /**
+     * Adds a game to Up Next (the API's wishlist). With no catalog hit, GET /search/fetch fills
+     * in what it can from the title. Returns the new wishlist id, or 0 when none came back.
+     */
+    public static long addToWishlist(String token, String title, Hit hit) throws Exception {
+        JSONObject body = hit != null ? hit.catalogFields() : fetchCatalog(token, title);
+        body.put("title", hit != null ? hit.title : title);
+        HttpResult result = request("POST", BASE + "/wishlist", token, body.toString());
+        if (result.code < 200 || result.code >= 300) {
+            throw call(result, "Could not add it to Up Next (" + result.code + ")");
+        }
+        try {
+            return new JSONObject(result.body).optLong("id", 0);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /** Titles already in Up Next, lowercased, so the UI can say a game is there. */
+    public static java.util.Set<String> wishlistTitles(String token) {
+        java.util.HashSet<String> out = new java.util.HashSet<String>();
+        try {
+            HttpResult result = request("GET", BASE + "/wishlist", token, null);
+            if (result.code < 200 || result.code >= 300) {
+                return out;
+            }
+            org.json.JSONArray rows = new org.json.JSONArray(result.body.isEmpty() ? "[]" : result.body);
+            for (int i = 0; i < rows.length(); i++) {
+                JSONObject row = rows.optJSONObject(i);
+                if (row != null) {
+                    out.add(FroglogMatch.normalizeTitle(row.optString("title", "")));
+                }
+            }
+        } catch (Exception ignored) {
+            // Treated as not listed.
+        }
+        return out;
+    }
+
+    private static JSONObject fetchCatalog(String token, String title) {
+        try {
+            String q = URLEncoder.encode(title == null ? "" : title, "UTF-8").replace("+", "%20");
+            HttpResult result = request("GET", BASE + "/search/fetch?title=" + q, token, null);
+            if (result.code >= 200 && result.code < 300 && !result.body.isEmpty()) {
+                JSONObject found = new JSONObject(result.body);
+                JSONObject out = new JSONObject();
+                String[] keys = {"description", "img", "cover_image", "genre", "dev", "rel_date",
+                        "rel_date_category", "steam_app_id", "igdb_slug", "igdb_id"};
+                for (String key : keys) {
+                    if (found.has(key) && !found.isNull(key)) {
+                        out.put(key, found.get(key));
+                    }
+                }
+                if (found.has("dev_country") && !found.isNull("dev_country")) {
+                    out.put("studio_country", found.get("dev_country"));
+                }
+                return out;
+            }
+        } catch (Exception ignored) {
+            // Title only.
+        }
+        return new JSONObject();
+    }
+
+    /**
+     * POST /screenshots/game/:gameId as multipart. Froglog keeps at most 10 per game and
+     * 10 MB per image; both come back as a 400 with an error message.
+     */
+    public static void uploadScreenshot(String token, long gameId, byte[] image, String mime, String fileName,
+            String caption, boolean spoiler) throws Exception {
+        String boundary = "----froglog" + Long.toHexString(System.nanoTime());
+        ByteArrayOutputStream body = new ByteArrayOutputStream();
+        if (caption != null && !caption.trim().isEmpty()) {
+            formField(body, boundary, "caption", caption.trim());
+        }
+        formField(body, boundary, "spoiler", spoiler ? "true" : "false");
+        body.write(("--" + boundary + "\r\n"
+                + "Content-Disposition: form-data; name=\"screenshot\"; filename=\""
+                + fileName.replace("\"", "") + "\"\r\n"
+                + "Content-Type: " + mime + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+        body.write(image);
+        body.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+        byte[] bytes = body.toByteArray();
+
+        HttpURLConnection conn = (HttpURLConnection) new URL(BASE + "/screenshots/game/" + gameId).openConnection();
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(60000);
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Accept", "application/json");
+        conn.setRequestProperty("User-Agent", "CocoonFroglogWidget/1.0");
+        conn.setRequestProperty("Authorization", "Bearer " + token);
+        conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+        conn.setDoOutput(true);
+        conn.setFixedLengthStreamingMode(bytes.length);
+        OutputStream out = conn.getOutputStream();
+        try {
+            out.write(bytes);
+        } finally {
+            out.close();
+        }
+        int code = conn.getResponseCode();
+        InputStream stream = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+        String response = stream == null ? "" : read(stream);
+        conn.disconnect();
+        if (code < 200 || code >= 300) {
+            throw call(new HttpResult(code, response), code == 413
+                    ? "That screenshot is over Froglog's 10 MB limit"
+                    : "Froglog did not take the screenshot (" + code + ")");
+        }
+    }
+
+    /** Number of screenshots already on the game, or -1 when it cannot be read. */
+    public static int screenshotCount(String token, long gameId) {
+        try {
+            HttpResult result = request("GET", BASE + "/screenshots/game/" + gameId, token, null);
+            if (result.code < 200 || result.code >= 300) {
+                return -1;
+            }
+            String text = result.body.trim();
+            if (text.startsWith("[")) {
+                return new org.json.JSONArray(text).length();
+            }
+            JSONObject json = new JSONObject(text);
+            org.json.JSONArray rows = json.optJSONArray("screenshots");
+            return rows == null ? -1 : rows.length();
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    private static void formField(ByteArrayOutputStream body, String boundary, String name, String value)
+            throws Exception {
+        body.write(("--" + boundary + "\r\n"
+                + "Content-Disposition: form-data; name=\"" + name + "\"\r\n\r\n"
+                + value + "\r\n").getBytes(StandardCharsets.UTF_8));
     }
 
     public static final class Logged {
@@ -359,14 +606,24 @@ public final class FroglogClient {
      */
     public static FroglogCreate.Outcome createGameKeyed(String token, String title, String platform, String coverUrl,
             boolean isPublic, String clientRef, boolean confirmNew) throws Exception {
-        JSONObject body = new JSONObject();
+        return createGameKeyed(token, title, platform, coverUrl, isPublic, clientRef, confirmNew, null);
+    }
+
+    /** {@code catalog} adds the chosen search result's description, genre, developer, and ids. */
+    public static FroglogCreate.Outcome createGameKeyed(String token, String title, String platform, String coverUrl,
+            boolean isPublic, String clientRef, boolean confirmNew, Hit catalog) throws Exception {
+        JSONObject body = catalog == null ? new JSONObject() : catalog.catalogFields();
         body.put("title", title);
         if (platform != null && !platform.isEmpty()) {
             body.put("platform", platform);
         }
         if (coverUrl != null && !coverUrl.isEmpty()) {
-            body.put("cover_image", coverUrl);
-            body.put("img", coverUrl);
+            if (!body.has("cover_image")) {
+                body.put("cover_image", coverUrl);
+            }
+            if (!body.has("img")) {
+                body.put("img", coverUrl);
+            }
         }
         body.put("is_public", isPublic);
         if (clientRef != null && !clientRef.isEmpty()) {
