@@ -254,16 +254,19 @@ def main() -> None:
     if share_before != share_after:
         raise SystemExit("picnic share chooser should stay unmodified")
     info = instructions(method(picnic_after, ".method public static final Y(Lcf/pd;Ljb/a;Ljava/lang/String;Lp1/o;Lz0/e0;I)V"))
+    y_body = method(picnic_after, ".method public static final Y(Lcf/pd;Ljb/a;Ljava/lang/String;Lp1/o;Lz0/e0;I)V")
     info_text = "\n".join(info)
-    if "FroglogPicnic;->uploadAction" not in info_text:
+    if ".registers 49" not in y_body or "move-object/from16 v3, p0" not in y_body:
+        raise SystemExit("picnic info dialog register frame changed")
+    if "invoke-static {v13, v14}, Lrip/moth/cocoonshell/froglog/FroglogPicnic;->uploadAction" not in info_text:
         raise SystemExit("picnic info dialog is missing the Froglog upload row")
-    if "invoke-static/range {p1 .. p5}, Lcf/pi;->W(" not in info_text \
-            and "invoke-static/range {v49 .. v53}, Lcf/pi;->W(" not in info_text:
+    if "invoke-static {v4, v14, v15, v12, v1}, Lcf/pi;->W(" not in info_text:
         raise SystemExit("picnic info dialog is missing the Froglog upload W row")
-    if ".registers 54" not in method(picnic_after, ".method public static final Y(Lcf/pd;Ljb/a;Ljava/lang/String;Lp1/o;Lz0/e0;I)V"):
-        raise SystemExit("picnic info dialog did not grow the register frame")
     row = instructions(method(picnic_after, ".method public static final W(Ljava/lang/String;Ljb/a;Lp1/o;Lz0/e0;I)V"))
-    if 'const-string v13, "Upload to Froglog"' not in row:
+    row_text = "\n".join(row)
+    if "invoke-virtual {v0, v4}, Ljava/lang/String;->equals" in row_text:
+        raise SystemExit("picnic info row compares the flags register as a string")
+    if "move-object/from16 v4, p0" not in row_text or 'const-string v13, "Upload to Froglog"' not in row_text:
         raise SystemExit("picnic info row is missing the Froglog upload label")
     if menu_text is not None:
         wrapper = instructions(method(menu_text, ".method public static final E(Landroid/content/Context;Lnf/d0;Lde/o;ZZZZ)Ljava/util/List;"))

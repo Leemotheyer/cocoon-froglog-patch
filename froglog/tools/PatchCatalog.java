@@ -1802,11 +1802,13 @@ public final class PatchCatalog {
         FiveRegisterInstruction logCall = (FiveRegisterInstruction) instructions.get(logRow);
         int composer = logCall.getRegisterF();
         int flags = logCall.getRegisterG();
-        final int scratchRegs = 5;
-        int newRegCount = impl.getRegisterCount() + scratchRegs;
-        int pdReg = newRegCount - parameterWords(method);
-        int scratchBase = impl.getRegisterCount();
-        List<Instruction> extra = picnicUploadRow(composer, flags, pdReg, scratchBase);
+        // v4, v13, v14 and v15 are dead after this call. Keep the original frame:
+        // growing .registers moves p0 and the rest of Y reads the wrong slots.
+        if (composer > 15 || flags > 15) {
+            throw new IllegalStateException("picnic log row regs composer=" + composer + " flags=" + flags);
+        }
+        int pdReg = impl.getRegisterCount() - parameterWords(method);
+        List<Instruction> extra = picnicUploadRow(composer, flags, pdReg);
         int insert = logRow + 1;
         int[] addresses = addresses(instructions);
         int insertAt = addresses[insert];
@@ -1821,48 +1823,39 @@ public final class PatchCatalog {
         }
         System.out.println("picnic upload row after log composer v" + composer + " pd v" + pdReg);
         return replace(method, new ImmutableMethodImplementation(
-                newRegCount,
+                impl.getRegisterCount(),
                 rewritten,
                 shiftTries(impl.getTryBlocks(), insertAt, added),
                 Collections.emptyList()));
     }
 
-    /** Uses scratch registers at {@code scratchBase} so live compose slots below are not clobbered. */
-    private static List<Instruction> picnicUploadRow(int composer, int flags, int pdReg, int scratchBase) {
-        int s0 = scratchBase;
-        int s1 = scratchBase + 1;
-        int s2 = scratchBase + 2;
-        int s3 = scratchBase + 3;
-        int s4 = scratchBase + 4;
+    /** Temps are v4, v13, v14, v15. Those are unused from the log row through the end of Y. */
+    private static List<Instruction> picnicUploadRow(int composer, int flags, int pdReg) {
         List<Instruction> extra = new ArrayList<Instruction>();
-        final int low = 15;
-        extra.add(new BuilderInstruction11n(Opcode.CONST_4, low, 0));
+        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 13, 0));
         extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_STATIC, 2, low, composer, 0, 0, 0,
+                Opcode.INVOKE_STATIC, 2, 13, composer, 0, 0, 0,
                 method(SHARE, "X", Arrays.asList("I", "Lz0/e0;"), "V")));
         extra.add(new ImmutableInstruction21c(
-                Opcode.SGET_OBJECT, low,
+                Opcode.SGET_OBJECT, 13,
                 field(ANDROID_LOCALS, "b", "Lz0/i2;")));
         extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_VIRTUAL, 2, composer, low, 0, 0, 0,
+                Opcode.INVOKE_VIRTUAL, 2, composer, 13, 0, 0, 0,
                 method("Lz0/e0;", "j", Collections.singletonList("Lz0/k1;"), "Ljava/lang/Object;")));
-        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, s2));
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 13));
         extra.add(new BuilderInstruction21c(
-                Opcode.CHECK_CAST, s2, new ImmutableTypeReference("Landroid/content/Context;")));
-        extra.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, s3, pdReg));
-        extra.add(new ImmutableInstruction3rc(
-                Opcode.INVOKE_STATIC_RANGE, s2, 2,
+                Opcode.CHECK_CAST, 13, new ImmutableTypeReference("Landroid/content/Context;")));
+        extra.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 14, pdReg));
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC, 2, 13, 14, 0, 0, 0,
                 new ImmutableMethodReference(FROGLOG_PICNIC, "uploadAction",
                         Arrays.asList("Landroid/content/Context;", "Ljava/lang/Object;"), "Ljb/a;")));
-        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, s3));
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 14));
         extra.add(new ImmutableInstruction21c(
-                Opcode.CONST_STRING, s0, new ImmutableStringReference("FROGLOG_UPLOAD")));
-        extra.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, s1, s3));
-        extra.add(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(Opcode.CONST, s2, 0));
-        extra.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, s3, composer));
-        extra.add(new ImmutableInstruction22x(Opcode.MOVE_FROM16, s4, flags));
-        extra.add(new ImmutableInstruction3rc(
-                Opcode.INVOKE_STATIC_RANGE, s0, 5,
+                Opcode.CONST_STRING, 4, new ImmutableStringReference("FROGLOG_UPLOAD")));
+        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 15, 0));
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC, 5, 4, 14, 15, composer, flags,
                 method(SHARE, "W", Arrays.asList(
                         "Ljava/lang/String;", "Ljb/a;", "Lp1/o;", "Lz0/e0;", "I"), "V")));
         return extra;
@@ -1898,26 +1891,52 @@ public final class PatchCatalog {
         if (labelAt < 0 || iconAt < 0) {
             throw new IllegalStateException("picnic row chrome label=" + labelAt + " icon=" + iconAt);
         }
-        List<Instruction> labelBranch = picnicUploadLabelBranch();
+        int stringParam = impl.getRegisterCount() - parameterWords(method);
+        List<Instruction> labelBranch = picnicUploadLabelBranch(stringParam);
+        int[] addresses = addresses(instructions);
+        int labelInsertAt = addresses[labelAt + 1];
+        int labelAdded = instructionWidth(labelBranch);
+        instructions = spliceAfter(instructions, labelAt, labelBranch);
+        List<TryBlock<? extends ExceptionHandler>> tries =
+                shiftTries(impl.getTryBlocks(), labelInsertAt, labelAdded);
+        iconAt = -1;
+        for (int i = 0; i < instructions.size(); i++) {
+            Instruction instruction = instructions.get(i);
+            if (instruction.getOpcode() == Opcode.CONST
+                    && instruction instanceof org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction
+                    && ((org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction) instruction).getNarrowLiteral()
+                            == 0x7f0601d5) {
+                iconAt = i;
+                break;
+            }
+        }
+        if (iconAt < 0) {
+            throw new IllegalStateException("picnic row icon missing after label patch");
+        }
         List<Instruction> iconBranch = picnicUploadIconBranch();
-        instructions = insertAfter(instructions, labelAt, labelBranch);
-        iconAt += instructionWidth(labelBranch);
-        instructions = replaceAt(instructions, iconAt, iconBranch);
+        addresses = addresses(instructions);
+        int iconAtAddress = addresses[iconAt];
+        int iconDelta = instructionWidth(iconBranch) - instructions.get(iconAt).getCodeUnits();
+        instructions = spliceReplace(instructions, iconAt, iconBranch);
+        tries = shiftTries(tries, iconAtAddress, iconDelta);
         System.out.println("picnic upload row label and icon branches");
         return replace(method, new ImmutableMethodImplementation(
                 impl.getRegisterCount(),
                 instructions,
-                impl.getTryBlocks(),
+                tries,
                 Collections.emptyList()));
     }
 
-    private static List<Instruction> picnicUploadLabelBranch() {
+    /** p0 is the row key. v0 at this point is the changed-flags int, not the string. */
+    private static List<Instruction> picnicUploadLabelBranch(int stringParam) {
         MethodImplementationBuilder code = new MethodImplementationBuilder(16);
         Label done = code.getLabel("froglog_label_done");
+        code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction22x(
+                Opcode.MOVE_OBJECT_FROM16, 4, stringParam));
         code.addInstruction(new BuilderInstruction21c(
-                Opcode.CONST_STRING, 4, new ImmutableStringReference("FROGLOG_UPLOAD")));
+                Opcode.CONST_STRING, 14, new ImmutableStringReference("FROGLOG_UPLOAD")));
         code.addInstruction(new BuilderInstruction35c(
-                Opcode.INVOKE_VIRTUAL, 2, 0, 4, 0, 0, 0,
+                Opcode.INVOKE_VIRTUAL, 2, 4, 14, 0, 0, 0,
                 method("Ljava/lang/String;", "equals", Collections.singletonList("Ljava/lang/Object;"), "Z")));
         code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 4));
         code.addInstruction(new BuilderInstruction21t(Opcode.IF_EQZ, 4, done));
@@ -1928,23 +1947,24 @@ public final class PatchCatalog {
         return instructionList(code);
     }
 
+    /** v4 holds p0 here. v6 is dead until the next move-result. */
     private static List<Instruction> picnicUploadIconBranch() {
         MethodImplementationBuilder code = new MethodImplementationBuilder(16);
-        Label frog = code.getLabel("froglog_icon_frog");
+        Label logIcon = code.getLabel("froglog_icon_log");
         Label done = code.getLabel("froglog_icon_done");
         code.addInstruction(new BuilderInstruction21c(
-                Opcode.CONST_STRING, 4, new ImmutableStringReference("FROGLOG_UPLOAD")));
+                Opcode.CONST_STRING, 6, new ImmutableStringReference("FROGLOG_UPLOAD")));
         code.addInstruction(new BuilderInstruction35c(
-                Opcode.INVOKE_VIRTUAL, 2, 0, 4, 0, 0, 0,
+                Opcode.INVOKE_VIRTUAL, 2, 4, 6, 0, 0, 0,
                 method("Ljava/lang/String;", "equals", Collections.singletonList("Ljava/lang/Object;"), "Z")));
-        code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 4));
-        code.addInstruction(new BuilderInstruction21t(Opcode.IF_EQZ, 4, frog));
-        code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(
-                Opcode.CONST, 3, 0x7f0601d5));
-        code.addInstruction(new BuilderInstruction10t(Opcode.GOTO, done));
-        code.addLabel("froglog_icon_frog");
+        code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 6));
+        code.addInstruction(new BuilderInstruction21t(Opcode.IF_EQZ, 6, logIcon));
         code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(
                 Opcode.CONST, 3, FROGLOG_POD_ICON));
+        code.addInstruction(new BuilderInstruction10t(Opcode.GOTO, done));
+        code.addLabel("froglog_icon_log");
+        code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(
+                Opcode.CONST, 3, 0x7f0601d5));
         code.addLabel("froglog_icon_done");
         code.addInstruction(new BuilderInstruction10x(Opcode.NOP));
         return instructionList(code);
@@ -1958,60 +1978,36 @@ public final class PatchCatalog {
         return out;
     }
 
-    private static List<Instruction> insertAfter(List<Instruction> instructions, int index, List<Instruction> extra) {
-        List<Instruction> out = new ArrayList<Instruction>();
+    /** Insert {@code extra} after {@code index}, retargeting only the original instructions. */
+    private static List<Instruction> spliceAfter(List<Instruction> instructions, int index, List<Instruction> extra) {
         int[] addresses = addresses(instructions);
-        int insertAt = addresses[index + 1];
+        int insert = index + 1;
+        int insertAt = addresses[insert];
         int[] switchAt = switchAddresses(instructions, addresses);
         int added = instructionWidth(extra);
-        for (int i = 0; i < instructions.size(); i++) {
-            out.add(instructions.get(i));
-            if (i == index) {
-                for (Instruction instruction : extra) {
-                    out.add(instruction);
-                }
-            }
-        }
         List<Instruction> rewritten = new ArrayList<Instruction>();
-        addresses = addresses(out);
-        switchAt = switchAddresses(out, addresses);
-        for (int i = 0; i < out.size(); i++) {
-            if (i <= index) {
-                rewritten.add(out.get(i));
-            } else {
-                rewritten.add(retarget(out.get(i), addresses[i], switchAt[i], insertAt, added));
+        for (int i = 0; i < instructions.size(); i++) {
+            if (i == insert) {
+                rewritten.addAll(extra);
             }
+            rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], insertAt, added));
         }
         return rewritten;
     }
 
-    private static List<Instruction> replaceAt(List<Instruction> instructions, int index, List<Instruction> replacement) {
-        List<Instruction> out = new ArrayList<Instruction>();
+    /** Replace one instruction. Later code shifts by the width delta. */
+    private static List<Instruction> spliceReplace(
+            List<Instruction> instructions, int index, List<Instruction> replacement) {
         int[] addresses = addresses(instructions);
-        int replaceAt = addresses[index];
-        int oldWidth = instructions.get(index).getCodeUnits();
-        int newWidth = instructionWidth(replacement);
-        int delta = newWidth - oldWidth;
+        int next = addresses[index] + instructions.get(index).getCodeUnits();
+        int delta = instructionWidth(replacement) - instructions.get(index).getCodeUnits();
         int[] switchAt = switchAddresses(instructions, addresses);
+        List<Instruction> rewritten = new ArrayList<Instruction>();
         for (int i = 0; i < instructions.size(); i++) {
             if (i == index) {
-                out.addAll(replacement);
+                rewritten.addAll(replacement);
             } else {
-                out.add(instructions.get(i));
-            }
-        }
-        List<Instruction> rewritten = new ArrayList<Instruction>();
-        addresses = addresses(out);
-        switchAt = switchAddresses(out, addresses);
-        for (int i = 0; i < out.size(); i++) {
-            if (i < index) {
-                rewritten.add(out.get(i));
-            } else if (i == index) {
-                for (Instruction instruction : replacement) {
-                    rewritten.add(instruction);
-                }
-            } else {
-                rewritten.add(retarget(out.get(i), addresses[i], switchAt[i], replaceAt, delta));
+                rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], next, delta));
             }
         }
         return rewritten;
