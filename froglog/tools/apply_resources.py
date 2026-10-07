@@ -276,13 +276,13 @@ def main() -> None:
 
     yml = decoded / "apktool.yml"
     text = yml.read_text(encoding="utf-8")
-    text = text.replace("versionCode: 1\n", "versionCode: 17\n", 1)
-    text = text.replace("versionName: 3.06-1\n", "versionName: 3.06-1-froglog16-dev\n", 1)
+    text = text.replace("versionCode: 1\n", "versionCode: 18\n", 1)
+    text = text.replace("versionName: 3.06-1\n", "versionName: 3.06-1-froglog17-dev\n", 1)
     text = text.replace("- assets/dexopt/baseline.prof\n", "")
     text = text.replace("- assets/dexopt/baseline.profm\n", "")
     if "renameManifestPackage:" not in text:
         text = text.replace("apkFileName:", f"renameManifestPackage: {PACKAGE}\napkFileName:", 1)
-    if "versionCode: 17\n" not in text or "versionName: 3.06-1-froglog16-dev\n" not in text:
+    if "versionCode: 18\n" not in text or "versionName: 3.06-1-froglog17-dev\n" not in text:
         raise SystemExit("version was not bumped")
     yml.write_text(text, encoding="utf-8")
     for profile in ("assets/dexopt/baseline.prof", "assets/dexopt/baseline.profm"):

@@ -1808,6 +1808,7 @@ public final class PatchCatalog {
             throw new IllegalStateException("picnic log row regs composer=" + composer + " flags=" + flags);
         }
         int pdReg = impl.getRegisterCount() - parameterWords(method);
+        // v4 is the dialog onClick. Y stores it in the restart lambda after this call.
         List<Instruction> extra = picnicUploadRow(composer, flags, pdReg);
         int insert = logRow + 1;
         int[] addresses = addresses(instructions);
@@ -1829,7 +1830,11 @@ public final class PatchCatalog {
                 Collections.emptyList()));
     }
 
-    /** Temps are v4, v13, v14, v15. Those are unused from the log row through the end of Y. */
+    /**
+     * Temps are v13, v14, and v15 only. v4 is the screenshot dialog's onClick and is
+     * still live: Y copies v0..v6 into the restart lambda after this row. Writing v4
+     * made the next frame call {@code lb.a.r0} with a null onClick.
+     */
     private static List<Instruction> picnicUploadRow(int composer, int flags, int pdReg) {
         List<Instruction> extra = new ArrayList<Instruction>();
         extra.add(new BuilderInstruction11n(Opcode.CONST_4, 13, 0));
@@ -1851,20 +1856,20 @@ public final class PatchCatalog {
                 new ImmutableMethodReference(FROGLOG_PICNIC, "uploadAction",
                         Arrays.asList("Landroid/content/Context;", "Ljava/lang/Object;"), "Ljb/a;")));
         extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 14));
-        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 4, 1));
+        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 13, 1));
         extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_STATIC, 1, 4, 0, 0, 0, 0,
+                Opcode.INVOKE_STATIC, 1, 13, 0, 0, 0, 0,
                 method(FROGLOG_PICNIC, "setUploadRow", Collections.singletonList("Z"), "V")));
         extra.add(new ImmutableInstruction21c(
-                Opcode.CONST_STRING, 4, new ImmutableStringReference("SELECT")));
+                Opcode.CONST_STRING, 13, new ImmutableStringReference("SELECT")));
         extra.add(new BuilderInstruction11n(Opcode.CONST_4, 15, 0));
         extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_STATIC, 5, 4, 14, 15, composer, flags,
+                Opcode.INVOKE_STATIC, 5, 13, 14, 15, composer, flags,
                 method(SHARE, "W", Arrays.asList(
                         "Ljava/lang/String;", "Ljb/a;", "Lp1/o;", "Lz0/e0;", "I"), "V")));
-        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 4, 0));
+        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 13, 0));
         extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_STATIC, 1, 4, 0, 0, 0, 0,
+                Opcode.INVOKE_STATIC, 1, 13, 0, 0, 0, 0,
                 method(FROGLOG_PICNIC, "setUploadRow", Collections.singletonList("Z"), "V")));
         return extra;
     }

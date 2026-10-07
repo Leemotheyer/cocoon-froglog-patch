@@ -260,8 +260,10 @@ def main() -> None:
         raise SystemExit("picnic info dialog register frame changed")
     if "invoke-static {v13, v14}, Lrip/moth/cocoonshell/froglog/FroglogPicnic;->uploadAction" not in info_text:
         raise SystemExit("picnic info dialog is missing the Froglog upload row")
-    if 'const-string v4, "SELECT"' not in info_text or "invoke-static {v4, v14, v15, v12, v1}, Lcf/pi;->W(" not in info_text:
+    if 'const-string v13, "SELECT"' not in info_text or "invoke-static {v13, v14, v15, v12, v1}, Lcf/pi;->W(" not in info_text:
         raise SystemExit("picnic info dialog is missing the Froglog upload W row")
+    if "const/4 v4," in info_text or 'const-string v4, "SELECT"' in info_text:
+        raise SystemExit("picnic upload row clobbers v4, the dialog onClick")
     if "FroglogPicnic;->setUploadRow" not in info_text:
         raise SystemExit("picnic info dialog does not mark the upload row")
     row = instructions(method(picnic_after, ".method public static final W(Ljava/lang/String;Ljb/a;Lp1/o;Lz0/e0;I)V"))
