@@ -96,7 +96,8 @@ def main() -> None:
             "g": (root / "before" / "lf" / "k.smali", root / "after" / "lf" / "k.smali"),
         }
         dispatch = {name: (b.read_text(encoding="utf-8"), a.read_text(encoding="utf-8")) for name, (b, a) in dispatch.items()}
-        share_after = (root / "after" / "cf" / "pi.smali").read_text(encoding="utf-8")
+        picnic_before = (root / "before" / "cf" / "pi.smali").read_text(encoding="utf-8")
+        picnic_after = (root / "after" / "cf" / "pi.smali").read_text(encoding="utf-8")
         menu_text = None
         if len(menu_dex) == 2:
             disassemble(baksmali, Path(menu_dex[1]), root / "menu", "La8/z;")
@@ -248,14 +249,18 @@ def main() -> None:
             raise SystemExit(f"menu dispatch {name} is missing the Froglog action prefix")
         if [shift_labels(line, 8) for line in body_before] != body_after[5:]:
             raise SystemExit(f"menu dispatch {name} changed more than the Froglog prefix")
-    share = instructions(method(share_after, ".method public static final Z0(Lc/j;Landroid/net/Uri;Ljava/lang/String;Ljava/lang/String;)V"))
-    upload = "invoke-static {p1, p0, v0, p3}, Lrip/moth/cocoonshell/froglog/FroglogPicnic;->withUpload(Landroid/content/Intent;Landroid/content/Context;Landroid/content/Intent;Ljava/lang/String;)Landroid/content/Intent;"
-    if upload not in share:
-        raise SystemExit("picnic share is missing the Froglog upload target")
-    at = share.index(upload)
-    if not share[at - 2].startswith("invoke-static {v0, p1}, Landroid/content/Intent;->createChooser") \
-            or share[at + 1] != "move-result-object p1" or not share[at + 2].startswith("invoke-virtual {p0, p1}, Landroid/content/Context;->startActivity"):
-        raise SystemExit("picnic share hook is not between the chooser and startActivity")
+    share_before = instructions(method(picnic_before, ".method public static final Z0(Lc/j;Landroid/net/Uri;Ljava/lang/String;Ljava/lang/String;)V"))
+    share_after = instructions(method(picnic_after, ".method public static final Z0(Lc/j;Landroid/net/Uri;Ljava/lang/String;Ljava/lang/String;)V"))
+    if share_before != share_after:
+        raise SystemExit("picnic share chooser should stay unmodified")
+    info = instructions(method(picnic_after, ".method public static final Y(Lcf/pd;Ljb/a;Ljava/lang/String;Lp1/o;Lz0/e0;I)V"))
+    upload_action = "invoke-static {v10, v0}, Lrip/moth/cocoonshell/froglog/FroglogPicnic;->uploadAction(Landroid/content/Context;Ljava/lang/Object;)Ljb/a;"
+    upload_row = 'const-string v9, "FROGLOG_UPLOAD"'
+    if upload_action not in info or upload_row not in info:
+        raise SystemExit("picnic info dialog is missing the Froglog upload row")
+    row = instructions(method(picnic_after, ".method public static final W(Ljava/lang/String;Ljb/a;Lp1/o;Lz0/e0;I)V"))
+    if 'const-string v13, "Upload to Froglog"' not in row:
+        raise SystemExit("picnic info row is missing the Froglog upload label")
     if menu_text is not None:
         wrapper = instructions(method(menu_text, ".method public static final E(Landroid/content/Context;Lnf/d0;Lde/o;ZZZZ)Ljava/util/List;"))
         if wrapper != [

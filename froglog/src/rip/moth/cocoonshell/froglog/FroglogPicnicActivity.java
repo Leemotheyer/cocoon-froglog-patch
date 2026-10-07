@@ -34,8 +34,13 @@ import java.util.concurrent.Executors;
  * screenshot goes to the Froglog game that title is mapped to.
  */
 public class FroglogPicnicActivity extends FroglogActivity {
-    /** Opens on one screenshot, as from Picnic's share sheet. */
+    /** Opens on one screenshot from Picnic's upload button or the pod list. */
     public static final String EXTRA_URI = "froglog_shot_uri";
+    public static final String EXTRA_TITLE = "froglog_shot_title";
+    public static final String EXTRA_ALT_TITLE = "froglog_shot_alt_title";
+    public static final String EXTRA_PLATFORM = "froglog_shot_platform";
+    public static final String EXTRA_MIME = "froglog_shot_mime";
+    public static final String EXTRA_NAME = "froglog_shot_name";
     private static final int MAX_BYTES = 10 * 1024 * 1024;
     private static final int MAX_SHOTS = 10;
     private static final int ROWS = 80;
@@ -73,6 +78,9 @@ public class FroglogPicnicActivity extends FroglogActivity {
         if (uri != null && !uri.isEmpty()) {
             direct = true;
             Shot shot = find(this, uri);
+            if (shot == null) {
+                shot = shotFromExtras(getIntent());
+            }
             if (shot == null) {
                 shot = new Shot();
                 shot.uri = uri;
@@ -142,7 +150,7 @@ public class FroglogPicnicActivity extends FroglogActivity {
         root.removeAllViews();
         root.addView(FroglogTheme.title(this, "Picnic screenshots"));
         root.addView(FroglogTheme.muted(this,
-                "Send a Picnic screenshot to the Froglog game its Cocoon game is mapped to. Each Froglog game holds up to 10.",
+                "Upload Picnic screenshots to the Froglog game each Cocoon title is mapped to. Each Froglog game holds up to 10.",
                 14));
         if (!signInPrompt()) {
             return;
@@ -245,7 +253,7 @@ public class FroglogPicnicActivity extends FroglogActivity {
         if (shot.title.isEmpty()) {
             root.addView(gap(14));
             root.addView(FroglogTheme.muted(this,
-                    "Picnic has no game for this image, so it cannot be matched to a Froglog game. Share the original screenshot from Picnic instead.",
+                    "Picnic has no game for this screenshot, so it cannot be matched to a Froglog game.",
                     14));
             return;
         }
@@ -625,6 +633,27 @@ public class FroglogPicnicActivity extends FroglogActivity {
     static Shot find(Context context, String uri) {
         List<Shot> shots = query(context, SELECT + "WHERE r.screenshotUri = ? LIMIT 1", new String[] {uri});
         return shots == null || shots.isEmpty() ? null : shots.get(0);
+    }
+
+    private static Shot shotFromExtras(Intent intent) {
+        if (intent == null) {
+            return null;
+        }
+        String uri = intent.getStringExtra(EXTRA_URI);
+        if (uri == null || uri.isEmpty()) {
+            return null;
+        }
+        Shot shot = new Shot();
+        shot.uri = uri;
+        shot.name = intent.getStringExtra(EXTRA_NAME);
+        if (shot.name == null || shot.name.isEmpty()) {
+            shot.name = Uri.parse(uri).getLastPathSegment();
+        }
+        shot.mime = intent.getStringExtra(EXTRA_MIME);
+        shot.title = nonNull(intent.getStringExtra(EXTRA_TITLE)).trim();
+        shot.altTitle = nonNull(intent.getStringExtra(EXTRA_ALT_TITLE)).trim();
+        shot.platform = nonNull(intent.getStringExtra(EXTRA_PLATFORM));
+        return shot;
     }
 
     private static List<Shot> query(Context context, String sql, String[] args) {

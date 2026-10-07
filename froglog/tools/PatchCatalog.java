@@ -3,6 +3,7 @@ import org.jf.dexlib2.Opcode;
 import org.jf.dexlib2.Opcodes;
 import org.jf.dexlib2.builder.MethodImplementationBuilder;
 import org.jf.dexlib2.builder.Label;
+import org.jf.dexlib2.builder.instruction.BuilderInstruction10t;
 import org.jf.dexlib2.builder.instruction.BuilderInstruction10x;
 import org.jf.dexlib2.builder.instruction.BuilderInstruction11n;
 import org.jf.dexlib2.builder.instruction.BuilderInstruction11x;
@@ -23,6 +24,7 @@ import org.jf.dexlib2.iface.instruction.Instruction;
 import org.jf.dexlib2.iface.instruction.OneRegisterInstruction;
 import org.jf.dexlib2.iface.instruction.ReferenceInstruction;
 import org.jf.dexlib2.iface.instruction.SwitchElement;
+import org.jf.dexlib2.iface.instruction.FiveRegisterInstruction;
 import org.jf.dexlib2.iface.instruction.TwoRegisterInstruction;
 import org.jf.dexlib2.iface.instruction.formats.Instruction10t;
 import org.jf.dexlib2.iface.instruction.formats.Instruction20t;
@@ -105,7 +107,12 @@ public final class PatchCatalog {
     private static final String MENU_DISPATCH_SIG =
             "(Landroid/content/Context;Ljava/lang/String;Ljb/c;Ljb/e;Ljb/c;Ljb/a;)V";
     private static final String SHARE = "Lcf/pi;";
-    private static final String SHARE_SIG = "(Lc/j;Landroid/net/Uri;Ljava/lang/String;Ljava/lang/String;)V";
+    private static final String PICNIC_INFO_SIG =
+            "(Lcf/pd;Ljb/a;Ljava/lang/String;Lp1/o;Lz0/e0;I)V";
+    private static final String PICNIC_ROW_SIG = "(Ljava/lang/String;Ljb/a;Lp1/o;Lz0/e0;I)V";
+    private static final String FROGLOG_PICNIC = "Lrip/moth/cocoonshell/froglog/FroglogPicnic;";
+    private static final String ANDROID_LOCALS = "Landroidx/compose/ui/platform/AndroidCompositionLocals_androidKt;";
+    private static final int FROGLOG_POD_ICON = 0x7F060218;
     private static final String FROGLOG_MENU = "Lrip/moth/cocoonshell/froglog/FroglogMenu;";
     private static final int FROGLOG_ICON = 0x7F06021A;
     private static final String INSERT =
@@ -208,7 +215,7 @@ public final class PatchCatalog {
         final ClassDef surfacePrefsReplacement = patchSurfacePrefs(surfacePrefs);
         final ClassDef glassDrawReplacement = prefixMenuAction(prefixGlassMethods(glassDraw, "b"), "Z0");
         final ClassDef menuDispatchReplacement = prefixMenuAction(menuDispatch, "g");
-        final ClassDef shareReplacement = patchShare(share);
+        final ClassDef picnicReplacement = patchPicnic(share);
         final ClassDef glassHostReplacement = prefixGlassMethods(glassHost, "h", "A0");
         final ClassDef widgetHostReplacement = patchWidgetHost(widgetHost);
         final ClassDef statusBarReplacement = patchStatusBar(statusBar);
@@ -254,7 +261,7 @@ public final class PatchCatalog {
                     } else if (MENU_DISPATCH.equals(cls.getType())) {
                         classes.add(menuDispatchReplacement);
                     } else if (SHARE.equals(cls.getType())) {
-                        classes.add(shareReplacement);
+                        classes.add(picnicReplacement);
                     } else {
                         classes.add(cls);
                     }
@@ -1727,84 +1734,280 @@ public final class PatchCatalog {
         return replace(method, code.getMethodImplementation());
     }
 
-    /** Picnic shares through cf.pi.Z0. Froglog adds its upload target to the chooser before it opens. */
-    private static ClassDef patchShare(ClassDef share) {
+    /** Picnic screenshot info dialog (cf.pi.Y): add an Upload to Froglog row beside View session info in Log. */
+    private static ClassDef patchPicnic(ClassDef picnic) {
+        int patchedInfo = 0;
+        int patchedRow = 0;
         List<Method> direct = new ArrayList<Method>();
-        boolean patched = false;
-        for (Method method : share.getDirectMethods()) {
-            if ("Z0".equals(method.getName()) && SHARE_SIG.equals(signature(method))) {
-                direct.add(patchShareChooser(method));
-                patched = true;
+        for (Method method : picnic.getDirectMethods()) {
+            if ("Y".equals(method.getName()) && PICNIC_INFO_SIG.equals(signature(method))) {
+                direct.add(patchPicnicInfoDialog(method));
+                patchedInfo++;
+            } else if ("W".equals(method.getName()) && PICNIC_ROW_SIG.equals(signature(method))) {
+                direct.add(patchPicnicInfoRow(method));
+                patchedRow++;
             } else {
                 direct.add(method);
             }
         }
-        if (!patched) {
-            throw new IllegalStateException("picnic share not found");
+        if (patchedInfo != 1 || patchedRow != 1) {
+            throw new IllegalStateException("picnic info dialog=" + patchedInfo + " row=" + patchedRow);
         }
         List<Method> virtual = new ArrayList<Method>();
-        for (Method method : share.getVirtualMethods()) {
+        for (Method method : picnic.getVirtualMethods()) {
             virtual.add(method);
         }
-        return copyClass(share, direct, virtual);
+        return copyClass(picnic, direct, virtual);
     }
 
-    private static Method patchShareChooser(Method method) {
+    private static Method patchPicnicInfoDialog(Method method) {
         MethodImplementation impl = method.getImplementation();
         List<Instruction> instructions = new ArrayList<Instruction>();
         for (Instruction instruction : impl.getInstructions()) {
             instructions.add(instruction);
         }
-        int send = -1;
-        int chooser = -1;
-        for (int i = 0; i < instructions.size() - 1; i++) {
+        int logRow = -1;
+        for (int i = 0; i < instructions.size(); i++) {
             Instruction instruction = instructions.get(i);
-            if (!(instruction instanceof ReferenceInstruction)) {
+            if (instruction.getOpcode() != Opcode.INVOKE_STATIC || !(instruction instanceof ReferenceInstruction)) {
                 continue;
             }
             Reference ref = ((ReferenceInstruction) instruction).getReference();
-            if (send < 0 && instruction.getOpcode() == Opcode.NEW_INSTANCE && ref instanceof TypeReference
-                    && "Landroid/content/Intent;".equals(((TypeReference) ref).getType())) {
-                send = ((OneRegisterInstruction) instruction).getRegisterA();
+            if (!(ref instanceof MethodReference)) {
+                continue;
             }
-            if (instruction.getOpcode() == Opcode.INVOKE_STATIC && ref instanceof MethodReference
-                    && "createChooser".equals(((MethodReference) ref).getName())
-                    && instructions.get(i + 1).getOpcode() == Opcode.MOVE_RESULT_OBJECT) {
-                chooser = i + 1;
+            MethodReference call = (MethodReference) ref;
+            if (!SHARE.equals(call.getDefiningClass()) || !"W".equals(call.getName())) {
+                continue;
+            }
+            for (int back = 1; back <= 6 && i - back >= 0; back++) {
+                Instruction prior = instructions.get(i - back);
+                if (prior.getOpcode() != Opcode.CONST_STRING || !(prior instanceof ReferenceInstruction)) {
+                    continue;
+                }
+                Reference stringRef = ((ReferenceInstruction) prior).getReference();
+                if (stringRef instanceof org.jf.dexlib2.iface.reference.StringReference
+                        && "SELECT".equals(((org.jf.dexlib2.iface.reference.StringReference) stringRef).getString())) {
+                    logRow = i;
+                    break;
+                }
+            }
+            if (logRow >= 0) {
                 break;
             }
         }
-        int context = impl.getRegisterCount() - parameterWords(method);
-        if (send < 0 || chooser < 0 || context + 3 > 15) {
-            throw new IllegalStateException("picnic share send=" + send + " chooser=" + chooser);
+        if (logRow < 0) {
+            throw new IllegalStateException("picnic log row not found");
         }
-        int result = ((OneRegisterInstruction) instructions.get(chooser)).getRegisterA();
-        List<Instruction> extra = new ArrayList<Instruction>();
-        extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_STATIC,
-                4, result, context, send, context + 3, 0,
-                new ImmutableMethodReference("Lrip/moth/cocoonshell/froglog/FroglogPicnic;", "withUpload",
-                        Arrays.asList("Landroid/content/Intent;", "Landroid/content/Context;",
-                                "Landroid/content/Intent;", "Ljava/lang/String;"),
-                        "Landroid/content/Intent;")));
-        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, result));
-        int insert = chooser + 1;
+        FiveRegisterInstruction logCall = (FiveRegisterInstruction) instructions.get(logRow);
+        int composer = logCall.getRegisterF();
+        int flags = logCall.getRegisterG();
+        List<Instruction> extra = picnicUploadRow(composer, flags);
+        int insert = logRow + 1;
         int[] addresses = addresses(instructions);
         int insertAt = addresses[insert];
         int[] switchAt = switchAddresses(instructions, addresses);
+        int added = instructionWidth(extra);
         List<Instruction> rewritten = new ArrayList<Instruction>();
         for (int i = 0; i < instructions.size(); i++) {
             if (i == insert) {
                 rewritten.addAll(extra);
             }
-            rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], insertAt, 4));
+            rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], insertAt, added));
         }
-        System.out.println("picnic share chooser v" + result + " send v" + send);
+        System.out.println("picnic upload row after log composer v" + composer);
         return replace(method, new ImmutableMethodImplementation(
                 impl.getRegisterCount(),
                 rewritten,
-                shiftTries(impl.getTryBlocks(), insertAt, 4),
+                shiftTries(impl.getTryBlocks(), insertAt, added),
                 Collections.emptyList()));
+    }
+
+    private static List<Instruction> picnicUploadRow(int composer, int flags) {
+        List<Instruction> extra = new ArrayList<Instruction>();
+        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 13, 0));
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC, 2, 13, composer, 0, 0, 0,
+                method(SHARE, "X", Arrays.asList("I", "Lz0/e0;"), "V")));
+        extra.add(new ImmutableInstruction21c(
+                Opcode.SGET_OBJECT, 14,
+                field(ANDROID_LOCALS, "b", "Lz0/i2;")));
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_VIRTUAL, 2, composer, 14, 0, 0, 0,
+                method("Lz0/e0;", "j", Collections.singletonList("Lz0/k1;"), "Ljava/lang/Object;")));
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 10));
+        extra.add(new BuilderInstruction21c(
+                Opcode.CHECK_CAST, 10, new ImmutableTypeReference("Landroid/content/Context;")));
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC, 2, 10, 0, 0, 0, 0,
+                new ImmutableMethodReference(FROGLOG_PICNIC, "uploadAction",
+                        Arrays.asList("Landroid/content/Context;", "Ljava/lang/Object;"), "Ljb/a;")));
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 11));
+        extra.add(new ImmutableInstruction21c(
+                Opcode.CONST_STRING, 9, new ImmutableStringReference("FROGLOG_UPLOAD")));
+        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 8, 0));
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC, 5, 9, 11, 8, composer, flags,
+                method(SHARE, "W", Arrays.asList(
+                        "Ljava/lang/String;", "Ljb/a;", "Lp1/o;", "Lz0/e0;", "I"), "V")));
+        return extra;
+    }
+
+    private static Method patchPicnicInfoRow(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> instructions = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            instructions.add(instruction);
+        }
+        int labelAt = -1;
+        int iconAt = -1;
+        for (int i = 0; i < instructions.size(); i++) {
+            Instruction instruction = instructions.get(i);
+            if (instruction.getOpcode() == Opcode.CONST_STRING && instruction instanceof ReferenceInstruction) {
+                Reference ref = ((ReferenceInstruction) instruction).getReference();
+                if (ref instanceof org.jf.dexlib2.iface.reference.StringReference
+                        && "View session info in Log".equals(
+                                ((org.jf.dexlib2.iface.reference.StringReference) ref).getString())) {
+                    labelAt = i;
+                }
+            }
+            if (instruction.getOpcode() == Opcode.CONST
+                    && instruction instanceof org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction) {
+                int value = ((org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction) instruction)
+                        .getNarrowLiteral();
+                if (value == 0x7f0601d5) {
+                    iconAt = i;
+                }
+            }
+        }
+        if (labelAt < 0 || iconAt < 0) {
+            throw new IllegalStateException("picnic row chrome label=" + labelAt + " icon=" + iconAt);
+        }
+        List<Instruction> labelBranch = picnicUploadLabelBranch();
+        List<Instruction> iconBranch = picnicUploadIconBranch();
+        instructions = insertAfter(instructions, labelAt, labelBranch);
+        iconAt += instructionWidth(labelBranch);
+        instructions = replaceAt(instructions, iconAt, iconBranch);
+        System.out.println("picnic upload row label and icon branches");
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                instructions,
+                impl.getTryBlocks(),
+                Collections.emptyList()));
+    }
+
+    private static List<Instruction> picnicUploadLabelBranch() {
+        MethodImplementationBuilder code = new MethodImplementationBuilder(16);
+        Label done = code.getLabel("froglog_label_done");
+        code.addInstruction(new BuilderInstruction21c(
+                Opcode.CONST_STRING, 4, new ImmutableStringReference("FROGLOG_UPLOAD")));
+        code.addInstruction(new BuilderInstruction35c(
+                Opcode.INVOKE_VIRTUAL, 2, 0, 4, 0, 0, 0,
+                method("Ljava/lang/String;", "equals", Collections.singletonList("Ljava/lang/Object;"), "Z")));
+        code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 4));
+        code.addInstruction(new BuilderInstruction21t(Opcode.IF_EQZ, 4, done));
+        code.addInstruction(new BuilderInstruction21c(
+                Opcode.CONST_STRING, 13, new ImmutableStringReference("Upload to Froglog")));
+        code.addLabel("froglog_label_done");
+        code.addInstruction(new BuilderInstruction10x(Opcode.NOP));
+        return instructionList(code);
+    }
+
+    private static List<Instruction> picnicUploadIconBranch() {
+        MethodImplementationBuilder code = new MethodImplementationBuilder(16);
+        Label frog = code.getLabel("froglog_icon_frog");
+        Label done = code.getLabel("froglog_icon_done");
+        code.addInstruction(new BuilderInstruction21c(
+                Opcode.CONST_STRING, 4, new ImmutableStringReference("FROGLOG_UPLOAD")));
+        code.addInstruction(new BuilderInstruction35c(
+                Opcode.INVOKE_VIRTUAL, 2, 0, 4, 0, 0, 0,
+                method("Ljava/lang/String;", "equals", Collections.singletonList("Ljava/lang/Object;"), "Z")));
+        code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 4));
+        code.addInstruction(new BuilderInstruction21t(Opcode.IF_EQZ, 4, frog));
+        code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(
+                Opcode.CONST, 3, 0x7f0601d5));
+        code.addInstruction(new BuilderInstruction10t(Opcode.GOTO, done));
+        code.addLabel("froglog_icon_frog");
+        code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(
+                Opcode.CONST, 3, FROGLOG_POD_ICON));
+        code.addLabel("froglog_icon_done");
+        code.addInstruction(new BuilderInstruction10x(Opcode.NOP));
+        return instructionList(code);
+    }
+
+    private static List<Instruction> instructionList(MethodImplementationBuilder code) {
+        List<Instruction> out = new ArrayList<Instruction>();
+        for (Instruction instruction : code.getMethodImplementation().getInstructions()) {
+            out.add(instruction);
+        }
+        return out;
+    }
+
+    private static List<Instruction> insertAfter(List<Instruction> instructions, int index, List<Instruction> extra) {
+        List<Instruction> out = new ArrayList<Instruction>();
+        int[] addresses = addresses(instructions);
+        int insertAt = addresses[index + 1];
+        int[] switchAt = switchAddresses(instructions, addresses);
+        int added = instructionWidth(extra);
+        for (int i = 0; i < instructions.size(); i++) {
+            out.add(instructions.get(i));
+            if (i == index) {
+                for (Instruction instruction : extra) {
+                    out.add(instruction);
+                }
+            }
+        }
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        addresses = addresses(out);
+        switchAt = switchAddresses(out, addresses);
+        for (int i = 0; i < out.size(); i++) {
+            if (i <= index) {
+                rewritten.add(out.get(i));
+            } else {
+                rewritten.add(retarget(out.get(i), addresses[i], switchAt[i], insertAt, added));
+            }
+        }
+        return rewritten;
+    }
+
+    private static List<Instruction> replaceAt(List<Instruction> instructions, int index, List<Instruction> replacement) {
+        List<Instruction> out = new ArrayList<Instruction>();
+        int[] addresses = addresses(instructions);
+        int replaceAt = addresses[index];
+        int oldWidth = instructions.get(index).getCodeUnits();
+        int newWidth = instructionWidth(replacement);
+        int delta = newWidth - oldWidth;
+        int[] switchAt = switchAddresses(instructions, addresses);
+        for (int i = 0; i < instructions.size(); i++) {
+            if (i == index) {
+                out.addAll(replacement);
+            } else {
+                out.add(instructions.get(i));
+            }
+        }
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        addresses = addresses(out);
+        switchAt = switchAddresses(out, addresses);
+        for (int i = 0; i < out.size(); i++) {
+            if (i < index) {
+                rewritten.add(out.get(i));
+            } else if (i == index) {
+                for (Instruction instruction : replacement) {
+                    rewritten.add(instruction);
+                }
+            } else {
+                rewritten.add(retarget(out.get(i), addresses[i], switchAt[i], replaceAt, delta));
+            }
+        }
+        return rewritten;
+    }
+
+    private static int instructionWidth(List<Instruction> instructions) {
+        int width = 0;
+        for (Instruction instruction : instructions) {
+            width += instruction.getCodeUnits();
+        }
+        return width;
     }
 
     /** Context menu clicks reach Cocoon's action switch here. Froglog's own action returns early. */
