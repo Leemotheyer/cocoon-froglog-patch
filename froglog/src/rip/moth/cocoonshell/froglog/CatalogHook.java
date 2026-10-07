@@ -51,7 +51,7 @@ public final class CatalogHook {
             ArrayList<Object> copy = append(null, existing,
                     "widget_type_froglog", "widget_type_froglog_desc", ef.b.GAMEPAD, 3, 2);
             copy = append(copy, existing,
-                    "widget_type_froglog_stats", "widget_type_froglog_stats_desc", ef.b.BAR_GRAPH, 1, 1);
+                    "widget_type_froglog_stats", "widget_type_froglog_stats_desc", ef.b.BAR_GRAPH, 2, 1);
             return copy == null ? existing : copy;
         } catch (Throwable t) {
             Log.e(TAG, "Catalog append failed", t);
@@ -78,7 +78,7 @@ public final class CatalogHook {
                 height = 2;
             } else if (labelRes == res("string", "widget_type_froglog_stats")) {
                 provider = FroglogStatsWidget.class.getName();
-                width = 1;
+                width = 2;
                 height = 1;
             } else {
                 return false;
