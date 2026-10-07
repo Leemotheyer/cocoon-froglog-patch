@@ -199,7 +199,9 @@ def main() -> None:
     renamed = f'android:authorities="{PACKAGE}.'
     if leftover in manifest_text.replace(renamed, ""):
         raise SystemExit("a FileProvider authority still uses the original package")
-    if f'<permission android:name="{ORIGINAL_PACKAGE}.' in manifest_text:
+    if f'<permission android:name="{ORIGINAL_PACKAGE}.' in manifest_text.replace(
+        f'<permission android:name="{PACKAGE}.', ""
+    ):
         raise SystemExit("a permission still uses the original package and blocks side-by-side install")
     manifest.write_text(manifest_text, encoding="utf-8")
     insert_before(decoded / "AndroidManifest.xml", "    </application>", MANIFEST, "FroglogRecentWidget")
