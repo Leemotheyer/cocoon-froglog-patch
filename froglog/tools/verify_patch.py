@@ -6,7 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-LABEL = re.compile(r":(cond|goto|pswitch_data|sswitch_data|array)_([0-9a-f]+)")
+LABEL = re.compile(r":(cond|goto|pswitch_data|sswitch_data|pswitch|sswitch|array)_([0-9a-f]+)")
 
 
 def disassemble(baksmali: str, dex: Path, out: Path, *classes: str) -> None:
@@ -58,7 +58,8 @@ def instructions(body: str) -> list[str]:
 
 
 def main() -> None:
-    baksmali, original, patched = sys.argv[1:]
+    baksmali, original, patched = sys.argv[1:4]
+    menu_dex = sys.argv[4:6]
     classes = (
         "Lmf/y1;",
         "Lrip/moth/cocoonshell/data/local/GameSessionDao_Impl;",
@@ -68,6 +69,8 @@ def main() -> None:
         "Lef/q3;",
         "Ltf/i1;",
         "Lef/b;",
+        "Lkf/n2;",
+        "Llf/k;",
     )
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -87,6 +90,15 @@ def main() -> None:
         widget_after = (root / "after" / "tf" / "i1.smali").read_text(encoding="utf-8")
         icons_before = (root / "before" / "ef" / "b.smali").read_text(encoding="utf-8")
         icons_after = (root / "after" / "ef" / "b.smali").read_text(encoding="utf-8")
+        dispatch = {
+            "Z0": (root / "before" / "kf" / "n2.smali", root / "after" / "kf" / "n2.smali"),
+            "g": (root / "before" / "lf" / "k.smali", root / "after" / "lf" / "k.smali"),
+        }
+        dispatch = {name: (b.read_text(encoding="utf-8"), a.read_text(encoding="utf-8")) for name, (b, a) in dispatch.items()}
+        menu_text = None
+        if len(menu_dex) == 2:
+            disassemble(baksmali, Path(menu_dex[1]), root / "menu", "La8/z;")
+            menu_text = (root / "menu" / "a8" / "z.smali").read_text(encoding="utf-8")
 
     clinit_before = instructions(method(before, ".method static constructor <clinit>()V"))
     clinit_after = instructions(method(after, ".method static constructor <clinit>()V"))
@@ -223,6 +235,29 @@ def main() -> None:
         "return-object v0",
     ]:
         raise SystemExit("icon values do not include FROGLOG")
+
+    on_action = "invoke-static/range {p0 .. p1}, Lrip/moth/cocoonshell/froglog/FroglogMenu;->onAction(Landroid/content/Context;Ljava/lang/String;)Z"
+    for name, (text_before, text_after) in dispatch.items():
+        header = f".method public static final {name}(Landroid/content/Context;Ljava/lang/String;Ljb/c;Ljb/e;Ljb/c;Ljb/a;)V"
+        body_before = instructions(method(text_before, header))
+        body_after = instructions(method(text_after, header))
+        if body_after[:2] != [on_action, "move-result v0"] or not body_after[2].startswith("if-eqz v0, ") \
+                or body_after[3:5] != ["return-void", "nop"]:
+            raise SystemExit(f"menu dispatch {name} is missing the Froglog action prefix")
+        if [shift_labels(line, 8) for line in body_before] != body_after[5:]:
+            raise SystemExit(f"menu dispatch {name} changed more than the Froglog prefix")
+    if menu_text is not None:
+        wrapper = instructions(method(menu_text, ".method public static final E(Landroid/content/Context;Lnf/d0;Lde/o;ZZZZ)Ljava/util/List;"))
+        if wrapper != [
+            "invoke-static/range {p0 .. p6}, La8/z;->E$froglog(Landroid/content/Context;Lnf/d0;Lde/o;ZZZZ)Ljava/util/List;",
+            "move-result-object v0",
+            "invoke-static {v0, p1, p2}, Lrip/moth/cocoonshell/froglog/FroglogMenu;->withFroglog(Ljava/util/List;Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/List;",
+            "move-result-object v0",
+            "return-object v0",
+        ]:
+            raise SystemExit("context menu builder does not pass through FroglogMenu")
+        if ".method public static final E$froglog(" not in menu_text:
+            raise SystemExit("original context menu builder is missing")
 
     click_header = ".method public final invoke(Ljava/lang/Object;)Ljava/lang/Object;"
     click = instructions(method(click_after, click_header))

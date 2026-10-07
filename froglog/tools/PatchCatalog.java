@@ -99,6 +99,12 @@ public final class PatchCatalog {
     private static final String WIDGET_HOST = "Ltf/i1;";
     private static final String STATUS_BAR = "Ldg/h4;";
     private static final String ICONS = "Lef/b;";
+    private static final String MENU_ITEMS = "La8/z;";
+    private static final String MENU_ITEMS_SIG = "(Landroid/content/Context;Lnf/d0;Lde/o;ZZZZ)Ljava/util/List;";
+    private static final String MENU_DISPATCH = "Llf/k;";
+    private static final String MENU_DISPATCH_SIG =
+            "(Landroid/content/Context;Ljava/lang/String;Ljb/c;Ljb/e;Ljb/c;Ljb/a;)V";
+    private static final String FROGLOG_MENU = "Lrip/moth/cocoonshell/froglog/FroglogMenu;";
     private static final int FROGLOG_ICON = 0x7F06021A;
     private static final String INSERT =
             "(Lrip/moth/cocoonshell/data/model/GameSession;Lxa/c;)Ljava/lang/Object;";
@@ -106,8 +112,12 @@ public final class PatchCatalog {
             "(Lxd/l0;Landroid/content/Context;Ljava/lang/Boolean;Lrip/moth/cocoonshell/data/model/Game;Lza/c;)Ljava/lang/Object;";
 
     public static void main(String[] args) throws Exception {
+        if (args.length == 3 && "menu".equals(args[0])) {
+            patchMenuDex(args[1], args[2]);
+            return;
+        }
         if (args.length != 2) {
-            throw new IllegalArgumentException("usage: PatchCatalog <in.dex> <out.dex>");
+            throw new IllegalArgumentException("usage: PatchCatalog [menu] <in.dex> <out.dex>");
         }
         // Keep dex version 037. forApi(35) rewrites the header as dex 041, which baksmali rejects.
         DexBackedDexFile dex = DexFileFactory.loadDexFile(new File(args[0]), Opcodes.forDexVersion(37));
@@ -127,6 +137,7 @@ public final class PatchCatalog {
         ClassDef widgetHost = null;
         ClassDef statusBar = null;
         ClassDef icons = null;
+        ClassDef menuDispatch = null;
         for (ClassDef cls : dex.getClasses()) {
             if (CATALOG.equals(cls.getType())) {
                 catalog = cls;
@@ -160,12 +171,14 @@ public final class PatchCatalog {
                 statusBar = cls;
             } else if (ICONS.equals(cls.getType())) {
                 icons = cls;
+            } else if (MENU_DISPATCH.equals(cls.getType())) {
+                menuDispatch = cls;
             }
         }
         if (catalog == null || session == null || pods == null || podAction == null || router == null
                 || friends == null || friendTabs == null || friendMaps == null || friendClick == null
                 || theme == null || surfacePrefs == null
-                || glassDraw == null || glassHost == null || widgetHost == null || statusBar == null || icons == null) {
+                || glassDraw == null || glassHost == null || widgetHost == null || statusBar == null || icons == null || menuDispatch == null) {
             throw new IllegalStateException("catalog=" + (catalog != null) + " session=" + (session != null)
                     + " pods=" + (pods != null) + " podAction=" + (podAction != null)
                     + " router=" + (router != null)
@@ -174,7 +187,7 @@ public final class PatchCatalog {
                     + " theme=" + (theme != null) + " surfacePrefs=" + (surfacePrefs != null)
                     + " glassDraw=" + (glassDraw != null) + " glassHost=" + (glassHost != null)
                     + " widgetHost=" + (widgetHost != null) + " statusBar=" + (statusBar != null)
-                    + " icons=" + (icons != null));
+                    + " icons=" + (icons != null) + " menuDispatch=" + (menuDispatch != null));
         }
         final ClassDef catalogReplacement = patchCatalog(catalog);
         final ClassDef sessionReplacement = patchSession(session);
@@ -187,7 +200,8 @@ public final class PatchCatalog {
         final ClassDef clickReplacement = patchFriendClick(friendClick);
         final ClassDef themeReplacement = patchTheme(theme);
         final ClassDef surfacePrefsReplacement = patchSurfacePrefs(surfacePrefs);
-        final ClassDef glassDrawReplacement = prefixGlassMethods(glassDraw, "b");
+        final ClassDef glassDrawReplacement = prefixMenuAction(prefixGlassMethods(glassDraw, "b"), "Z0");
+        final ClassDef menuDispatchReplacement = prefixMenuAction(menuDispatch, "g");
         final ClassDef glassHostReplacement = prefixGlassMethods(glassHost, "h", "A0");
         final ClassDef widgetHostReplacement = patchWidgetHost(widgetHost);
         final ClassDef statusBarReplacement = patchStatusBar(statusBar);
@@ -230,6 +244,8 @@ public final class PatchCatalog {
                         classes.add(statusBarReplacement);
                     } else if (ICONS.equals(cls.getType())) {
                         classes.add(iconsReplacement);
+                    } else if (MENU_DISPATCH.equals(cls.getType())) {
+                        classes.add(menuDispatchReplacement);
                     } else {
                         classes.add(cls);
                     }
@@ -1700,6 +1716,148 @@ public final class PatchCatalog {
                         "Ljava/util/List;"), "V")));
         code.addInstruction(new BuilderInstruction10x(Opcode.RETURN_VOID));
         return replace(method, code.getMethodImplementation());
+    }
+
+    /** Context menu clicks reach Cocoon's action switch here. Froglog's own action returns early. */
+    private static ClassDef prefixMenuAction(ClassDef cls, String name) {
+        int patched = 0;
+        List<Method> direct = new ArrayList<Method>();
+        for (Method method : cls.getDirectMethods()) {
+            if (name.equals(method.getName()) && MENU_DISPATCH_SIG.equals(signature(method))
+                    && method.getImplementation() != null) {
+                direct.add(prefixMenuDispatch(method));
+                patched++;
+            } else {
+                direct.add(method);
+            }
+        }
+        if (patched != 1) {
+            throw new IllegalStateException(cls.getType() + " menu dispatch " + patched);
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        for (Method method : cls.getVirtualMethods()) {
+            virtual.add(method);
+        }
+        return copyClass(cls, direct, virtual);
+    }
+
+    private static Method prefixMenuDispatch(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        int first = impl.getRegisterCount() - parameterWords(method);
+        if (first < 1) {
+            throw new IllegalStateException("menu dispatch has no scratch register");
+        }
+        List<Instruction> original = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            original.add(instruction);
+        }
+        List<Instruction> prefix = new ArrayList<Instruction>();
+        prefix.add(new ImmutableInstruction3rc(
+                Opcode.INVOKE_STATIC_RANGE, first, 2,
+                new ImmutableMethodReference(FROGLOG_MENU, "onAction",
+                        Arrays.asList("Landroid/content/Context;", "Ljava/lang/String;"), "Z")));
+        prefix.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0));
+        prefix.add(new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 3));
+        prefix.add(new ImmutableInstruction10x(Opcode.RETURN_VOID));
+        prefix.add(new ImmutableInstruction10x(Opcode.NOP));
+        int added = 0;
+        for (Instruction instruction : prefix) {
+            added += instruction.getCodeUnits();
+        }
+        if (added != 8) {
+            throw new IllegalStateException("menu dispatch prefix " + added);
+        }
+        int[] addresses = addresses(original);
+        int[] switchAt = switchAddresses(original, addresses);
+        List<Instruction> rewritten = new ArrayList<Instruction>(prefix);
+        for (int i = 0; i < original.size(); i++) {
+            rewritten.add(retarget(original.get(i), addresses[i], switchAt[i], 0, added));
+        }
+        System.out.println("menu dispatch " + method.getDefiningClass() + "->" + method.getName()
+                + " p0=v" + first);
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                rewritten,
+                shiftTries(impl.getTryBlocks(), 0, added),
+                Collections.emptyList()));
+    }
+
+    /**
+     * classes.dex builds every context menu in a8.z.E. Keep that body as E$froglog and make E
+     * pass its list through FroglogMenu.withFroglog, so no return path is missed.
+     */
+    private static void patchMenuDex(String in, String out) throws Exception {
+        final DexBackedDexFile dex = DexFileFactory.loadDexFile(new File(in), Opcodes.forDexVersion(37));
+        ClassDef items = null;
+        for (ClassDef cls : dex.getClasses()) {
+            if (MENU_ITEMS.equals(cls.getType())) {
+                items = cls;
+            }
+        }
+        if (items == null) {
+            throw new IllegalStateException("menu items class not found");
+        }
+        List<Method> direct = new ArrayList<Method>();
+        Method original = null;
+        for (Method method : items.getDirectMethods()) {
+            if ("E".equals(method.getName()) && MENU_ITEMS_SIG.equals(signature(method))) {
+                original = method;
+            } else if ("E$froglog".equals(method.getName())) {
+                throw new IllegalStateException("menu items already wrapped");
+            } else {
+                direct.add(method);
+            }
+        }
+        if (original == null || (original.getAccessFlags() & 0x8) == 0) {
+            throw new IllegalStateException("menu items builder not found");
+        }
+        direct.add(new ImmutableMethod(
+                original.getDefiningClass(),
+                "E$froglog",
+                original.getParameters(),
+                original.getReturnType(),
+                original.getAccessFlags(),
+                Collections.emptySet(),
+                original.getHiddenApiRestrictions(),
+                original.getImplementation()));
+        int words = parameterWords(original);
+        List<Instruction> wrapper = new ArrayList<Instruction>();
+        wrapper.add(new ImmutableInstruction3rc(
+                Opcode.INVOKE_STATIC_RANGE, 1, words,
+                new ImmutableMethodReference(MENU_ITEMS, "E$froglog", original.getParameterTypes(),
+                        original.getReturnType())));
+        wrapper.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0));
+        wrapper.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC,
+                3, 0, 2, 3, 0, 0,
+                new ImmutableMethodReference(FROGLOG_MENU, "withFroglog",
+                        Arrays.asList("Ljava/util/List;", "Ljava/lang/Object;", "Ljava/lang/Object;"),
+                        "Ljava/util/List;")));
+        wrapper.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0));
+        wrapper.add(new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0));
+        direct.add(replace(original, new ImmutableMethodImplementation(
+                words + 1, wrapper, Collections.emptyList(), Collections.emptyList())));
+        List<Method> virtual = new ArrayList<Method>();
+        for (Method method : items.getVirtualMethods()) {
+            virtual.add(method);
+        }
+        final ClassDef replacement = copyClass(items, direct, virtual);
+        DexFileFactory.writeDexFile(out, new DexFile() {
+            @Override
+            public Set<? extends ClassDef> getClasses() {
+                LinkedHashSet<ClassDef> classes = new LinkedHashSet<ClassDef>();
+                for (ClassDef cls : dex.getClasses()) {
+                    classes.add(MENU_ITEMS.equals(cls.getType()) ? replacement : cls);
+                }
+                return classes;
+            }
+
+            @Override
+            public Opcodes getOpcodes() {
+                return dex.getOpcodes();
+            }
+        });
+        System.out.println("menu items wrapped in " + out);
     }
 
     private static ClassDef prefixGlassMethods(ClassDef cls, String... names) {

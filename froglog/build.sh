@@ -139,11 +139,15 @@ mkdir -p "$WORK/patch-classes"
 javac --release 11 -encoding UTF-8 -cp "$BAKSMALI" -d "$WORK/patch-classes" "$ROOT/froglog/tools/PatchCatalog.java"
 cp "$DECODE/classes4.dex" "$WORK/classes4.original.dex"
 java -cp "$WORK/patch-classes:$BAKSMALI" PatchCatalog "$WORK/classes4.original.dex" "$WORK/classes4.patched.dex"
+cp "$DECODE/classes.dex" "$WORK/classes.original.dex"
+java -cp "$WORK/patch-classes:$BAKSMALI" PatchCatalog menu "$WORK/classes.original.dex" "$WORK/classes.patched.dex"
 
 if ! python3 "$ROOT/froglog/tools/verify_patch.py" \
   "$BAKSMALI" \
   "$WORK/classes4.original.dex" \
-  "$WORK/classes4.patched.dex"; then
+  "$WORK/classes4.patched.dex" \
+  "$WORK/classes.original.dex" \
+  "$WORK/classes.patched.dex"; then
   echo "verify_patch skipped (baksmali classpath incomplete)"
 fi
 if [[ -f "$ROOT/tools/apk-reverse/skills/apk-reverse/scripts/dex_classdiff.py" ]]; then
@@ -161,6 +165,7 @@ rm -rf "$BUILD"
 cp -a "$DECODE" "$BUILD"
 python3 "$ROOT/froglog/tools/apply_resources.py" "$BUILD"
 cp "$WORK/classes4.patched.dex" "$BUILD/classes4.dex"
+cp "$WORK/classes.patched.dex" "$BUILD/classes.dex"
 cp "$WORK/froglog-dex/classes.dex" "$BUILD/classes7.dex"
 
 java -jar "$APKTOOL" b -o "$WORK/cocoon-froglog-unsigned.apk" "$BUILD"
