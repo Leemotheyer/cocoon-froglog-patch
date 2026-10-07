@@ -5,3 +5,4 @@ dist/
 *.idsig
 .gradle/
 build/
+froglog/tools/__pycache__/
