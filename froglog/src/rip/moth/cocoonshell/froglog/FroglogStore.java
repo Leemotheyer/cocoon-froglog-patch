@@ -54,6 +54,74 @@ public final class FroglogStore {
         prefs(context).edit().putBoolean(SESSIONS_PUBLIC, sessionsPublic).apply();
     }
 
+    public static final String VISIBILITY_DEFAULT = "default";
+    public static final String VISIBILITY_PUBLIC = "public";
+    public static final String VISIBILITY_PRIVATE = "private";
+
+    /**
+     * Session visibility for one Froglog game, {@code game:12} or {@code live:12}. A per-game
+     * "public" or "private" wins over the pod default; anything else follows the default.
+     */
+    public static boolean sessionsPublic(Context context, String target) {
+        String choice = visibility(context, target);
+        if (VISIBILITY_PUBLIC.equals(choice)) {
+            return true;
+        }
+        if (VISIBILITY_PRIVATE.equals(choice)) {
+            return false;
+        }
+        return sessionsPublic(context);
+    }
+
+    public static boolean sessionsPublic(Context context, FroglogGame game) {
+        return game == null ? sessionsPublic(context) : sessionsPublic(context, FroglogLinks.value(game.id, game.live));
+    }
+
+    public static String visibility(Context context, String target) {
+        if (target == null) {
+            return VISIBILITY_DEFAULT;
+        }
+        return prefs(context).getString("vis_" + baseTarget(target), VISIBILITY_DEFAULT);
+    }
+
+    public static void setVisibility(Context context, String target, String choice) {
+        String key = "vis_" + baseTarget(target);
+        if (choice == null || VISIBILITY_DEFAULT.equals(choice)) {
+            prefs(context).edit().remove(key).apply();
+        } else {
+            prefs(context).edit().putString(key, choice).apply();
+        }
+    }
+
+    /** {@code game:12:34} (a posted session) narrows to {@code game:12}. */
+    static String baseTarget(String target) {
+        int first = target.indexOf(':');
+        int second = first < 0 ? -1 : target.indexOf(':', first + 1);
+        return second < 0 ? target : target.substring(0, second);
+    }
+
+    public static String visibilityLabel(Context context, String target) {
+        String choice = visibility(context, target);
+        if (VISIBILITY_PUBLIC.equals(choice)) {
+            return "Always public";
+        }
+        if (VISIBILITY_PRIVATE.equals(choice)) {
+            return "Always private";
+        }
+        return "Default (" + (sessionsPublic(context) ? "public" : "private") + ")";
+    }
+
+    /** default, then always public, then always private. */
+    public static String nextVisibility(String choice) {
+        if (VISIBILITY_PUBLIC.equals(choice)) {
+            return VISIBILITY_PRIVATE;
+        }
+        if (VISIBILITY_PRIVATE.equals(choice)) {
+            return VISIBILITY_DEFAULT;
+        }
+        return VISIBILITY_PUBLIC;
+    }
+
     public static String link(Context context, String key) {
         return prefs(context).getString(FroglogLinks.LINK + key, null);
     }
