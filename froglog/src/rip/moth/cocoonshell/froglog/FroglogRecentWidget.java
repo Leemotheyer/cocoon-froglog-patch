@@ -7,27 +7,27 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.RemoteViews;
 
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.List;
 
 /**
- * Grid widget of recent Froglog games. Cocoon hosts it as its own tile.
- * It does not read or replace the local Recently played widget.
+ * Recent Froglog games, laid out like Cocoon's Recently played: a header, then square cover
+ * rows with the title and play time. Wide tiles use two columns, narrow tiles show covers
+ * only. It does not read or replace the local Recently played widget.
  */
 public class FroglogRecentWidget extends AppWidgetProvider {
     public static final String ACTION_REFRESH = "rip.moth.cocoonshell.froglog.REFRESH";
     public static final String ACTION_FILTER = "rip.moth.cocoonshell.froglog.FILTER";
-    private static final int SLOTS = 4;
+    private static final int ROWS = 6;
+    private static final int SLOTS = ROWS * 2;
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] appWidgetIds) {
@@ -66,6 +66,28 @@ public class FroglogRecentWidget extends AppWidgetProvider {
         }
     }
 
+    /** Redraws placed tiles, for example when Cocoon starts or stops a game. */
+    static void refresh(Context context) {
+        final Context app = context.getApplicationContext();
+        synchronized (FroglogRecentWidget.class) {
+            if (refresher == null) {
+                refresher = new Handler(Looper.getMainLooper());
+            }
+            refresher.removeCallbacksAndMessages(null);
+            // Session scans enqueue several rows at once; redraw once after they settle.
+            refresher.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    Intent intent = new Intent(app, FroglogRecentWidget.class);
+                    intent.setAction(ACTION_REFRESH);
+                    app.sendBroadcast(intent);
+                }
+            }, 1500);
+        }
+    }
+
+    private static Handler refresher;
+
     static void render(Context context, AppWidgetManager manager, int[] ids) {
         String token = FroglogStore.token(context);
         String username = FroglogStore.username(context);
@@ -73,168 +95,201 @@ public class FroglogRecentWidget extends AppWidgetProvider {
         if (FroglogStore.signedIn(context)) {
             recent = FroglogClient.recentGames(token, username, SLOTS, FroglogStore.filter(context));
         }
+        String playing = playingKey(context, recent);
+        int waiting = FroglogStore.signedIn(context) ? FroglogStore.pending(context).size() : 0;
         for (int id : ids) {
-            manager.updateAppWidget(id, views(context, manager, id, username, recent));
+            manager.updateAppWidget(id, views(context, manager, id, recent, playing, waiting));
         }
     }
 
-    private static RemoteViews views(Context context, AppWidgetManager manager, int widgetId, String username, FroglogClient.Recent recent) {
-        Bundle options = manager.getAppWidgetOptions(widgetId);
-        Fit fit = fit(options == null ? Bundle.EMPTY : options);
+    /** "game:12" or "live:4" for the Froglog game Cocoon is running now, without any network call. */
+    private static String playingKey(Context context, FroglogClient.Recent recent) {
+        CocoonLibrary.Playing playing = CocoonLibrary.playing(context);
+        if (playing == null) {
+            return null;
+        }
+        String link = FroglogStore.link(context, FroglogMatch.linkKey(playing.title, playing.platformId));
+        if (link != null && link.indexOf(':') > 0) {
+            return link;
+        }
+        if ("no".equals(link) || recent == null || recent.games == null) {
+            return null;
+        }
+        FroglogGame match = FroglogMatch.best(recent.games, playing.title, playing.platformId);
+        return match == null ? null : FroglogLinks.value(match.id, match.live);
+    }
+
+    /** How the tile is filled. Every size is in dp. */
+    static final class Fit {
+        boolean header;
+        boolean coversOnly;
+        boolean meta;
+        boolean pending;
+        int columns;
+        int rows;
+        int cover;
+        float scale;
+    }
+
+    static Fit fit(FroglogWidgetArt.Box box, boolean hasPending) {
+        Fit fit = new Fit();
+        float e = box.scale;
+        fit.scale = e;
+        int gap = Math.round(FroglogWidgetArt.clamp(4 * e, 3, 10));
+        int width = box.widthDp;
+        int height = box.heightDp;
+        if (width < 100) {
+            fit.coversOnly = true;
+            fit.columns = 1;
+            fit.cover = Math.min(width, Math.round(FroglogWidgetArt.clamp(64 * e, 40, 84)));
+            fit.rows = Math.max(1, Math.min(ROWS, (height + gap) / (fit.cover + gap)));
+            if (fit.rows == 1) {
+                fit.cover = Math.max(20, Math.min(width, height));
+            }
+            return fit;
+        }
+        fit.header = true;
+        int headerH = Math.round(FroglogWidgetArt.clamp(16 * e, 14, 24)) + 6;
+        int pendingH = 14;
+        fit.pending = hasPending && height - headerH - pendingH >= 2 * 28 + gap;
+        int available = height - headerH - (fit.pending ? pendingH : 0);
+        fit.cover = Math.round(FroglogWidgetArt.clamp(28 * e, 22, 42));
+        fit.rows = (available + gap) / (fit.cover + gap);
+        if (fit.rows < 1) {
+            fit.rows = 1;
+            fit.cover = Math.max(18, available);
+        }
+        fit.rows = Math.min(ROWS, fit.rows);
+        fit.meta = fit.cover >= 26;
+        fit.columns = width >= 200 ? 2 : 1;
+        return fit;
+    }
+
+    private static RemoteViews views(Context context, AppWidgetManager manager, int widgetId,
+            FroglogClient.Recent recent, String playing, int waiting) {
+        FroglogWidgetArt.Box box = FroglogWidgetArt.box(manager.getAppWidgetOptions(widgetId), 222, 148);
+        Fit fit = fit(box, waiting > 0);
+        float e = fit.scale;
         RemoteViews views = new RemoteViews(context.getPackageName(), layout(context, "froglog_widget"));
-        views.setTextViewText(id(context, "froglog_title"), "Froglog");
+        int root = id(context, "froglog_root");
+        views.setViewPadding(root, dp(context, box.padH), dp(context, box.padV), dp(context, box.padH),
+                dp(context, box.padV));
         FroglogTheme.Palette palette = FroglogTheme.resolve(context);
-        FroglogWidgetTheme.accent(context, views, palette, "froglog_title", "froglog_filter");
-        FroglogWidgetTheme.ink(context, views, palette, "froglog_message",
-                "froglog_name0", "froglog_name1", "froglog_name2", "froglog_name3");
-        FroglogWidgetTheme.muted(context, views, palette, "froglog_subtitle",
-                "froglog_meta0", "froglog_meta1", "froglog_meta2", "froglog_meta3");
+        FroglogWidgetTheme.accent(context, views, palette, "froglog_title", "froglog_filter", "froglog_pending");
+        FroglogWidgetTheme.ink(context, views, palette, "froglog_message");
+        for (int i = 0; i < SLOTS; i++) {
+            FroglogWidgetTheme.ink(context, views, palette, "froglog_name" + i);
+            FroglogWidgetTheme.muted(context, views, palette, "froglog_meta" + i);
+        }
+
+        views.setViewVisibility(id(context, "froglog_header"), fit.header ? View.VISIBLE : View.GONE);
+        views.setTextViewText(id(context, "froglog_title"), "Froglog");
+        views.setTextViewTextSize(id(context, "froglog_title"), TypedValue.COMPLEX_UNIT_SP,
+                FroglogWidgetArt.clamp(13 * e, 11, 18));
         String filter = FroglogStore.filter(context);
         views.setTextViewText(id(context, "froglog_filter"), FroglogGames.filterLabel(filter));
-        boolean signedIn = FroglogStore.signedIn(context);
-        views.setViewVisibility(id(context, "froglog_subtitle"), View.GONE);
-        if (!signedIn) {
-            showMessage(context, views, "Sign in to Froglog");
-        } else if (recent != null && recent.error != null) {
-            showMessage(context, views, recent.error);
-        } else if (recent == null || recent.games.isEmpty()) {
-            showMessage(context, views, "No play history yet");
-        } else {
-            views.setViewVisibility(id(context, "froglog_message"), View.GONE);
-            views.setViewVisibility(id(context, "froglog_row"), View.VISIBLE);
-            List<FroglogGame> games = recent.games;
-            for (int i = 0; i < SLOTS; i++) {
-                int slot = id(context, "froglog_slot" + i);
-                if (i >= games.size() || i >= fit.slots) {
-                    views.setViewVisibility(slot, View.GONE);
-                    continue;
-                }
-                FroglogGame game = games.get(i);
-                views.setViewVisibility(slot, View.VISIBLE);
-                views.setTextViewText(id(context, "froglog_name" + i), game.title);
-                int meta = id(context, "froglog_meta" + i);
-                if (fit.compact) {
-                    views.setViewVisibility(meta, View.GONE);
-                } else {
-                    views.setViewVisibility(meta, View.VISIBLE);
-                    views.setTextViewText(meta, game.meta);
-                }
-                int art = id(context, "froglog_art" + i);
-                sizeCover(views, art, fit.coverDp);
-                Bitmap cover = loadCover(game.coverUrl);
-                if (cover != null) {
-                    views.setImageViewBitmap(art, cover);
-                } else {
-                    views.setImageViewResource(art,
-                            context.getResources().getIdentifier("froglog_cover_placeholder", "drawable", context.getPackageName()));
-                }
-                Intent detail = FroglogGameDetail.intent(context, game, true);
-                detail.setData(Uri.parse("froglog://game/" + widgetId + "/" + i));
-                views.setOnClickPendingIntent(slot, PendingIntent.getActivity(context, widgetId * 10 + i, detail,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
-            }
-        }
-        Intent open = new Intent(context, FroglogPodActivity.class);
-        open.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
-        open.setData(Uri.parse("froglog://widget/" + widgetId));
-        views.setOnClickPendingIntent(id(context, "froglog_title"), PendingIntent.getActivity(context, widgetId, open,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+        views.setTextViewTextSize(id(context, "froglog_filter"), TypedValue.COMPLEX_UNIT_SP,
+                FroglogWidgetArt.clamp(11 * e, 9, 15));
+        views.setTextViewTextSize(id(context, "froglog_message"), TypedValue.COMPLEX_UNIT_SP,
+                FroglogWidgetArt.clamp(11 * e, 9, 15));
+
+        PendingIntent pod = podIntent(context, widgetId);
+        views.setOnClickPendingIntent(root, pod);
+        views.setOnClickPendingIntent(id(context, "froglog_title"), pod);
+        views.setOnClickPendingIntent(id(context, "froglog_title_icon"), pod);
         Intent cycle = new Intent(context, FroglogRecentWidget.class);
         cycle.setAction(ACTION_FILTER);
         views.setOnClickPendingIntent(id(context, "froglog_filter"), PendingIntent.getBroadcast(context, widgetId + 50, cycle,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+
+        int pendingView = id(context, "froglog_pending");
+        if (fit.pending) {
+            views.setViewVisibility(pendingView, View.VISIBLE);
+            views.setTextViewText(pendingView, waiting == 1 ? "1 session waiting to log" : waiting + " sessions waiting to log");
+            views.setOnClickPendingIntent(pendingView, pod);
+        } else {
+            views.setViewVisibility(pendingView, View.GONE);
+        }
+
+        if (!FroglogStore.signedIn(context)) {
+            showMessage(context, views, fit, "Sign in to Froglog");
+            return views;
+        }
+        if (recent != null && recent.error != null) {
+            showMessage(context, views, fit, recent.error);
+            return views;
+        }
+        List<FroglogGame> games = recent == null ? null : recent.games;
+        if (games == null || games.isEmpty()) {
+            showMessage(context, views, fit, FroglogGames.FILTER_RECENT.equals(filter)
+                    ? "No play history yet" : "No " + FroglogGames.filterLabel(filter).toLowerCase(java.util.Locale.ROOT) + " games");
+            return views;
+        }
+
+        views.setViewVisibility(id(context, "froglog_message_box"), View.GONE);
+        views.setViewVisibility(id(context, "froglog_list"), View.VISIBLE);
+        views.setViewVisibility(id(context, "froglog_col1"), fit.columns > 1 ? View.VISIBLE : View.GONE);
+        float nameSize = FroglogWidgetArt.clamp(12 * e, 10, 16);
+        float metaSize = FroglogWidgetArt.clamp(10 * e, 9, 13);
+        int placeholder = FroglogWidgetArt.withAlpha(palette.muted, 0x33);
+        int shown = Math.min(games.size(), fit.rows * fit.columns);
+        for (int i = 0; i < SLOTS; i++) {
+            int col = i / ROWS;
+            int row = i % ROWS;
+            int index = row * fit.columns + col;
+            int slot = id(context, "froglog_slot" + i);
+            if (col >= fit.columns || row >= fit.rows || index >= shown) {
+                views.setViewVisibility(slot, View.GONE);
+                continue;
+            }
+            FroglogGame game = games.get(index);
+            views.setViewVisibility(slot, View.VISIBLE);
+            views.setInt(slot, "setGravity", fit.coversOnly ? Gravity.CENTER : Gravity.CENTER_VERTICAL);
+            int art = id(context, "froglog_art" + i);
+            Bitmap source = FroglogImages.fetch(game.coverUrl, FroglogWidgetArt.px(context, fit.cover * 2));
+            views.setImageViewBitmap(art, FroglogWidgetArt.cover(context, source, fit.cover, placeholder));
+            views.setContentDescription(art, game.title);
+            views.setViewVisibility(id(context, "froglog_text" + i), fit.coversOnly ? View.GONE : View.VISIBLE);
+            int name = id(context, "froglog_name" + i);
+            views.setTextViewText(name, game.title);
+            views.setTextViewTextSize(name, TypedValue.COMPLEX_UNIT_SP, nameSize);
+            int meta = id(context, "froglog_meta" + i);
+            boolean now = playing != null && playing.equals(FroglogLinks.value(game.id, game.live));
+            if (fit.meta || now) {
+                views.setViewVisibility(meta, View.VISIBLE);
+                views.setTextViewText(meta, now ? "Playing now" : FroglogGames.widgetMeta(game));
+                views.setTextViewTextSize(meta, TypedValue.COMPLEX_UNIT_SP, metaSize);
+                if (now) {
+                    FroglogWidgetTheme.accent(context, views, palette, "froglog_meta" + i);
+                }
+            } else {
+                views.setViewVisibility(meta, View.GONE);
+            }
+            Intent detail = FroglogGameDetail.intent(context, game, true);
+            detail.setData(Uri.parse("froglog://game/" + widgetId + "/" + i));
+            views.setOnClickPendingIntent(slot, PendingIntent.getActivity(context, widgetId * 100 + i, detail,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+        }
         return views;
     }
 
-    private static void showMessage(Context context, RemoteViews views, String message) {
-        views.setViewVisibility(id(context, "froglog_row"), View.GONE);
-        views.setViewVisibility(id(context, "froglog_message"), View.VISIBLE);
+    private static void showMessage(Context context, RemoteViews views, Fit fit, String message) {
+        views.setViewVisibility(id(context, "froglog_list"), View.GONE);
+        views.setViewVisibility(id(context, "froglog_message_box"), View.VISIBLE);
+        views.setViewVisibility(id(context, "froglog_message_icon"), fit.header ? View.VISIBLE : View.GONE);
         views.setTextViewText(id(context, "froglog_message"), message);
     }
 
-    private static Bitmap loadCover(String url) {
-        if (url == null || url.isEmpty()) {
-            return null;
-        }
-        HttpURLConnection conn = null;
-        try {
-            conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(12000);
-            conn.setInstanceFollowRedirects(true);
-            conn.connect();
-            if (conn.getResponseCode() >= 400) {
-                return null;
-            }
-            InputStream in = conn.getInputStream();
-            try {
-                Bitmap raw = BitmapFactory.decodeStream(in);
-                if (raw == null) {
-                    return null;
-                }
-                int max = 96;
-                int width = raw.getWidth();
-                int height = raw.getHeight();
-                if (width <= max && height <= max) {
-                    return raw;
-                }
-                float scale = Math.min(max / (float) width, max / (float) height);
-                return Bitmap.createScaledBitmap(raw, Math.max(1, (int) (width * scale)),
-                        Math.max(1, (int) (height * scale)), true);
-            } finally {
-                in.close();
-            }
-        } catch (Exception ignored) {
-            return null;
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
-        }
+    private static PendingIntent podIntent(Context context, int widgetId) {
+        Intent open = new Intent(context, FroglogPodActivity.class);
+        open.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        open.setData(Uri.parse("froglog://widget/" + widgetId));
+        return PendingIntent.getActivity(context, widgetId, open,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    /** Cocoon turns provider dp into grid cells with ceil(dp / 74). Covers stay inside that cell. */
-    private static Fit fit(Bundle options) {
-        int width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0);
-        int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0);
-        if (width <= 0) {
-            width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 222);
-        }
-        if (height <= 0) {
-            height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 148);
-        }
-        boolean compact = height < 100;
-        int text = compact ? 16 : 32;
-        int innerW = Math.max(48, width - 16);
-        int innerH = Math.max(36, height - 16 - 22 - text);
-        int slots = SLOTS;
-        int gap = 6;
-        int cover = Math.min(innerH, (innerW - gap * (slots - 1)) / slots);
-        while (slots > 3 && cover < 40) {
-            slots--;
-            cover = Math.min(innerH, (innerW - gap * (slots - 1)) / slots);
-        }
-        cover = Math.max(40, Math.min(cover, 72));
-        return new Fit(cover, slots, compact);
-    }
-
-    private static void sizeCover(RemoteViews views, int viewId, int coverDp) {
-        if (Build.VERSION.SDK_INT >= 31) {
-            views.setViewLayoutWidth(viewId, coverDp, TypedValue.COMPLEX_UNIT_DIP);
-            views.setViewLayoutHeight(viewId, coverDp, TypedValue.COMPLEX_UNIT_DIP);
-        }
-    }
-
-    private static final class Fit {
-        final int coverDp;
-        final int slots;
-        final boolean compact;
-
-        Fit(int coverDp, int slots, boolean compact) {
-            this.coverDp = coverDp;
-            this.slots = slots;
-            this.compact = compact;
-        }
+    private static int dp(Context context, int value) {
+        return FroglogWidgetArt.px(context, value);
     }
 
     private static int layout(Context context, String name) {

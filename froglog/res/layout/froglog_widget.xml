@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Laid out like Cocoon's Recently played: header, then square cover rows. The provider
+     picks one or two columns, the row count and every size from the tile it is given. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/froglog_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
     android:orientation="vertical"
-    android:paddingLeft="16dp"
-    android:paddingTop="14dp"
-    android:paddingRight="16dp"
-    android:paddingBottom="14dp">
+    android:paddingLeft="10dp"
+    android:paddingTop="8dp"
+    android:paddingRight="10dp"
+    android:paddingBottom="8dp">
 
     <LinearLayout
+        android:id="@+id/froglog_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -20,7 +23,7 @@
             android:id="@+id/froglog_title_icon"
             android:layout_width="16dp"
             android:layout_height="16dp"
-            android:layout_marginRight="6dp"
+            android:layout_marginEnd="6dp"
             android:src="@drawable/froglog_title_icon" />
 
         <TextView
@@ -29,220 +32,680 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:ellipsize="end"
-            android:fontFamily="@font/poppins_medium"
+            android:fontFamily="@font/poppins_semibold"
+            android:includeFontPadding="false"
             android:maxLines="1"
             android:text="Froglog"
             android:textColor="#3BCF7A"
-            android:textSize="14sp" />
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/froglog_filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="@font/poppins_medium"
-            android:paddingLeft="8dp"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:paddingStart="8dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
             android:text="Recent"
             android:textColor="#3BCF7A"
-            android:textSize="12sp" />
+            android:textSize="11sp" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/froglog_subtitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:fontFamily="@font/poppins_regular"
-        android:maxLines="1"
-        android:textColor="#8E8E93"
-        android:textSize="12sp"
-        android:visibility="gone" />
-
-    <TextView
-        android:id="@+id/froglog_message"
+    <LinearLayout
+        android:id="@+id/froglog_message_box"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fontFamily="@font/poppins_regular"
         android:gravity="center"
-        android:text="No play history yet"
-        android:textColor="#1C1C1E"
-        android:textSize="16sp"
-        android:visibility="gone" />
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/froglog_message_icon"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/froglog_title_icon" />
+
+        <TextView
+            android:id="@+id/froglog_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:ellipsize="end"
+            android:fontFamily="@font/poppins_medium"
+            android:gravity="center"
+            android:maxLines="2"
+            android:text="Your recent Froglog games"
+            android:textColor="#1C1C1E"
+            android:textSize="11sp" />
+    </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/froglog_row"
+        android:id="@+id/froglog_list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="6dp"
         android:layout_weight="1"
-        android:gravity="center"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+    <LinearLayout
+        android:id="@+id/froglog_col0"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
 
         <LinearLayout
             android:id="@+id/froglog_slot0"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:gravity="center_horizontal"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <ImageView
                 android:id="@+id/froglog_art0"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:background="@drawable/froglog_cover_placeholder"
-                android:clipToOutline="true"
-                android:scaleType="centerCrop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:scaleType="fitCenter"
                 android:src="@drawable/froglog_cover_placeholder" />
 
-            <TextView
-                android:id="@+id/froglog_name0"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:id="@+id/froglog_text0"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:ellipsize="end"
-                android:fontFamily="@font/poppins_medium"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textColor="#1C1C1E"
-                android:textSize="11sp" />
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/froglog_meta0"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:fontFamily="@font/poppins_regular"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textColor="#8E8E93"
-                android:textSize="10sp" />
+                <TextView
+                    android:id="@+id/froglog_name0"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta0"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/froglog_slot1"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:gravity="center_horizontal"
-            android:orientation="vertical">
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <ImageView
                 android:id="@+id/froglog_art1"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:background="@drawable/froglog_cover_placeholder"
-                android:clipToOutline="true"
-                android:scaleType="centerCrop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:scaleType="fitCenter"
                 android:src="@drawable/froglog_cover_placeholder" />
 
-            <TextView
-                android:id="@+id/froglog_name1"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:id="@+id/froglog_text1"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:ellipsize="end"
-                android:fontFamily="@font/poppins_medium"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textColor="#1C1C1E"
-                android:textSize="11sp" />
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/froglog_meta1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:fontFamily="@font/poppins_regular"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textColor="#8E8E93"
-                android:textSize="10sp" />
+                <TextView
+                    android:id="@+id/froglog_name1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/froglog_slot2"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:gravity="center_horizontal"
-            android:orientation="vertical">
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <ImageView
                 android:id="@+id/froglog_art2"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:background="@drawable/froglog_cover_placeholder"
-                android:clipToOutline="true"
-                android:scaleType="centerCrop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:scaleType="fitCenter"
                 android:src="@drawable/froglog_cover_placeholder" />
 
-            <TextView
-                android:id="@+id/froglog_name2"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:id="@+id/froglog_text2"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:ellipsize="end"
-                android:fontFamily="@font/poppins_medium"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textColor="#1C1C1E"
-                android:textSize="11sp" />
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/froglog_meta2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:fontFamily="@font/poppins_regular"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textColor="#8E8E93"
-                android:textSize="10sp" />
+                <TextView
+                    android:id="@+id/froglog_name2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/froglog_slot3"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center_horizontal"
-            android:orientation="vertical">
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <ImageView
                 android:id="@+id/froglog_art3"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:background="@drawable/froglog_cover_placeholder"
-                android:clipToOutline="true"
-                android:scaleType="centerCrop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:scaleType="fitCenter"
                 android:src="@drawable/froglog_cover_placeholder" />
 
-            <TextView
-                android:id="@+id/froglog_name3"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:id="@+id/froglog_text3"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:ellipsize="end"
-                android:fontFamily="@font/poppins_medium"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textColor="#1C1C1E"
-                android:textSize="11sp" />
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/froglog_meta3"
-                android:layout_width="match_parent"
+                <TextView
+                    android:id="@+id/froglog_name3"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta3"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/froglog_slot4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/froglog_art4"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:fontFamily="@font/poppins_regular"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textColor="#8E8E93"
-                android:textSize="10sp" />
+                android:scaleType="fitCenter"
+                android:src="@drawable/froglog_cover_placeholder" />
+
+            <LinearLayout
+                android:id="@+id/froglog_text4"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/froglog_name4"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta4"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/froglog_slot5"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/froglog_art5"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:scaleType="fitCenter"
+                android:src="@drawable/froglog_cover_placeholder" />
+
+            <LinearLayout
+                android:id="@+id/froglog_text5"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/froglog_name5"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta5"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/froglog_col1"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/froglog_slot6"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/froglog_art6"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:scaleType="fitCenter"
+                android:src="@drawable/froglog_cover_placeholder" />
+
+            <LinearLayout
+                android:id="@+id/froglog_text6"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/froglog_name6"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta6"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/froglog_slot7"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/froglog_art7"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:scaleType="fitCenter"
+                android:src="@drawable/froglog_cover_placeholder" />
+
+            <LinearLayout
+                android:id="@+id/froglog_text7"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/froglog_name7"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta7"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/froglog_slot8"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/froglog_art8"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:scaleType="fitCenter"
+                android:src="@drawable/froglog_cover_placeholder" />
+
+            <LinearLayout
+                android:id="@+id/froglog_text8"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/froglog_name8"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta8"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/froglog_slot9"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/froglog_art9"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:scaleType="fitCenter"
+                android:src="@drawable/froglog_cover_placeholder" />
+
+            <LinearLayout
+                android:id="@+id/froglog_text9"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/froglog_name9"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta9"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/froglog_slot10"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/froglog_art10"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:scaleType="fitCenter"
+                android:src="@drawable/froglog_cover_placeholder" />
+
+            <LinearLayout
+                android:id="@+id/froglog_text10"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/froglog_name10"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta10"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/froglog_slot11"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/froglog_art11"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:scaleType="fitCenter"
+                android:src="@drawable/froglog_cover_placeholder" />
+
+            <LinearLayout
+                android:id="@+id/froglog_text11"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/froglog_name11"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#1C1C1E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/froglog_meta11"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/poppins_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#8E8E93"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/froglog_pending"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:fontFamily="@font/poppins_medium"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="#3BCF7A"
+        android:textSize="10sp"
+        android:visibility="gone" />
 </LinearLayout>

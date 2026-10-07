@@ -274,6 +274,7 @@ public final class FroglogStore {
         SharedPreferences store = prefs(context);
         String next = FroglogQueue.upsert(store.getString(PENDING, "[]"), title, platform, minutes, date, sync);
         store.edit().putString(PENDING, next).commit();
+        FroglogRecentWidget.refresh(context);
     }
 
     public static synchronized void pendingError(Context context, String sync, String error) {
@@ -286,12 +287,14 @@ public final class FroglogStore {
         SharedPreferences store = prefs(context);
         String next = FroglogQueue.remove(store.getString(PENDING, "[]"), sync);
         store.edit().putString(PENDING, next).commit();
+        FroglogRecentWidget.refresh(context);
     }
 
     public static synchronized void removePendingKey(Context context, String title, String platform) {
         SharedPreferences store = prefs(context);
         String next = FroglogQueue.removeKey(store.getString(PENDING, "[]"), title, platform);
         store.edit().putString(PENDING, next).commit();
+        FroglogRecentWidget.refresh(context);
     }
 
     private static SharedPreferences prefs(Context context) {

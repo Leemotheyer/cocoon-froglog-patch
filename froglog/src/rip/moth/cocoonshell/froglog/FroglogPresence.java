@@ -118,6 +118,7 @@ public final class FroglogPresence {
             }
             if (first) {
                 Log.i(TAG, "Set Froglog now playing " + target.title);
+                FroglogRecentWidget.refresh(context);
             }
         } catch (Exception e) {
             Log.w(TAG, "Could not set Froglog now playing", e);
@@ -159,6 +160,7 @@ public final class FroglogPresence {
             FroglogClient.clearNowPlaying(FroglogStore.token(context));
             FroglogStore.setPresenceOn(context, false);
             Log.i(TAG, "Cleared Froglog now playing");
+            FroglogRecentWidget.refresh(context);
         } catch (Exception e) {
             FroglogStore.setPresenceOn(context, true);
             Log.w(TAG, "Could not clear Froglog now playing, will retry", e);
