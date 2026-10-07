@@ -40,7 +40,9 @@ public class FroglogRecentWidget extends AppWidgetProvider {
                 try {
                     render(app, AppWidgetManager.getInstance(app), ids);
                 } finally {
-                    pending.finish();
+                    if (pending != null) {
+                        pending.finish();
+                    }
                 }
             }
         }, "froglog-widget").start();
@@ -81,6 +83,12 @@ public class FroglogRecentWidget extends AppWidgetProvider {
         Fit fit = fit(options == null ? Bundle.EMPTY : options);
         RemoteViews views = new RemoteViews(context.getPackageName(), layout(context, "froglog_widget"));
         views.setTextViewText(id(context, "froglog_title"), "Froglog");
+        FroglogTheme.Palette palette = FroglogTheme.resolve(context);
+        FroglogWidgetTheme.accent(context, views, palette, "froglog_title", "froglog_filter");
+        FroglogWidgetTheme.ink(context, views, palette, "froglog_message",
+                "froglog_name0", "froglog_name1", "froglog_name2", "froglog_name3");
+        FroglogWidgetTheme.muted(context, views, palette, "froglog_subtitle",
+                "froglog_meta0", "froglog_meta1", "froglog_meta2", "froglog_meta3");
         String filter = FroglogStore.filter(context);
         views.setTextViewText(id(context, "froglog_filter"), FroglogGames.filterLabel(filter));
         boolean signedIn = FroglogStore.signedIn(context);

@@ -22,7 +22,7 @@ import java.net.URL;
 import java.util.List;
 
 /** A small cover beside the title, then every field Froglog has for the game, its review, and sessions. */
-public class FroglogGameDetail extends Activity {
+public class FroglogGameDetail extends FroglogActivity {
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_META = "meta";
     public static final String EXTRA_REVIEW = "review";

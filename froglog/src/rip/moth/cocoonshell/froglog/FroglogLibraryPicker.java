@@ -11,7 +11,7 @@ import android.widget.TextView;
 import java.util.List;
 
 /** Picks a game from Cocoon's library and opens the Froglog add screen. */
-public class FroglogLibraryPicker extends Activity {
+public class FroglogLibraryPicker extends FroglogActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

@@ -22,16 +22,11 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 /** Public Froglog library for someone the user follows, opened from Cocoon's friends list. */
-public class FroglogFriendActivity extends Activity {
+public class FroglogFriendActivity extends FroglogActivity {
     public static final String EXTRA_USERNAME = "froglog_username";
     public static final String EXTRA_NAME = "froglog_name";
     public static final String EXTRA_STATUS = "froglog_status";
 
-    private static final int INK = FroglogTheme.INK;
-    private static final int CARD = FroglogTheme.CARD;
-    private static final int CREAM = FroglogTheme.INK;
-    private static final int MUTED = FroglogTheme.MUTED;
-    private static final int GREEN = FroglogTheme.ACCENT;
 
     private LinearLayout games;
 
@@ -54,7 +49,7 @@ public class FroglogFriendActivity extends Activity {
         root.addView(FroglogTheme.title(this, name));
         if (status != null && !status.isEmpty()) {
             TextView line = text(status, 14, false);
-            line.setTextColor(MUTED);
+            line.setTextColor(FroglogTheme.MUTED);
             root.addView(line);
         }
         root.addView(gap(16));
@@ -126,7 +121,7 @@ public class FroglogFriendActivity extends Activity {
         lines.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         lines.addView(text(game.title, 15, true));
         TextView meta = text(game.meta, 12, false);
-        meta.setTextColor(MUTED);
+        meta.setTextColor(FroglogTheme.MUTED);
         lines.addView(meta);
         row.addView(lines);
         row.setOnClickListener(new View.OnClickListener() {
@@ -206,7 +201,7 @@ public class FroglogFriendActivity extends Activity {
 
     private TextView muted(String value) {
         TextView view = FroglogTheme.text(this, value, 14, false);
-        view.setTextColor(MUTED);
+        view.setTextColor(FroglogTheme.MUTED);
         return view;
     }
 

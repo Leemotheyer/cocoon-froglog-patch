@@ -25,18 +25,13 @@ import java.util.List;
  * Maps one unknown Cocoon session onto a Froglog game: an existing library entry, a new entry,
  * or a dismissal. The same screen retries a post that failed.
  */
-public class FroglogMapActivity extends Activity {
+public class FroglogMapActivity extends FroglogActivity {
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_PLATFORM = "platform";
     public static final String EXTRA_MINUTES = "minutes";
     public static final String EXTRA_DATE = "date";
     public static final String EXTRA_SYNC = "sync";
 
-    private static final int INK = FroglogTheme.INK;
-    private static final int CARD = FroglogTheme.FIELD;
-    private static final int CREAM = FroglogTheme.INK;
-    private static final int MUTED = FroglogTheme.MUTED;
-    private static final int GREEN = FroglogTheme.ACCENT;
 
     private TextView status;
     private LinearLayout actions;
@@ -68,11 +63,11 @@ public class FroglogMapActivity extends Activity {
         TextView meta = text(minutes + "m"
                 + (date.isEmpty() ? "" : " · " + date)
                 + (platform.isEmpty() ? "" : " · " + platform), 14, false);
-        meta.setTextColor(MUTED);
+        meta.setTextColor(FroglogTheme.MUTED);
         root.addView(meta);
         root.addView(gap(12));
         status = text("Looking through your Froglog library…", 14, false);
-        status.setTextColor(MUTED);
+        status.setTextColor(FroglogTheme.MUTED);
         root.addView(status);
         root.addView(gap(14));
         actions = new LinearLayout(this);
@@ -243,7 +238,7 @@ public class FroglogMapActivity extends Activity {
                     + (game.status == null || game.status.isEmpty() ? "" : ((game.platform == null || game.platform.isEmpty()) && !game.live ? "" : " · ") + game.status);
             if (!meta.isEmpty()) {
                 TextView line = text(meta, 13, false);
-                line.setTextColor(MUTED);
+                line.setTextColor(FroglogTheme.MUTED);
                 wrap.addView(line);
             }
             View card = FroglogTheme.card(this, wrap);
@@ -257,7 +252,7 @@ public class FroglogMapActivity extends Activity {
         }
         if (shown == 0) {
             TextView empty = text(library.isEmpty() ? "Your Froglog library is empty." : "Nothing in the library matches that.", 14, false);
-            empty.setTextColor(MUTED);
+            empty.setTextColor(FroglogTheme.MUTED);
             libraryRows.addView(empty);
         }
     }

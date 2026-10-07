@@ -14,6 +14,7 @@ public final class FroglogInitProvider extends ContentProvider {
         FroglogPods.install(getContext());
         FroglogSocial.warm(getContext());
         FroglogPresence.start(getContext());
+        FroglogWidgetTheme.watch(getContext());
         return true;
     }
 

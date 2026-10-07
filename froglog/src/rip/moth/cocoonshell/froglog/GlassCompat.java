@@ -66,11 +66,12 @@ public final class GlassCompat {
         int radius = Math.round(24f * density);
         int halo = Math.round(5f * density);
         int drop = Math.round(3f * density);
+        FroglogTheme.Palette palette = FroglogTheme.resolve(view.getContext());
         GradientDrawable shade = new GradientDrawable();
-        shade.setColor(0x1A212121);
+        shade.setColor(palette.dark ? 0x40000000 : 0x1A212121);
         shade.setCornerRadius(radius);
         GradientDrawable face = new GradientDrawable();
-        face.setColor(0xFFFFFFFF);
+        face.setColor(palette.card);
         face.setCornerRadius(radius);
         LayerDrawable layers = new LayerDrawable(new GradientDrawable[] { shade, face });
         layers.setLayerInset(0, halo, halo + drop, halo, 0);

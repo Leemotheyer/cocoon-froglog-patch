@@ -33,12 +33,9 @@ import java.util.List;
 /**
  * Cocoon pod for the Froglog account. Sign-in lives here, with the signed-in library under it.
  */
-public class FroglogPodActivity extends Activity {
-    private static final int INK = FroglogTheme.INK;
-    private static final int CARD = FroglogTheme.FIELD;
-    private static final int CREAM = FroglogTheme.INK;
-    private static final int MUTED = FroglogTheme.MUTED;
-    private static final int GREEN = FroglogTheme.ACCENT;
+public class FroglogPodActivity extends FroglogActivity {
+    /** Library filter to open on, one of the {@link FroglogGames} FILTER_ values. */
+    public static final String EXTRA_FILTER = "froglog_filter";
 
     private int appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
     private int generation;
@@ -60,6 +57,10 @@ public class FroglogPodActivity extends Activity {
         Bundle extras = getIntent() == null ? null : getIntent().getExtras();
         if (extras != null) {
             appWidgetId = extras.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
+            String wanted = extras.getString(EXTRA_FILTER);
+            if (wanted != null) {
+                filter = wanted;
+            }
         }
         if (isWidgetConfigure() && FroglogStore.signedIn(this)) {
             finishPod();
@@ -116,12 +117,12 @@ public class FroglogPodActivity extends Activity {
         titles.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         titles.addView(FroglogTheme.title(this, "Froglog"));
         TextView body = text("Your account, library, and sessions still waiting for a Froglog game.", 14, false);
-        body.setTextColor(MUTED);
+        body.setTextColor(FroglogTheme.MUTED);
         titles.addView(body);
         row.addView(titles);
         TextView done = text("Done", 15, true);
         done.setTextColor(0xFFFFFFFF);
-        done.setBackground(pill(GREEN));
+        done.setBackground(pill(FroglogTheme.ACCENT));
         done.setPadding(dp(16), dp(8), dp(16), dp(8));
         done.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -142,7 +143,7 @@ public class FroglogPodActivity extends Activity {
         label.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         row.addView(label);
         final TextView value = text(sessionVisibilityLabel(FroglogStore.sessionsPublic(this)), 14, true);
-        value.setTextColor(GREEN);
+        value.setTextColor(FroglogTheme.ACCENT);
         row.addView(value);
         row.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -164,7 +165,7 @@ public class FroglogPodActivity extends Activity {
         account.addView(section("Account"));
         if (!FroglogStore.signedIn(this)) {
             TextView copy = text("Sign in once. The password is sent to Froglog and is not stored on this device.", 13, false);
-            copy.setTextColor(MUTED);
+            copy.setTextColor(FroglogTheme.MUTED);
             account.addView(copy);
             account.addView(gap(10));
             username = field("Username");
@@ -181,7 +182,7 @@ public class FroglogPodActivity extends Activity {
                 }
             }));
             status = text("", 13, false);
-            status.setTextColor(MUTED);
+            status.setTextColor(FroglogTheme.MUTED);
             account.addView(gap(8));
             account.addView(status);
             return;
@@ -189,7 +190,7 @@ public class FroglogPodActivity extends Activity {
         TextView who = text(FroglogStore.username(this), 20, true);
         account.addView(who);
         TextView copy = text("Signed in. People you follow show in Cocoon's friends list. This library includes private games. New games holds sessions that still need a Froglog entry.", 13, false);
-        copy.setTextColor(MUTED);
+        copy.setTextColor(FroglogTheme.MUTED);
         account.addView(copy);
         account.addView(gap(10));
         account.addView(sessionVisibilityRow());
@@ -246,8 +247,8 @@ public class FroglogPodActivity extends Activity {
             final String mode = modes[i];
             boolean selected = mode.equals(filter);
             TextView chip = text(FroglogGames.filterLabel(mode), 12, selected);
-            chip.setTextColor(selected ? 0xFFFFFFFF : INK);
-            chip.setBackground(pill(selected ? GREEN : FroglogTheme.FIELD));
+            chip.setTextColor(selected ? 0xFFFFFFFF : FroglogTheme.INK);
+            chip.setBackground(pill(selected ? FroglogTheme.ACCENT : FroglogTheme.FIELD));
             chip.setPadding(dp(10), dp(6), dp(10), dp(6));
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -313,13 +314,13 @@ public class FroglogPodActivity extends Activity {
         if (!FroglogStore.signedIn(this)) {
             stats.addView(section("This month"));
             TextView signedOut = text("Sign in to see hours and your library.", 14, false);
-            signedOut.setTextColor(MUTED);
+            signedOut.setTextColor(FroglogTheme.MUTED);
             stats.addView(signedOut);
             return;
         }
         stats.addView(section("This month"));
         TextView waiting = text("Loading Froglog…", 14, false);
-        waiting.setTextColor(MUTED);
+        waiting.setTextColor(FroglogTheme.MUTED);
         stats.addView(waiting);
         final String token = FroglogStore.token(this);
         final String mode = filter;
@@ -349,7 +350,7 @@ public class FroglogPodActivity extends Activity {
         stats.addView(section("Hours"));
         if (loaded != null && loaded.error != null) {
             TextView error = text(loaded.error, 14, false);
-            error.setTextColor(MUTED);
+            error.setTextColor(FroglogTheme.MUTED);
             stats.addView(error);
             return;
         }
@@ -359,7 +360,7 @@ public class FroglogPodActivity extends Activity {
         stats.addView(text(loaded.monthLine, 16, true));
         stats.addView(text(loaded.yearLine, 16, true));
         TextView rate = text(loaded.rateLine, 14, false);
-        rate.setTextColor(MUTED);
+        rate.setTextColor(FroglogTheme.MUTED);
         stats.addView(rate);
     }
 
@@ -388,7 +389,7 @@ public class FroglogPodActivity extends Activity {
         if (!waiting.isEmpty()) {
             pending.addView(section("Waiting to upload"));
             TextView note = text("These sessions are saved on this device and upload when Froglog can be reached.", 13, false);
-            note.setTextColor(MUTED);
+            note.setTextColor(FroglogTheme.MUTED);
             pending.addView(note);
             for (int i = 0; i < waiting.size(); i++) {
                 pending.addView(pendingRow(waiting.get(i)));
@@ -397,7 +398,7 @@ public class FroglogPodActivity extends Activity {
         pending.addView(section("New games"));
         if (unmapped.isEmpty()) {
             TextView empty = text("Sessions Cocoon could not match wait here. Map one to a Froglog game, create an entry, or dismiss it.", 14, false);
-            empty.setTextColor(MUTED);
+            empty.setTextColor(FroglogTheme.MUTED);
             pending.addView(empty);
             return;
         }
@@ -415,7 +416,7 @@ public class FroglogPodActivity extends Activity {
                 + (item.date.isEmpty() ? "" : " · " + item.date)
                 + (item.platform.isEmpty() ? "" : " · " + item.platform);
         TextView line = text(meta, 13, false);
-        line.setTextColor(MUTED);
+        line.setTextColor(FroglogTheme.MUTED);
         row.addView(line);
         if (item.error != null && !item.error.isEmpty()) {
             TextView error = text(item.error, 13, false);
@@ -442,14 +443,14 @@ public class FroglogPodActivity extends Activity {
         follows.addView(section("Following"));
         if (!FroglogStore.signedIn(this)) {
             TextView signedOut = text("Sign in to see people you follow.", 14, false);
-            signedOut.setTextColor(MUTED);
+            signedOut.setTextColor(FroglogTheme.MUTED);
             follows.addView(signedOut);
             return;
         }
         java.util.List<FroglogFollow> people = FroglogSocial.snapshot();
         if (people.isEmpty()) {
             TextView empty = text("No recent activity from people you follow.", 14, false);
-            empty.setTextColor(MUTED);
+            empty.setTextColor(FroglogTheme.MUTED);
             follows.addView(empty);
             return;
         }
@@ -464,7 +465,7 @@ public class FroglogPodActivity extends Activity {
         row.setPadding(0, dp(8), 0, dp(8));
         row.addView(text(person.name, 16, true));
         TextView status = text(person.status, 13, false);
-        status.setTextColor(MUTED);
+        status.setTextColor(FroglogTheme.MUTED);
         row.addView(status);
         row.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -483,13 +484,13 @@ public class FroglogPodActivity extends Activity {
         games.removeAllViews();
         if (recent != null && recent.error != null) {
             TextView error = text(recent.error, 14, false);
-            error.setTextColor(MUTED);
+            error.setTextColor(FroglogTheme.MUTED);
             games.addView(error);
             return;
         }
         if (recent == null || recent.games.isEmpty()) {
             TextView empty = text("No games in " + FroglogGames.filterLabel(filter) + ".", 14, false);
-            empty.setTextColor(MUTED);
+            empty.setTextColor(FroglogTheme.MUTED);
             games.addView(empty);
             return;
         }
@@ -515,7 +516,7 @@ public class FroglogPodActivity extends Activity {
         lines.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         lines.addView(text(game.title, 15, true));
         TextView meta = text(game.meta, 12, false);
-        meta.setTextColor(MUTED);
+        meta.setTextColor(FroglogTheme.MUTED);
         meta.setMaxLines(2);
         lines.addView(meta);
         row.addView(lines);
@@ -604,15 +605,7 @@ public class FroglogPodActivity extends Activity {
     }
 
     private void refreshWidgets() {
-        AppWidgetManager manager = AppWidgetManager.getInstance(this);
-        int[] ids = manager.getAppWidgetIds(new ComponentName(this, FroglogRecentWidget.class));
-        if (ids.length > 0) {
-            new FroglogRecentWidget().onUpdate(this, manager, ids);
-        }
-        int[] statsIds = manager.getAppWidgetIds(new ComponentName(this, FroglogStatsWidget.class));
-        if (statsIds.length > 0) {
-            new FroglogStatsWidget().onUpdate(this, manager, statsIds);
-        }
+        FroglogWidgetTheme.refresh(this);
     }
 
     private void paintSystemBars() {

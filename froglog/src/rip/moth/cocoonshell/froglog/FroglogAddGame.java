@@ -12,7 +12,7 @@ import android.widget.TextView;
 import java.util.List;
 
 /** Search Froglog, then create the Cocoon game if it is missing. */
-public class FroglogAddGame extends Activity {
+public class FroglogAddGame extends FroglogActivity {
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_PLATFORM = "platform";
     public static final String EXTRA_PLATFORM_LABEL = "platform_label";

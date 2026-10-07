@@ -8,7 +8,7 @@ import android.os.Bundle;
 /**
  * Widget configure. Opens the Froglog pod only when the user still needs to sign in.
  */
-public class FroglogWidgetConfig extends Activity {
+public class FroglogWidgetConfig extends FroglogActivity {
     private int appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
 
     @Override

@@ -21,8 +21,7 @@ import java.util.Map;
  * Lists which Froglog game each Cocoon title logs to and lets the player change, remove, or
  * stop a mapping. A change applies to sessions that have not been sent yet.
  */
-public class FroglogMappingsActivity extends Activity {
-    private static final int MUTED = FroglogTheme.MUTED;
+public class FroglogMappingsActivity extends FroglogActivity {
     private static final int ROWS = 60;
 
     private ScrollView scroll;
@@ -433,7 +432,7 @@ public class FroglogMappingsActivity extends Activity {
 
     private TextView muted(String value, int sp) {
         TextView view = FroglogTheme.text(this, value, sp, false);
-        view.setTextColor(MUTED);
+        view.setTextColor(FroglogTheme.MUTED);
         return view;
     }
 

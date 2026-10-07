@@ -5,7 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 
 /** Older prompts open the mapping screen. The queue itself lives in the Froglog pod. */
-public class FroglogSessionPrompt extends Activity {
+public class FroglogSessionPrompt extends FroglogActivity {
     public static final String EXTRA_TITLE = FroglogMapActivity.EXTRA_TITLE;
     public static final String EXTRA_PLATFORM = FroglogMapActivity.EXTRA_PLATFORM;
     public static final String EXTRA_MINUTES = FroglogMapActivity.EXTRA_MINUTES;
