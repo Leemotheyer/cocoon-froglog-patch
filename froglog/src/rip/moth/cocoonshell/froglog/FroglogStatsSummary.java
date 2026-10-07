@@ -211,6 +211,39 @@ public final class FroglogStatsSummary {
         topLive = best.live;
     }
 
+    /** Hours per day for the last {@code count} days, oldest first, ending today. */
+    public double[] lastDays(int count) {
+        double[] out = new double[Math.max(0, count)];
+        for (int i = 0; i < out.length; i++) {
+            Double hours = dayHours.get(shift(today, i - out.length + 1));
+            out[i] = hours == null || hours < 0 ? 0 : hours;
+        }
+        return out;
+    }
+
+    /** Single-letter weekday labels (M T W T F S S) matching {@link #lastDays(int)}. */
+    public String[] lastDayLetters(int count) {
+        String[] letters = {"S", "M", "T", "W", "T", "F", "S"};
+        String[] out = new String[Math.max(0, count)];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = letters[weekday(shift(today, i - out.length + 1))];
+        }
+        return out;
+    }
+
+    /** 0 for Sunday through 6 for Saturday. */
+    static int weekday(String day) {
+        try {
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);
+            format.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"), Locale.ROOT);
+            calendar.setTime(format.parse(day));
+            return calendar.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     static String shift(String day, int days) {
         try {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);

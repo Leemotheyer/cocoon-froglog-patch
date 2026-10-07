@@ -196,6 +196,70 @@ public final class FroglogGames {
         return trimTrailingZero(hours) + "h";
     }
 
+    /** Cocoon's Recently played format: 45m, 3h, 3h 20m. Past 100 hours the minutes are dropped. */
+    public static String duration(double hours) {
+        long minutes = Double.isNaN(hours) || hours <= 0 ? 0 : Math.round(hours * 60.0);
+        if (minutes < 60) {
+            return minutes + "m";
+        }
+        long whole = minutes / 60;
+        long rest = minutes % 60;
+        if (rest == 0 || whole >= 100) {
+            return whole + "h";
+        }
+        return whole + "h " + rest + "m";
+    }
+
+    /** "2026-10-03" to "Oct 3". Anything else comes back unchanged. */
+    public static String shortDate(String day) {
+        long key = dateKey(day);
+        if (key <= 0) {
+            return day;
+        }
+        int month = (int) (key / 100 % 100);
+        int date = (int) (key % 100);
+        String[] names = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+        if (month < 1 || month > 12) {
+            return day;
+        }
+        return names[month - 1] + " " + date;
+    }
+
+    /** One short line for a widget row: play time, then status or the last session date. */
+    public static String widgetMeta(FroglogGame game) {
+        if (game.json == null) {
+            return game.meta;
+        }
+        JSONObject obj;
+        try {
+            obj = new JSONObject(game.json);
+        } catch (Exception ignored) {
+            return game.meta;
+        }
+        Double hours = number(obj, "total_hours");
+        if (hours == null) {
+            hours = number(obj, "hours_played");
+        }
+        ArrayList<String> parts = new ArrayList<String>();
+        if (hours != null && hours > 0) {
+            parts.add(duration(hours));
+        }
+        String status = statusLabel(game.status);
+        if (status != null) {
+            parts.add(status);
+        } else {
+            String when = firstDate(text(obj, "last_session_date"), text(obj, "end_date"),
+                    text(obj, "start_date"));
+            if (when != null) {
+                parts.add(shortDate(when));
+            }
+        }
+        if (parts.isEmpty()) {
+            return game.platform == null ? "" : game.platform;
+        }
+        return parts.size() == 1 ? parts.get(0) : parts.get(0) + " · " + parts.get(1);
+    }
+
     private static String trimTrailingZero(double hours) {
         String text = String.format(java.util.Locale.US, "%.1f", hours);
         if (text.endsWith(".0")) {

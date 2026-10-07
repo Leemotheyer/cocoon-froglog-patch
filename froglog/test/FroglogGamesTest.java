@@ -33,6 +33,17 @@ public final class FroglogGamesTest {
         expect("4h", FroglogGames.hoursLabel(4.0));
         expect("4.5h", FroglogGames.hoursLabel(4.5));
         expect(null, FroglogGames.hoursLabel(0.0));
+        expect("0m", FroglogGames.duration(0));
+        expect("45m", FroglogGames.duration(0.75));
+        expect("3h", FroglogGames.duration(3.0));
+        expect("3h 20m", FroglogGames.duration(3.0 + 1.0 / 3.0));
+        expect("140h", FroglogGames.duration(140.5));
+        expect("Oct 3", FroglogGames.shortDate("2026-10-03"));
+        expect("soon", FroglogGames.shortDate("soon"));
+        expect("12h · Live", FroglogGames.widgetMeta(recent.get(0)));
+        expect("4h 30m · In Progress", FroglogGames.widgetMeta(recent.get(1)));
+        expect("Sep 1", FroglogGames.widgetMeta(new FroglogGame(1, false, "No Status", null, null, null,
+                null, null, 0, "x", 0, "{\"last_session_date\":\"2026-09-01\"}")));
         System.out.println("FroglogGamesTest ok");
     }
 

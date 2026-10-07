@@ -22,6 +22,18 @@ public final class FroglogStatsSummaryTest {
         // Live service play on the 4th joins the 3rd..7th into one run.
         expect(5, camel.streak);
         expect(7.5, camel.weekHours);
+        double[] days = camel.lastDays(7);
+        expect(7, days.length);
+        expect(1.0, days[6]);
+        expect(2.0, days[5]);
+        expect(0.5, days[4]);
+        expect(1.0, days[3]);
+        expect(0.0, days[0]);
+        // 2026-10-07 is a Wednesday.
+        String[] letters = camel.lastDayLetters(7);
+        expect("W", letters[6]);
+        expect("T", letters[5]);
+        expect("T", letters[0]);
 
         FroglogStatsSummary snake = new FroglogStatsSummary("2026-10-07");
         snake.readStats("{\"this_month\":{\"hours\":4,\"completed\":2},\"this_year\":{\"hours\":30},"
