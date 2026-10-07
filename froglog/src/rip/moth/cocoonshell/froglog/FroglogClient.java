@@ -46,6 +46,8 @@ public final class FroglogClient {
         public final String rateLine;
         public final String compactHours;
         public final String error;
+        /** Null when the request failed. */
+        public FroglogStatsSummary summary;
 
         public Stats(String monthLine, String yearLine, String rateLine, String error) {
             this(monthLine, yearLine, rateLine, error, "0h");
@@ -216,7 +218,7 @@ public final class FroglogClient {
         return result.body == null || result.body.isEmpty() ? "[]" : result.body;
     }
 
-    public static Stats stats(String token) {
+    public static Stats stats(String token, boolean withTop) {
         try {
             HttpResult result = request("GET", BASE + "/stats", token, null);
             if (result.code == 401) {
@@ -225,16 +227,47 @@ public final class FroglogClient {
             if (result.code < 200 || result.code >= 300) {
                 return new Stats("", "", "", errorMessage(result.body, "Could not load Froglog stats (" + result.code + ")"));
             }
-            JSONObject json = new JSONObject(result.body);
-            JSONObject month = json.optJSONObject("this_month");
-            JSONObject year = json.optJSONObject("this_year");
-            JSONObject overall = json.optJSONObject("overall");
-            String hours = FroglogGames.hoursLabel(month == null ? null : Double.valueOf(month.optDouble("hours", 0)));
-            return new Stats(periodLine("This month", month), periodLine("This year", year), rateLine(overall),
+            FroglogStatsSummary summary = new FroglogStatsSummary(FroglogStatsSummary.today());
+            summary.readStats(result.body);
+            if (withTop) {
+                try {
+                    readMonthSessions(token, summary);
+                } catch (Exception ignored) {
+                    // The figures from /stats still stand without a top game.
+                }
+            }
+            String hours = FroglogGames.hoursLabel(Double.valueOf(summary.monthHours));
+            Stats stats = new Stats(
+                    periodLine("This month", summary.monthHours, summary.monthCompleted),
+                    periodLine("This year", summary.yearHours, summary.yearCompleted),
+                    summary.completionRate < 0 ? "Completion —" : "Completion " + summary.completionRate + "%",
                     null, hours == null ? "0h" : hours);
+            stats.summary = summary;
+            return stats;
         } catch (Exception e) {
             return new Stats("", "", "", "Could not reach Froglog");
         }
+    }
+
+    public static Stats stats(String token) {
+        return stats(token, false);
+    }
+
+    /** Up to three pages of each session list, stopping once a page reaches last month. */
+    private static void readMonthSessions(String token, FroglogStatsSummary summary) throws Exception {
+        String[] lists = {"/sessions/games", "/sessions/live-service"};
+        for (int l = 0; l < lists.length; l++) {
+            for (int page = 1; page <= 3; page++) {
+                HttpResult result = request("GET", BASE + lists[l] + "?limit=100&page=" + page, token, null);
+                if (result.code < 200 || result.code >= 300) {
+                    break;
+                }
+                if (!summary.addSessions(result.body, l == 1)) {
+                    break;
+                }
+            }
+        }
+        summary.finishTop();
     }
 
     public static java.util.List<Hit> search(String token, String query) throws Exception {
@@ -559,28 +592,9 @@ public final class FroglogClient {
         }
     }
 
-    private static String periodLine(String label, JSONObject period) {
-        if (period == null) {
-            return label + ": —";
-        }
-        double hours = period.optDouble("hours", 0);
-        int completed = period.optInt("completed", 0);
+    private static String periodLine(String label, double hours, int completed) {
         String hoursLabel = FroglogGames.hoursLabel(Double.valueOf(hours));
         return label + ": " + (hoursLabel == null ? "0h" : hoursLabel) + " · " + completed + " finished";
-    }
-
-    private static String rateLine(JSONObject overall) {
-        if (overall == null || !overall.has("completion_rate") || overall.isNull("completion_rate")) {
-            return "Completion —";
-        }
-        double rate = overall.optDouble("completion_rate", Double.NaN);
-        if (Double.isNaN(rate)) {
-            return "Completion —";
-        }
-        if (rate <= 1.0) {
-            rate = rate * 100.0;
-        }
-        return "Completion " + Math.round(rate) + "%";
     }
 
     private static String errorMessage(String body, String fallback) {

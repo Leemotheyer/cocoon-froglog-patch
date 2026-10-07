@@ -80,7 +80,9 @@ javac --release 11 -encoding UTF-8 -cp "$JSON_JAR" -d "$WORK/froglog-test" \
   "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogNowPlaying.java" \
   "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogLinks.java" \
   "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogGameInfo.java" \
+  "$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogStatsSummary.java" \
   "$ROOT/froglog/test/FroglogGamesTest.java" \
+  "$ROOT/froglog/test/FroglogStatsSummaryTest.java" \
   "$ROOT/froglog/test/FroglogGameInfoTest.java" \
   "$ROOT/froglog/test/FroglogMatchTest.java" \
   "$ROOT/froglog/test/FroglogFollowsTest.java" \
@@ -96,6 +98,7 @@ java -cp "$WORK/froglog-test:$JSON_JAR" FroglogQueueTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogTrackingTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogNowPlayingTest
 java -cp "$WORK/froglog-test:$JSON_JAR" FroglogLinksTest
+java -cp "$WORK/froglog-test:$JSON_JAR" FroglogStatsSummaryTest
 
 FLAGS_SRC="$ROOT/froglog/src/rip/moth/cocoonshell/froglog/FroglogFlags.java"
 set_skip_setup() {

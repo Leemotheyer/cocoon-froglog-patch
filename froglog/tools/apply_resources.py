@@ -40,6 +40,22 @@ IDS = [
     "froglog_stats_message",
     "froglog_title_icon",
     "froglog_stats_icon",
+    "froglog_stats_streak",
+    "froglog_stats_figures",
+    "froglog_stats_week_box",
+    "froglog_stats_week",
+    "froglog_stats_week_label",
+    "froglog_stats_year_box",
+    "froglog_stats_year_hours",
+    "froglog_stats_year_label",
+    "froglog_stats_done_box",
+    "froglog_stats_done",
+    "froglog_stats_done_label",
+    "froglog_stats_top",
+    "froglog_stats_top_art",
+    "froglog_stats_top_label",
+    "froglog_stats_top_name",
+    "froglog_stats_top_hours",
 ]
 
 PUBLIC = [
