@@ -29,6 +29,14 @@ public final class FroglogGameInfoTest {
         expect("Replayed|Yes", row(rows, 10));
         expect(11, rows.size());
 
+        List<String[]> catalog = FroglogGameInfo.rows(new JSONObject(
+                "{\"rating\":90,\"dev\":\"Supergiant\",\"rel_date\":\"2020-09-17\",\"description\":\"Defy\"}"));
+        expect("Rating|★4.5", row(catalog, 0));
+        expect("Developer|Supergiant", row(catalog, 1));
+        expect("Released|2020-09-17", row(catalog, 2));
+        expect(3, catalog.size());
+        expect("Defy", FroglogGameInfo.description(new JSONObject("{\"description\":\"Defy\"}")));
+
         JSONObject live = new JSONObject("{\"title\":\"FFXIV\",\"live_service_status\":\"active\",\"session_count\":0}");
         List<String[]> liveRows = FroglogGameInfo.rows(live);
         expect(1, liveRows.size());

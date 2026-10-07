@@ -27,9 +27,11 @@ public final class FroglogGameInfo {
             {"end_date", "Finished"},
             {"last_session_date", "Last played"},
             {"genre|genres", "Genre"},
-            {"developer|developers", "Developer"},
+            {"dev|developer|developers", "Developer"},
+            {"studio_country|dev_country", "Country"},
             {"publisher|publishers", "Publisher"},
-            {"release_date|release_year|year", "Released"},
+            {"rel_date|release_date|release_year|year", "Released"},
+            {"screenshot_count", "Screenshots"},
             {"format|ownership", "Format"},
             {"store", "Store"},
             {"tags", "Tags"},
@@ -41,8 +43,17 @@ public final class FroglogGameInfo {
             "id", "title", "name", "review", "cover_image", "img", "user_id", "username",
             "session_tracking", "sessions_public", "initial_session_hours", "public_session_count",
             "status_override", "updated_at", "sort_order", "position", "client_ref", "sync_ref",
-            "dnf", "is_public", "private", "game_type",
+            "dnf", "is_public", "private", "game_type", "description", "rel_date_category", "igdb_slug",
     };
+
+    /** The game's catalog description, or null. Shown as its own block rather than a row. */
+    public static String description(JSONObject game) {
+        if (game == null || game.isNull("description")) {
+            return null;
+        }
+        String text = game.optString("description", "").trim();
+        return text.isEmpty() || "null".equals(text) ? null : text;
+    }
 
     public static List<String[]> rows(JSONObject game) {
         ArrayList<String[]> out = new ArrayList<String[]>();
@@ -155,13 +166,17 @@ public final class FroglogGameInfo {
                 if (rating <= 0) {
                     return null;
                 }
+                // Froglog stores 0-100, 20 per star; older rows may already be stars.
+                if (rating > 5) {
+                    rating = Math.round(rating / 2.0) / 10.0;
+                }
                 String shown = rating == Math.rint(rating) ? String.valueOf((long) rating) : String.valueOf(rating);
                 return "★" + shown;
             } catch (NumberFormatException e) {
                 return text;
             }
         }
-        if ("session_count".equals(key) && "0".equals(text)) {
+        if (("session_count".equals(key) || "screenshot_count".equals(key)) && "0".equals(text)) {
             return null;
         }
         if ("status".equals(key) || "live_service_status".equals(key)) {

@@ -151,7 +151,8 @@ public final class FroglogGames {
             parts.add(statusLabel);
         }
         if (rating != null && rating > 0) {
-            parts.add("★" + trimTrailingZero(rating.doubleValue()));
+            double stars = rating > 5 ? Math.round(rating / 2.0) / 10.0 : rating.doubleValue();
+            parts.add("★" + trimTrailingZero(stars));
         }
         if (sessions > 0) {
             parts.add(sessions == 1 ? "1 session" : sessions + " sessions");
