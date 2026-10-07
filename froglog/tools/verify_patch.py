@@ -254,10 +254,14 @@ def main() -> None:
     if share_before != share_after:
         raise SystemExit("picnic share chooser should stay unmodified")
     info = instructions(method(picnic_after, ".method public static final Y(Lcf/pd;Ljb/a;Ljava/lang/String;Lp1/o;Lz0/e0;I)V"))
-    upload_action = "invoke-static {v10, v0}, Lrip/moth/cocoonshell/froglog/FroglogPicnic;->uploadAction(Landroid/content/Context;Ljava/lang/Object;)Ljb/a;"
-    upload_row = 'const-string v9, "FROGLOG_UPLOAD"'
-    if upload_action not in info or upload_row not in info:
+    info_text = "\n".join(info)
+    if "FroglogPicnic;->uploadAction" not in info_text:
         raise SystemExit("picnic info dialog is missing the Froglog upload row")
+    if "invoke-static/range {p1 .. p5}, Lcf/pi;->W(" not in info_text \
+            and "invoke-static/range {v49 .. v53}, Lcf/pi;->W(" not in info_text:
+        raise SystemExit("picnic info dialog is missing the Froglog upload W row")
+    if ".registers 54" not in method(picnic_after, ".method public static final Y(Lcf/pd;Ljb/a;Ljava/lang/String;Lp1/o;Lz0/e0;I)V"):
+        raise SystemExit("picnic info dialog did not grow the register frame")
     row = instructions(method(picnic_after, ".method public static final W(Ljava/lang/String;Ljb/a;Lp1/o;Lz0/e0;I)V"))
     if 'const-string v13, "Upload to Froglog"' not in row:
         raise SystemExit("picnic info row is missing the Froglog upload label")

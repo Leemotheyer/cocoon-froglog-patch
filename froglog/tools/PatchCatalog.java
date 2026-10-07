@@ -1802,7 +1802,11 @@ public final class PatchCatalog {
         FiveRegisterInstruction logCall = (FiveRegisterInstruction) instructions.get(logRow);
         int composer = logCall.getRegisterF();
         int flags = logCall.getRegisterG();
-        List<Instruction> extra = picnicUploadRow(composer, flags);
+        final int scratchRegs = 5;
+        int newRegCount = impl.getRegisterCount() + scratchRegs;
+        int pdReg = newRegCount - parameterWords(method);
+        int scratchBase = impl.getRegisterCount();
+        List<Instruction> extra = picnicUploadRow(composer, flags, pdReg, scratchBase);
         int insert = logRow + 1;
         int[] addresses = addresses(instructions);
         int insertAt = addresses[insert];
@@ -1815,39 +1819,50 @@ public final class PatchCatalog {
             }
             rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], insertAt, added));
         }
-        System.out.println("picnic upload row after log composer v" + composer);
+        System.out.println("picnic upload row after log composer v" + composer + " pd v" + pdReg);
         return replace(method, new ImmutableMethodImplementation(
-                impl.getRegisterCount(),
+                newRegCount,
                 rewritten,
                 shiftTries(impl.getTryBlocks(), insertAt, added),
                 Collections.emptyList()));
     }
 
-    private static List<Instruction> picnicUploadRow(int composer, int flags) {
+    /** Uses scratch registers at {@code scratchBase} so live compose slots below are not clobbered. */
+    private static List<Instruction> picnicUploadRow(int composer, int flags, int pdReg, int scratchBase) {
+        int s0 = scratchBase;
+        int s1 = scratchBase + 1;
+        int s2 = scratchBase + 2;
+        int s3 = scratchBase + 3;
+        int s4 = scratchBase + 4;
         List<Instruction> extra = new ArrayList<Instruction>();
-        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 13, 0));
+        final int low = 15;
+        extra.add(new BuilderInstruction11n(Opcode.CONST_4, low, 0));
         extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_STATIC, 2, 13, composer, 0, 0, 0,
+                Opcode.INVOKE_STATIC, 2, low, composer, 0, 0, 0,
                 method(SHARE, "X", Arrays.asList("I", "Lz0/e0;"), "V")));
         extra.add(new ImmutableInstruction21c(
-                Opcode.SGET_OBJECT, 14,
+                Opcode.SGET_OBJECT, low,
                 field(ANDROID_LOCALS, "b", "Lz0/i2;")));
         extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_VIRTUAL, 2, composer, 14, 0, 0, 0,
+                Opcode.INVOKE_VIRTUAL, 2, composer, low, 0, 0, 0,
                 method("Lz0/e0;", "j", Collections.singletonList("Lz0/k1;"), "Ljava/lang/Object;")));
-        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 10));
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, s2));
         extra.add(new BuilderInstruction21c(
-                Opcode.CHECK_CAST, 10, new ImmutableTypeReference("Landroid/content/Context;")));
-        extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_STATIC, 2, 10, 0, 0, 0, 0,
+                Opcode.CHECK_CAST, s2, new ImmutableTypeReference("Landroid/content/Context;")));
+        extra.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, s3, pdReg));
+        extra.add(new ImmutableInstruction3rc(
+                Opcode.INVOKE_STATIC_RANGE, s2, 2,
                 new ImmutableMethodReference(FROGLOG_PICNIC, "uploadAction",
                         Arrays.asList("Landroid/content/Context;", "Ljava/lang/Object;"), "Ljb/a;")));
-        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 11));
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, s3));
         extra.add(new ImmutableInstruction21c(
-                Opcode.CONST_STRING, 9, new ImmutableStringReference("FROGLOG_UPLOAD")));
-        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 8, 0));
-        extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_STATIC, 5, 9, 11, 8, composer, flags,
+                Opcode.CONST_STRING, s0, new ImmutableStringReference("FROGLOG_UPLOAD")));
+        extra.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, s1, s3));
+        extra.add(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(Opcode.CONST, s2, 0));
+        extra.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, s3, composer));
+        extra.add(new ImmutableInstruction22x(Opcode.MOVE_FROM16, s4, flags));
+        extra.add(new ImmutableInstruction3rc(
+                Opcode.INVOKE_STATIC_RANGE, s0, 5,
                 method(SHARE, "W", Arrays.asList(
                         "Ljava/lang/String;", "Ljb/a;", "Lp1/o;", "Lz0/e0;", "I"), "V")));
         return extra;
