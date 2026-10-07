@@ -104,6 +104,8 @@ public final class PatchCatalog {
     private static final String MENU_DISPATCH = "Llf/k;";
     private static final String MENU_DISPATCH_SIG =
             "(Landroid/content/Context;Ljava/lang/String;Ljb/c;Ljb/e;Ljb/c;Ljb/a;)V";
+    private static final String SHARE = "Lcf/pi;";
+    private static final String SHARE_SIG = "(Lc/j;Landroid/net/Uri;Ljava/lang/String;Ljava/lang/String;)V";
     private static final String FROGLOG_MENU = "Lrip/moth/cocoonshell/froglog/FroglogMenu;";
     private static final int FROGLOG_ICON = 0x7F06021A;
     private static final String INSERT =
@@ -138,6 +140,7 @@ public final class PatchCatalog {
         ClassDef statusBar = null;
         ClassDef icons = null;
         ClassDef menuDispatch = null;
+        ClassDef share = null;
         for (ClassDef cls : dex.getClasses()) {
             if (CATALOG.equals(cls.getType())) {
                 catalog = cls;
@@ -173,12 +176,14 @@ public final class PatchCatalog {
                 icons = cls;
             } else if (MENU_DISPATCH.equals(cls.getType())) {
                 menuDispatch = cls;
+            } else if (SHARE.equals(cls.getType())) {
+                share = cls;
             }
         }
         if (catalog == null || session == null || pods == null || podAction == null || router == null
                 || friends == null || friendTabs == null || friendMaps == null || friendClick == null
                 || theme == null || surfacePrefs == null
-                || glassDraw == null || glassHost == null || widgetHost == null || statusBar == null || icons == null || menuDispatch == null) {
+                || glassDraw == null || glassHost == null || widgetHost == null || statusBar == null || icons == null || menuDispatch == null || share == null) {
             throw new IllegalStateException("catalog=" + (catalog != null) + " session=" + (session != null)
                     + " pods=" + (pods != null) + " podAction=" + (podAction != null)
                     + " router=" + (router != null)
@@ -187,7 +192,8 @@ public final class PatchCatalog {
                     + " theme=" + (theme != null) + " surfacePrefs=" + (surfacePrefs != null)
                     + " glassDraw=" + (glassDraw != null) + " glassHost=" + (glassHost != null)
                     + " widgetHost=" + (widgetHost != null) + " statusBar=" + (statusBar != null)
-                    + " icons=" + (icons != null) + " menuDispatch=" + (menuDispatch != null));
+                    + " icons=" + (icons != null) + " menuDispatch=" + (menuDispatch != null)
+                    + " share=" + (share != null));
         }
         final ClassDef catalogReplacement = patchCatalog(catalog);
         final ClassDef sessionReplacement = patchSession(session);
@@ -202,6 +208,7 @@ public final class PatchCatalog {
         final ClassDef surfacePrefsReplacement = patchSurfacePrefs(surfacePrefs);
         final ClassDef glassDrawReplacement = prefixMenuAction(prefixGlassMethods(glassDraw, "b"), "Z0");
         final ClassDef menuDispatchReplacement = prefixMenuAction(menuDispatch, "g");
+        final ClassDef shareReplacement = patchShare(share);
         final ClassDef glassHostReplacement = prefixGlassMethods(glassHost, "h", "A0");
         final ClassDef widgetHostReplacement = patchWidgetHost(widgetHost);
         final ClassDef statusBarReplacement = patchStatusBar(statusBar);
@@ -246,6 +253,8 @@ public final class PatchCatalog {
                         classes.add(iconsReplacement);
                     } else if (MENU_DISPATCH.equals(cls.getType())) {
                         classes.add(menuDispatchReplacement);
+                    } else if (SHARE.equals(cls.getType())) {
+                        classes.add(shareReplacement);
                     } else {
                         classes.add(cls);
                     }
@@ -1716,6 +1725,86 @@ public final class PatchCatalog {
                         "Ljava/util/List;"), "V")));
         code.addInstruction(new BuilderInstruction10x(Opcode.RETURN_VOID));
         return replace(method, code.getMethodImplementation());
+    }
+
+    /** Picnic shares through cf.pi.Z0. Froglog adds its upload target to the chooser before it opens. */
+    private static ClassDef patchShare(ClassDef share) {
+        List<Method> direct = new ArrayList<Method>();
+        boolean patched = false;
+        for (Method method : share.getDirectMethods()) {
+            if ("Z0".equals(method.getName()) && SHARE_SIG.equals(signature(method))) {
+                direct.add(patchShareChooser(method));
+                patched = true;
+            } else {
+                direct.add(method);
+            }
+        }
+        if (!patched) {
+            throw new IllegalStateException("picnic share not found");
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        for (Method method : share.getVirtualMethods()) {
+            virtual.add(method);
+        }
+        return copyClass(share, direct, virtual);
+    }
+
+    private static Method patchShareChooser(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> instructions = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            instructions.add(instruction);
+        }
+        int send = -1;
+        int chooser = -1;
+        for (int i = 0; i < instructions.size() - 1; i++) {
+            Instruction instruction = instructions.get(i);
+            if (!(instruction instanceof ReferenceInstruction)) {
+                continue;
+            }
+            Reference ref = ((ReferenceInstruction) instruction).getReference();
+            if (send < 0 && instruction.getOpcode() == Opcode.NEW_INSTANCE && ref instanceof TypeReference
+                    && "Landroid/content/Intent;".equals(((TypeReference) ref).getType())) {
+                send = ((OneRegisterInstruction) instruction).getRegisterA();
+            }
+            if (instruction.getOpcode() == Opcode.INVOKE_STATIC && ref instanceof MethodReference
+                    && "createChooser".equals(((MethodReference) ref).getName())
+                    && instructions.get(i + 1).getOpcode() == Opcode.MOVE_RESULT_OBJECT) {
+                chooser = i + 1;
+                break;
+            }
+        }
+        int context = impl.getRegisterCount() - parameterWords(method);
+        if (send < 0 || chooser < 0 || context + 3 > 15) {
+            throw new IllegalStateException("picnic share send=" + send + " chooser=" + chooser);
+        }
+        int result = ((OneRegisterInstruction) instructions.get(chooser)).getRegisterA();
+        List<Instruction> extra = new ArrayList<Instruction>();
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC,
+                4, result, context, send, context + 3, 0,
+                new ImmutableMethodReference("Lrip/moth/cocoonshell/froglog/FroglogPicnic;", "withUpload",
+                        Arrays.asList("Landroid/content/Intent;", "Landroid/content/Context;",
+                                "Landroid/content/Intent;", "Ljava/lang/String;"),
+                        "Landroid/content/Intent;")));
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, result));
+        int insert = chooser + 1;
+        int[] addresses = addresses(instructions);
+        int insertAt = addresses[insert];
+        int[] switchAt = switchAddresses(instructions, addresses);
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        for (int i = 0; i < instructions.size(); i++) {
+            if (i == insert) {
+                rewritten.addAll(extra);
+            }
+            rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], insertAt, 4));
+        }
+        System.out.println("picnic share chooser v" + result + " send v" + send);
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                rewritten,
+                shiftTries(impl.getTryBlocks(), insertAt, 4),
+                Collections.emptyList()));
     }
 
     /** Context menu clicks reach Cocoon's action switch here. Froglog's own action returns early. */

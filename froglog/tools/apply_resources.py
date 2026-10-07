@@ -113,6 +113,7 @@ MANIFEST = """
         <activity android:exported="false" android:name="rip.moth.cocoonshell.froglog.FroglogMappingsActivity" android:theme="@style/Theme.Cocoon"/>
         <activity android:exported="false" android:name="rip.moth.cocoonshell.froglog.FroglogAddGame" android:theme="@android:style/Theme.DeviceDefault.NoActionBar"/>
         <activity android:exported="false" android:name="rip.moth.cocoonshell.froglog.FroglogLibraryPicker" android:theme="@android:style/Theme.DeviceDefault.NoActionBar"/>
+        <activity android:exported="true" android:name="rip.moth.cocoonshell.froglog.FroglogPicnicActivity" android:theme="@style/Theme.Cocoon"/>
         <provider android:authorities="rip.moth.cocoonshell.froglog.startup" android:exported="false" android:initOrder="100" android:name="rip.moth.cocoonshell.froglog.FroglogInitProvider"/>
 """
 

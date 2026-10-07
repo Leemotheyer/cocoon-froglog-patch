@@ -71,6 +71,7 @@ def main() -> None:
         "Lef/b;",
         "Lkf/n2;",
         "Llf/k;",
+        "Lcf/pi;",
     )
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -95,6 +96,7 @@ def main() -> None:
             "g": (root / "before" / "lf" / "k.smali", root / "after" / "lf" / "k.smali"),
         }
         dispatch = {name: (b.read_text(encoding="utf-8"), a.read_text(encoding="utf-8")) for name, (b, a) in dispatch.items()}
+        share_after = (root / "after" / "cf" / "pi.smali").read_text(encoding="utf-8")
         menu_text = None
         if len(menu_dex) == 2:
             disassemble(baksmali, Path(menu_dex[1]), root / "menu", "La8/z;")
@@ -246,6 +248,14 @@ def main() -> None:
             raise SystemExit(f"menu dispatch {name} is missing the Froglog action prefix")
         if [shift_labels(line, 8) for line in body_before] != body_after[5:]:
             raise SystemExit(f"menu dispatch {name} changed more than the Froglog prefix")
+    share = instructions(method(share_after, ".method public static final Z0(Lc/j;Landroid/net/Uri;Ljava/lang/String;Ljava/lang/String;)V"))
+    upload = "invoke-static {p1, p0, v0, p3}, Lrip/moth/cocoonshell/froglog/FroglogPicnic;->withUpload(Landroid/content/Intent;Landroid/content/Context;Landroid/content/Intent;Ljava/lang/String;)Landroid/content/Intent;"
+    if upload not in share:
+        raise SystemExit("picnic share is missing the Froglog upload target")
+    at = share.index(upload)
+    if not share[at - 2].startswith("invoke-static {v0, p1}, Landroid/content/Intent;->createChooser") \
+            or share[at + 1] != "move-result-object p1" or not share[at + 2].startswith("invoke-virtual {p0, p1}, Landroid/content/Context;->startActivity"):
+        raise SystemExit("picnic share hook is not between the chooser and startActivity")
     if menu_text is not None:
         wrapper = instructions(method(menu_text, ".method public static final E(Landroid/content/Context;Lnf/d0;Lde/o;ZZZZ)Ljava/util/List;"))
         if wrapper != [

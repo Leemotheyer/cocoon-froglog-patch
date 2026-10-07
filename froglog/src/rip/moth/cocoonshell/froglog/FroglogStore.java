@@ -173,6 +173,33 @@ public final class FroglogStore {
                 .apply();
     }
 
+    /** "game:12", "live:4", or null for a Cocoon title that is unmapped or declined. */
+    public static String mappedTarget(Context context, String title, String platform) {
+        if (title == null || title.trim().isEmpty()) {
+            return null;
+        }
+        String value = link(context, FroglogMatch.linkKey(title, platform == null ? "" : platform));
+        if (value == null || FroglogLinks.DECLINED.equals(value)) {
+            return null;
+        }
+        return value.startsWith("game:") || value.startsWith("live:") ? value : null;
+    }
+
+    public static boolean declined(Context context, String title, String platform) {
+        return FroglogLinks.DECLINED.equals(
+                link(context, FroglogMatch.linkKey(title, platform == null ? "" : platform)));
+    }
+
+    public static boolean shotUploaded(Context context, String uri) {
+        return uri != null && prefs(context).getBoolean("shot_" + uri.hashCode() + "_" + uri.length(), false);
+    }
+
+    public static void markShotUploaded(Context context, String uri) {
+        if (uri != null) {
+            prefs(context).edit().putBoolean("shot_" + uri.hashCode() + "_" + uri.length(), true).apply();
+        }
+    }
+
     public static boolean posted(Context context, String syncRef) {
         return syncRef != null && prefs(context).getBoolean("posted_" + syncRef, false);
     }

@@ -222,6 +222,7 @@ for token in (
     "FroglogLibraryPicker",
     "FroglogPodActivity",
     "FroglogFriendActivity",
+    "FroglogPicnicActivity",
 ):
     if token.encode("utf-16le") not in manifest:
         raise SystemExit(f"manifest missing {token}")

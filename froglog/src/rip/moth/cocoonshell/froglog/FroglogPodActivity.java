@@ -225,12 +225,23 @@ public class FroglogPodActivity extends FroglogActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         mappingsParams.topMargin = dp(8);
         mappings.setLayoutParams(mappingsParams);
+        Button picnic = FroglogTheme.secondary(this, "Picnic screenshots", new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(FroglogPodActivity.this, FroglogPicnicActivity.class));
+            }
+        });
+        LinearLayout.LayoutParams picnicParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        picnicParams.topMargin = dp(8);
+        picnic.setLayoutParams(picnicParams);
         LinearLayout.LayoutParams outParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         outParams.topMargin = dp(8);
         out.setLayoutParams(outParams);
         actions.addView(add);
         actions.addView(mappings);
+        actions.addView(picnic);
         actions.addView(out);
         account.addView(actions);
     }
