@@ -3,8 +3,6 @@ package rip.moth.cocoonshell.froglog;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -16,9 +14,6 @@ import android.widget.TextView;
 
 import org.json.JSONObject;
 
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.List;
 
 /** A small cover beside the title, then every field Froglog has for the game, its review, and sessions. */
@@ -67,41 +62,80 @@ public class FroglogGameDetail extends FroglogActivity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(20), dp(24), dp(20), dp(24));
 
+        List<String[]> rows = FroglogGameInfo.rows(game);
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        final ImageView art = new ImageView(this);
-        LinearLayout.LayoutParams artParams = new LinearLayout.LayoutParams(dp(88), dp(116));
-        artParams.rightMargin = dp(16);
-        art.setLayoutParams(artParams);
-        art.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        art.setBackground(FroglogTheme.rounded(FroglogTheme.FIELD, dp(12)));
-        art.setClipToOutline(true);
+        header.setGravity(Gravity.TOP);
+        ImageView art = FroglogCards.cover(this, cover.isEmpty() ? null : cover, 96, 128);
+        ((LinearLayout.LayoutParams) art.getLayoutParams()).rightMargin = dp(16);
         header.addView(art);
         LinearLayout heading = new LinearLayout(this);
         heading.setOrientation(LinearLayout.VERTICAL);
         heading.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        heading.addView(FroglogTheme.title(this, title));
+        TextView name = FroglogTheme.title(this, title);
+        name.setTextSize(22);
+        heading.addView(name);
         TextView line = FroglogTheme.text(this, meta.isEmpty() ? "No session yet" : meta, 14, false);
         line.setTextColor(FroglogTheme.MUTED);
+        line.setPadding(0, dp(2), 0, 0);
         heading.addView(line);
+        LinearLayout tags = tags(rows, live);
+        if (tags.getChildCount() > 0) {
+            heading.addView(tags);
+        }
         header.addView(heading);
         root.addView(FroglogTheme.card(this, header));
 
-        List<String[]> rows = FroglogGameInfo.rows(game);
+        String about = FroglogGameInfo.description(game);
+        if (about != null) {
+            LinearLayout aboutBody = column();
+            aboutBody.addView(FroglogTheme.section(this, "About"));
+            final TextView aboutText = FroglogTheme.text(this, about, 14, false);
+            aboutText.setLineSpacing(0, 1.15f);
+            aboutText.setMaxLines(6);
+            aboutText.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            aboutBody.addView(aboutText);
+            if (about.length() > 280) {
+                final TextView more = FroglogTheme.text(this, "Show more", 13, true);
+                more.setTextColor(FroglogTheme.ACCENT);
+                more.setPadding(0, dp(6), 0, 0);
+                FroglogTheme.row(more, new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        boolean open = aboutText.getMaxLines() != Integer.MAX_VALUE;
+                        aboutText.setMaxLines(open ? Integer.MAX_VALUE : 6);
+                        more.setText(open ? "Show less" : "Show more");
+                    }
+                });
+                aboutBody.addView(more);
+            }
+            root.addView(spaced(FroglogTheme.card(this, aboutBody)));
+        }
+
         if (!rows.isEmpty()) {
             LinearLayout details = column();
             details.addView(FroglogTheme.section(this, "Details"));
-            for (String[] row : rows) {
-                details.addView(field(row[0], row[1]));
+            for (int i = 0; i < rows.size(); i++) {
+                if (i > 0) {
+                    details.addView(divider());
+                }
+                details.addView(field(rows.get(i)[0], rows.get(i)[1]));
             }
             root.addView(spaced(FroglogTheme.card(this, details)));
         }
 
-        LinearLayout reviewBody = column();
-        reviewBody.addView(FroglogTheme.section(this, "Review"));
-        reviewBody.addView(FroglogTheme.text(this, review.isEmpty() ? "No review on this game." : review, 15, false));
-        root.addView(spaced(FroglogTheme.card(this, reviewBody)));
+        if (!review.isEmpty()) {
+            LinearLayout reviewBody = column();
+            reviewBody.addView(FroglogTheme.section(this, "Review"));
+            TextView reviewText = FroglogTheme.text(this, review, 15, false);
+            reviewText.setLineSpacing(0, 1.15f);
+            reviewBody.addView(reviewText);
+            root.addView(spaced(FroglogTheme.card(this, reviewBody)));
+        }
+
+        if (own && id > 0 && FroglogStore.signedIn(this)) {
+            root.addView(spaced(FroglogCards.visibilityCard(this, FroglogLinks.value(id, live))));
+        }
 
         final String token = own && id > 0 ? FroglogStore.token(this) : null;
         if (token != null && !token.isEmpty()) {
@@ -117,25 +151,48 @@ public class FroglogGameDetail extends FroglogActivity {
         scroll.addView(root);
         setContentView(scroll);
         FroglogTheme.paintSystemBars(this);
-        if (!cover.isEmpty()) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    final Bitmap bitmap = load(cover);
-                    if (bitmap == null) {
-                        return;
-                    }
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (!isFinishing()) {
-                                art.setImageBitmap(bitmap);
-                            }
-                        }
-                    });
-                }
-            }, "froglog-detail").start();
+    }
+
+    /** Status, platform, and rating as chips under the title. They also stay in Details. */
+    private LinearLayout tags(List<String[]> rows, boolean live) {
+        LinearLayout tags = new LinearLayout(this);
+        tags.setOrientation(LinearLayout.HORIZONTAL);
+        tags.setPadding(0, dp(8), 0, 0);
+        if (live) {
+            addTag(tags, "Live service", true);
         }
+        for (int i = 0; i < rows.size() && tags.getChildCount() < 3; i++) {
+            String label = rows.get(i)[0];
+            String value = rows.get(i)[1];
+            if ("Status".equals(label)) {
+                addTag(tags, value, !live);
+            } else if ("Platform".equals(label)) {
+                addTag(tags, value, false);
+            } else if ("Rating".equals(label)) {
+                addTag(tags, value.startsWith("★") ? value : "★ " + value, false);
+            }
+        }
+        return tags;
+    }
+
+    private void addTag(LinearLayout tags, String value, boolean strong) {
+        TextView chip = FroglogTheme.chip(this, value, strong);
+        chip.setMaxLines(1);
+        chip.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        if (tags.getChildCount() > 0) {
+            params.leftMargin = dp(6);
+        }
+        chip.setLayoutParams(params);
+        tags.addView(chip);
+    }
+
+    private View divider() {
+        View line = new View(this);
+        line.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(1) / 2)));
+        line.setBackgroundColor(FroglogTheme.LINE);
+        return line;
     }
 
     private void loadSessions(final String token, final boolean live, final long id) {
@@ -175,8 +232,14 @@ public class FroglogGameDetail extends FroglogActivity {
             sessionList.addView(muted("No sessions logged yet."));
             return;
         }
+        TextView count = muted(sessions.size() == 1 ? "1 session" : sessions.size() + " sessions");
+        count.setPadding(0, 0, 0, dp(4));
+        sessionList.addView(count);
         int shown = Math.min(sessions.size(), SESSIONS_SHOWN);
         for (int i = 0; i < shown; i++) {
+            if (i > 0) {
+                sessionList.addView(divider());
+            }
             String[] session = sessions.get(i);
             String when = session[0].isEmpty() ? "Undated" : session[0];
             sessionList.addView(field(when, session[1].isEmpty() ? "—" : session[1]));
@@ -240,31 +303,6 @@ public class FroglogGameDetail extends FroglogActivity {
     private String extra(String key, String fallback) {
         String value = getIntent() == null ? null : getIntent().getStringExtra(key);
         return value == null ? fallback : value;
-    }
-
-    private static Bitmap load(String url) {
-        HttpURLConnection conn = null;
-        try {
-            conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(12000);
-            conn.connect();
-            if (conn.getResponseCode() >= 400) {
-                return null;
-            }
-            InputStream in = conn.getInputStream();
-            try {
-                return BitmapFactory.decodeStream(in);
-            } finally {
-                in.close();
-            }
-        } catch (Exception ignored) {
-            return null;
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
-        }
     }
 
     private int dp(int value) {

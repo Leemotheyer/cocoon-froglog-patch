@@ -2,8 +2,6 @@ package rip.moth.cocoonshell.froglog;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
@@ -12,14 +10,10 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsetsController;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 
 /** Public Froglog library for someone the user follows, opened from Cocoon's friends list. */
 public class FroglogFriendActivity extends FroglogActivity {
@@ -99,96 +93,17 @@ public class FroglogFriendActivity extends FroglogActivity {
             return;
         }
         for (int i = 0; i < recent.games.size(); i++) {
-            games.addView(FroglogTheme.card(this, gameRow(recent.games.get(i))));
+            games.addView(gameRow(recent.games.get(i)));
         }
     }
 
     private View gameRow(final FroglogGame game) {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(0, dp(8), 0, dp(8));
-        final ImageView art = new ImageView(this);
-        LinearLayout.LayoutParams artParams = new LinearLayout.LayoutParams(dp(52), dp(52));
-        artParams.rightMargin = dp(12);
-        art.setLayoutParams(artParams);
-        art.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        art.setBackground(rounded(FroglogTheme.FIELD, dp(12)));
-        art.setClipToOutline(true);
-        row.addView(art);
-        LinearLayout lines = new LinearLayout(this);
-        lines.setOrientation(LinearLayout.VERTICAL);
-        lines.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        lines.addView(text(game.title, 15, true));
-        TextView meta = text(game.meta, 12, false);
-        meta.setTextColor(FroglogTheme.MUTED);
-        lines.addView(meta);
-        row.addView(lines);
-        row.setOnClickListener(new View.OnClickListener() {
+        return FroglogCards.gameRow(this, game.title, game.meta, game.coverUrl, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startActivity(FroglogGameDetail.intent(FroglogFriendActivity.this, game, false));
             }
         });
-        loadArt(art, game.coverUrl);
-        return row;
-    }
-
-    private void loadArt(final ImageView art, final String url) {
-        if (url == null || url.isEmpty()) {
-            return;
-        }
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                final Bitmap bitmap = fetch(url);
-                if (bitmap == null) {
-                    return;
-                }
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (!isFinishing()) {
-                            art.setImageBitmap(bitmap);
-                        }
-                    }
-                });
-            }
-        }, "froglog-follow-art").start();
-    }
-
-    private static Bitmap fetch(String url) {
-        HttpURLConnection conn = null;
-        try {
-            conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(12000);
-            if (conn.getResponseCode() >= 400) {
-                return null;
-            }
-            InputStream in = conn.getInputStream();
-            try {
-                Bitmap raw = BitmapFactory.decodeStream(in);
-                if (raw == null) {
-                    return null;
-                }
-                int max = 256;
-                if (raw.getWidth() <= max && raw.getHeight() <= max) {
-                    return raw;
-                }
-                float scale = Math.min(max / (float) raw.getWidth(), max / (float) raw.getHeight());
-                return Bitmap.createScaledBitmap(raw, Math.max(1, (int) (raw.getWidth() * scale)),
-                        Math.max(1, (int) (raw.getHeight() * scale)), true);
-            } finally {
-                in.close();
-            }
-        } catch (Exception ignored) {
-            return null;
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
-        }
     }
 
     private void paintSystemBars() {
