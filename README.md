@@ -19,7 +19,7 @@ Froglog data comes from the [Froglog API](https://wiki.froglog.co.uk/Api/Documen
 
 Sign-in stores the JWT and username only. The password is not saved. The widget grid stays on the public user endpoints, so private games do not appear there. A private game can still receive a session after it is linked.
 
-This build uses the package name `rip.moth.cocoonshell.froglog` and the launcher label **Cocoon Froglog**, so it installs beside official Cocoon (`rip.moth.cocoonshell`). Its AndroidX receiver permission is renamed to match, because two apps with different signers cannot define the same signature permission. It is signed with the debug key in `froglog/debug.keystore` (store password `froglog`, alias `froglog`). A later Froglog build signed with the same key can upgrade in place. `versionCode` is 13 and `versionName` is `3.06-1-froglog12-dev`.
+This build uses the package name `rip.moth.cocoonshell.froglog` and the launcher label **Cocoon Froglog**, so it installs beside official Cocoon (`rip.moth.cocoonshell`). Its AndroidX receiver permission is renamed to match, because two apps with different signers cannot define the same signature permission. It is signed with the debug key in `froglog/debug.keystore` (store password `froglog`, alias `froglog`). A later Froglog build signed with the same key can upgrade in place. `versionCode` is 14 and `versionName` is `3.06-1-froglog13-dev`.
 
 Cocoon only records play sessions with Usage Access, which its onboarding asks for. The `SKIP_SETUP=1` test build skips onboarding, so grant it by hand: `adb shell appops set rip.moth.cocoonshell.froglog GET_USAGE_STATS allow`.
 
