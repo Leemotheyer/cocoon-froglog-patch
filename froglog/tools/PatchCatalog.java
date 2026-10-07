@@ -1851,13 +1851,21 @@ public final class PatchCatalog {
                 new ImmutableMethodReference(FROGLOG_PICNIC, "uploadAction",
                         Arrays.asList("Landroid/content/Context;", "Ljava/lang/Object;"), "Ljb/a;")));
         extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 14));
+        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 4, 1));
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC, 1, 4, 0, 0, 0, 0,
+                method(FROGLOG_PICNIC, "setUploadRow", Collections.singletonList("Z"), "V")));
         extra.add(new ImmutableInstruction21c(
-                Opcode.CONST_STRING, 4, new ImmutableStringReference("FROGLOG_UPLOAD")));
+                Opcode.CONST_STRING, 4, new ImmutableStringReference("SELECT")));
         extra.add(new BuilderInstruction11n(Opcode.CONST_4, 15, 0));
         extra.add(new ImmutableInstruction35c(
                 Opcode.INVOKE_STATIC, 5, 4, 14, 15, composer, flags,
                 method(SHARE, "W", Arrays.asList(
                         "Ljava/lang/String;", "Ljb/a;", "Lp1/o;", "Lz0/e0;", "I"), "V")));
+        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 4, 0));
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC, 1, 4, 0, 0, 0, 0,
+                method(FROGLOG_PICNIC, "setUploadRow", Collections.singletonList("Z"), "V")));
         return extra;
     }
 
@@ -1919,6 +1927,26 @@ public final class PatchCatalog {
         int iconDelta = instructionWidth(iconBranch) - instructions.get(iconAt).getCodeUnits();
         instructions = spliceReplace(instructions, iconAt, iconBranch);
         tries = shiftTries(tries, iconAtAddress, iconDelta);
+        int keyAt = -1;
+        for (int i = 0; i < instructions.size(); i++) {
+            Instruction instruction = instructions.get(i);
+            if (instruction.getOpcode() == Opcode.CONST
+                    && instruction instanceof org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction
+                    && ((org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction) instruction).getNarrowLiteral()
+                            == 0xF3BC3364) {
+                keyAt = i;
+                break;
+            }
+        }
+        if (keyAt < 0) {
+            throw new IllegalStateException("picnic row group key missing");
+        }
+        List<Instruction> keyBranch = picnicUploadKeyBranch();
+        addresses = addresses(instructions);
+        int keyAddress = addresses[keyAt];
+        int keyDelta = instructionWidth(keyBranch) - instructions.get(keyAt).getCodeUnits();
+        instructions = spliceReplace(instructions, keyAt, keyBranch);
+        tries = shiftTries(tries, keyAddress, keyDelta);
         System.out.println("picnic upload row label and icon branches");
         return replace(method, new ImmutableMethodImplementation(
                 impl.getRegisterCount(),
@@ -1927,17 +1955,13 @@ public final class PatchCatalog {
                 Collections.emptyList()));
     }
 
-    /** p0 is the row key. v0 at this point is the changed-flags int, not the string. */
+    /** The row key stays a real platform id. The upload row is marked with setUploadRow. */
     private static List<Instruction> picnicUploadLabelBranch(int stringParam) {
         MethodImplementationBuilder code = new MethodImplementationBuilder(16);
         Label done = code.getLabel("froglog_label_done");
-        code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction22x(
-                Opcode.MOVE_OBJECT_FROM16, 4, stringParam));
-        code.addInstruction(new BuilderInstruction21c(
-                Opcode.CONST_STRING, 14, new ImmutableStringReference("FROGLOG_UPLOAD")));
         code.addInstruction(new BuilderInstruction35c(
-                Opcode.INVOKE_VIRTUAL, 2, 4, 14, 0, 0, 0,
-                method("Ljava/lang/String;", "equals", Collections.singletonList("Ljava/lang/Object;"), "Z")));
+                Opcode.INVOKE_STATIC, 0, 0, 0, 0, 0, 0,
+                method(FROGLOG_PICNIC, "isUploadRow", Collections.<String>emptyList(), "Z")));
         code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 4));
         code.addInstruction(new BuilderInstruction21t(Opcode.IF_EQZ, 4, done));
         code.addInstruction(new BuilderInstruction21c(
@@ -1947,16 +1971,35 @@ public final class PatchCatalog {
         return instructionList(code);
     }
 
-    /** v4 holds p0 here. v6 is dead until the next move-result. */
+    /** v6 is dead until the next move-result. A separate group key keeps the second row from colliding. */
+    private static List<Instruction> picnicUploadKeyBranch() {
+        MethodImplementationBuilder code = new MethodImplementationBuilder(8);
+        Label logKey = code.getLabel("froglog_group_log");
+        Label done = code.getLabel("froglog_group_done");
+        code.addInstruction(new BuilderInstruction35c(
+                Opcode.INVOKE_STATIC, 0, 0, 0, 0, 0, 0,
+                method(FROGLOG_PICNIC, "isUploadRow", Collections.<String>emptyList(), "Z")));
+        code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 1));
+        code.addInstruction(new BuilderInstruction21t(Opcode.IF_EQZ, 1, logKey));
+        code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(
+                Opcode.CONST, 1, 0x5106F06));
+        code.addInstruction(new BuilderInstruction10t(Opcode.GOTO, done));
+        code.addLabel("froglog_group_log");
+        code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(
+                Opcode.CONST, 1, 0xF3BC3364));
+        code.addLabel("froglog_group_done");
+        code.addInstruction(new BuilderInstruction10x(Opcode.NOP));
+        return instructionList(code);
+    }
+
+    /** v6 is dead until the next move-result. */
     private static List<Instruction> picnicUploadIconBranch() {
         MethodImplementationBuilder code = new MethodImplementationBuilder(16);
         Label logIcon = code.getLabel("froglog_icon_log");
         Label done = code.getLabel("froglog_icon_done");
-        code.addInstruction(new BuilderInstruction21c(
-                Opcode.CONST_STRING, 6, new ImmutableStringReference("FROGLOG_UPLOAD")));
         code.addInstruction(new BuilderInstruction35c(
-                Opcode.INVOKE_VIRTUAL, 2, 4, 6, 0, 0, 0,
-                method("Ljava/lang/String;", "equals", Collections.singletonList("Ljava/lang/Object;"), "Z")));
+                Opcode.INVOKE_STATIC, 0, 0, 0, 0, 0, 0,
+                method(FROGLOG_PICNIC, "isUploadRow", Collections.<String>emptyList(), "Z")));
         code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 6));
         code.addInstruction(new BuilderInstruction21t(Opcode.IF_EQZ, 6, logIcon));
         code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(

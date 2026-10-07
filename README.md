@@ -19,7 +19,7 @@ Froglog data comes from the [Froglog API](https://wiki.froglog.co.uk/Api/Documen
 
 Sign-in stores the JWT and username only. The password is not saved. The widget grid stays on the public user endpoints, so private games do not appear there. A private game can still receive a session after it is linked.
 
-This build uses the package name `rip.moth.cocoonshell.froglog` and the launcher label **Cocoon Froglog**, so it installs beside official Cocoon (`rip.moth.cocoonshell`). Its AndroidX receiver permission is renamed to match, because two apps with different signers cannot define the same signature permission. It is signed with the debug key in `froglog/debug.keystore` (store password `froglog`, alias `froglog`). A later Froglog build signed with the same key can upgrade in place. `versionCode` is 16 and `versionName` is `3.06-1-froglog15-dev`.
+This build uses the package name `rip.moth.cocoonshell.froglog` and the launcher label **Cocoon Froglog**, so it installs beside official Cocoon (`rip.moth.cocoonshell`). Its AndroidX receiver permission is renamed to match, because two apps with different signers cannot define the same signature permission. It is signed with the debug key in `froglog/debug.keystore` (store password `froglog`, alias `froglog`). A later Froglog build signed with the same key can upgrade in place. `versionCode` is 17 and `versionName` is `3.06-1-froglog16-dev`.
 
 Cocoon only records play sessions with Usage Access, which its onboarding asks for. The `SKIP_SETUP=1` test build skips onboarding, so grant it by hand: `adb shell appops set rip.moth.cocoonshell.froglog GET_USAGE_STATS allow`.
 
@@ -29,7 +29,7 @@ The Froglog tiles follow Cocoon's own widgets. Froglog recent is placed at 3×2 
 
 ## Install
 
-`./froglog/build.sh` writes `dist/cocoon-306-froglog-<versionName>.apk` (not committed), for example `dist/cocoon-306-froglog-3.06-1-froglog15-dev.apk`. GitHub release assets use the same naming. The current **dev** release from the `dev` branch is [v3.06-1-froglog15-dev](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.06-1-froglog15-dev) (`cocoon-306-froglog-3.06-1-froglog15-dev.apk`, sha256 `c9678365cae0541e88ac6fbc8a6e4530e3114e7a6dabee6fd9caa9fbafdff23d`). The last stable tag on `main` is [v3.06-1-froglog10](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.06-1-froglog10). `SKIP_SETUP=1 ./froglog/build.sh` still marks setup complete for BlueStacks test builds. The default build leaves setup in place for Android 13.
+`./froglog/build.sh` writes `dist/cocoon-306-froglog-<versionName>.apk` (not committed), for example `dist/cocoon-306-froglog-3.06-1-froglog16-dev.apk`. GitHub release assets use the same naming. The current **dev** release from the `dev` branch is [v3.06-1-froglog16-dev](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.06-1-froglog16-dev) (`cocoon-306-froglog-3.06-1-froglog16-dev.apk`, sha256 `b23490cd30adba057b37b4dc235a5e2ca564c1392cd7a518d021af9c9e2dd279`). The last stable tag on `main` is [v3.06-1-froglog10](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.06-1-froglog10). `SKIP_SETUP=1 ./froglog/build.sh` still marks setup complete for BlueStacks test builds. The default build leaves setup in place for Android 13.
 
 1. Official Cocoon can stay installed. A previous Froglog build with this same debug key can update over itself.
 2. Install the versioned APK from Releases or from `dist/` after a local build.

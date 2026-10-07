@@ -260,13 +260,15 @@ def main() -> None:
         raise SystemExit("picnic info dialog register frame changed")
     if "invoke-static {v13, v14}, Lrip/moth/cocoonshell/froglog/FroglogPicnic;->uploadAction" not in info_text:
         raise SystemExit("picnic info dialog is missing the Froglog upload row")
-    if "invoke-static {v4, v14, v15, v12, v1}, Lcf/pi;->W(" not in info_text:
+    if 'const-string v4, "SELECT"' not in info_text or "invoke-static {v4, v14, v15, v12, v1}, Lcf/pi;->W(" not in info_text:
         raise SystemExit("picnic info dialog is missing the Froglog upload W row")
+    if "FroglogPicnic;->setUploadRow" not in info_text:
+        raise SystemExit("picnic info dialog does not mark the upload row")
     row = instructions(method(picnic_after, ".method public static final W(Ljava/lang/String;Ljb/a;Lp1/o;Lz0/e0;I)V"))
     row_text = "\n".join(row)
-    if "invoke-virtual {v0, v4}, Ljava/lang/String;->equals" in row_text:
-        raise SystemExit("picnic info row compares the flags register as a string")
-    if "move-object/from16 v4, p0" not in row_text or 'const-string v13, "Upload to Froglog"' not in row_text:
+    if "invoke-virtual {v0, v4}, Ljava/lang/String;->equals" in row_text or "FROGLOG_UPLOAD" in row_text:
+        raise SystemExit("picnic info row still treats the platform id as an upload marker")
+    if "FroglogPicnic;->isUploadRow" not in row_text or 'const-string v13, "Upload to Froglog"' not in row_text:
         raise SystemExit("picnic info row is missing the Froglog upload label")
     if menu_text is not None:
         wrapper = instructions(method(menu_text, ".method public static final E(Landroid/content/Context;Lnf/d0;Lde/o;ZZZZ)Ljava/util/List;"))

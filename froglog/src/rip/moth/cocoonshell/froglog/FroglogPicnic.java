@@ -12,7 +12,18 @@ import jb.a;
 /** Picnic screenshot upload entry from Cocoon's info dialog (cf.pi.Y). */
 public final class FroglogPicnic {
     private static final String TAG = "FroglogPicnic";
+    /** True while the upload row in cf.pi.W is composing. The platform key stays SELECT. */
+    private static boolean uploadRow;
+
     private FroglogPicnic() {}
+
+    public static void setUploadRow(boolean on) {
+        uploadRow = on;
+    }
+
+    public static boolean isUploadRow() {
+        return uploadRow;
+    }
 
     public static a uploadAction(Context context, Object picnicDetail) {
         return new FroglogPicnicUpload(context, picnicDetail);
