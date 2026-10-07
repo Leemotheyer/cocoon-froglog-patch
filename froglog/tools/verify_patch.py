@@ -67,6 +67,7 @@ def main() -> None:
         "Lef/d0;",
         "Lef/q3;",
         "Ltf/i1;",
+        "Lef/b;",
     )
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -84,6 +85,8 @@ def main() -> None:
         friends_after = (root / "after" / "ef" / "d0.smali").read_text(encoding="utf-8")
         click_after = (root / "after" / "ef" / "q3.smali").read_text(encoding="utf-8")
         widget_after = (root / "after" / "tf" / "i1.smali").read_text(encoding="utf-8")
+        icons_before = (root / "before" / "ef" / "b.smali").read_text(encoding="utf-8")
+        icons_after = (root / "after" / "ef" / "b.smali").read_text(encoding="utf-8")
 
     clinit_before = instructions(method(before, ".method static constructor <clinit>()V"))
     clinit_after = instructions(method(after, ".method static constructor <clinit>()V"))
@@ -182,6 +185,44 @@ def main() -> None:
     panel = "Lrip/moth/cocoonshell/froglog/FroglogSocial;->listForTab(Ljava/lang/Object;Ljava/util/List;)Ljava/util/List;"
     if panel not in friends_after:
         raise SystemExit("friend panel is missing the Froglog tab list")
+
+    chip_icon = "Lrip/moth/cocoonshell/froglog/FroglogSocial;->tabIcon(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
+    chips = instructions(method(friends_after, ".method public static final s(Ljava/util/List;Lef/w0;Leg/l0;Ljb/c;Lz0/e0;I)V"))
+    hits = [i for i, line in enumerate(chips) if chip_icon in line]
+    if len(hits) != 1:
+        raise SystemExit("friend chips are missing the Froglog icon")
+    at = hits[0]
+    if not chips[at - 1].startswith("sget-object v12, Lef/b;->STEAM") or chips[at + 1] != "move-result-object v12" \
+            or chips[at + 2] != "check-cast v12, Lef/b;" or not chips[at + 3].startswith("const/16 v14, 0x3e8"):
+        raise SystemExit("friend chip icon hook is not where both icon branches meet")
+
+    icon_field = ".field public static final enum FROGLOG:Lef/b;"
+    if icon_field not in icons_after or icon_field in icons_before:
+        raise SystemExit("icon enum is missing FROGLOG")
+    icon_init = instructions(method(icons_after, ".method static constructor <clinit>()V"))
+    expected_icon = [
+        "new-instance v0, Lef/b;",
+        'const-string v1, "FROGLOG"',
+        "const/16 v2, 0xd3",
+        "const v3, 0x7f06021a",
+        "const/4 v4, 0x0",
+        "const/4 v5, 0x0",
+        "const/16 v6, 0x1c",
+        "invoke-direct/range {v0 .. v6}, Lef/b;-><init>(Ljava/lang/String;IILw1/v;Lw1/v;I)V",
+        "sput-object v0, Lef/b;->FROGLOG:Lef/b;",
+        "invoke-static {}, Lef/b;->a()[Lef/b;",
+    ]
+    start = icon_init.index(expected_icon[1]) - 1
+    if icon_init[start:start + len(expected_icon)] != expected_icon:
+        raise SystemExit("icon enum does not build FROGLOG before values")
+    icon_values = instructions(method(icons_after, ".method public static final synthetic a()[Lef/b;"))
+    if icon_values[0] != "const/16 v0, 0xd4" or icon_values[-4:] != [
+        "sget-object v1, Lef/b;->FROGLOG:Lef/b;",
+        "const/16 v2, 0xd3",
+        "aput-object v1, v0, v2",
+        "return-object v0",
+    ]:
+        raise SystemExit("icon values do not include FROGLOG")
 
     click_header = ".method public final invoke(Ljava/lang/Object;)Ljava/lang/Object;"
     click = instructions(method(click_after, click_header))

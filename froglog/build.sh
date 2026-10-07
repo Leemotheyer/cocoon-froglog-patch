@@ -9,7 +9,7 @@ DIST="${DIST:-$ROOT/dist}"
 APKTOOL="${APKTOOL:-$TOOLS/apktool.jar}"
 if [[ -z "${BAKSMALI:-}" ]]; then
   if [[ -f "$TOOLS/smali/dexlib2.jar" ]]; then
-    BAKSMALI="$TOOLS/smali/dexlib2.jar:$TOOLS/smali/util.jar:$TOOLS/smali/guava.jar:$TOOLS/smali/failureaccess.jar:$TOOLS/smali/baksmali.jar"
+    BAKSMALI="$TOOLS/smali/dexlib2.jar:$TOOLS/smali/util.jar:$TOOLS/smali/guava.jar:$TOOLS/smali/failureaccess.jar:$TOOLS/smali/jcommander.jar:$TOOLS/smali/baksmali.jar"
   else
     BAKSMALI="$TOOLS/baksmali.jar"
   fi

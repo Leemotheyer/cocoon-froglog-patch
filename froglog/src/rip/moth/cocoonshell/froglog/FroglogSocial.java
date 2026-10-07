@@ -135,7 +135,7 @@ public final class FroglogSocial {
     /** Keep the Froglog chip from using the Steam glyph. */
     public static Object tabIcon(Object tab, Object icon) {
         if (tab == ef.w0.FROGLOG) {
-            return ef.b.PEOPLE;
+            return ef.b.FROGLOG;
         }
         return icon;
     }

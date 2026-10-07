@@ -63,6 +63,7 @@ PUBLIC = [
     ("drawable", "froglog_cover_placeholder", 0x7F060217),
     ("drawable", "froglog", 0x7F060218),
     ("drawable", "froglog_title_icon", 0x7F060219),
+    ("drawable", "froglog_friends_icon", 0x7F06021A),
     ("layout", "froglog_widget", 0x7F0A001E),
     ("layout", "froglog_stats", 0x7F0A001F),
     ("string", "widget_type_froglog", 0x7F0E072D),
@@ -141,6 +142,7 @@ def main() -> None:
         "drawable/froglog_widget_bg.xml",
         "drawable/froglog_cover_placeholder.xml",
         "drawable/froglog_title_icon.xml",
+        "drawable/froglog_friends_icon.xml",
     ):
         source = RES / relative
         target = decoded / "res" / relative

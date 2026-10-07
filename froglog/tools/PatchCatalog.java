@@ -98,6 +98,8 @@ public final class PatchCatalog {
     private static final String GLASS_HOST = "Ldg/m3;";
     private static final String WIDGET_HOST = "Ltf/i1;";
     private static final String STATUS_BAR = "Ldg/h4;";
+    private static final String ICONS = "Lef/b;";
+    private static final int FROGLOG_ICON = 0x7F06021A;
     private static final String INSERT =
             "(Lrip/moth/cocoonshell/data/model/GameSession;Lxa/c;)Ljava/lang/Object;";
     private static final String OPEN_POD =
@@ -124,6 +126,7 @@ public final class PatchCatalog {
         ClassDef glassHost = null;
         ClassDef widgetHost = null;
         ClassDef statusBar = null;
+        ClassDef icons = null;
         for (ClassDef cls : dex.getClasses()) {
             if (CATALOG.equals(cls.getType())) {
                 catalog = cls;
@@ -155,12 +158,14 @@ public final class PatchCatalog {
                 widgetHost = cls;
             } else if (STATUS_BAR.equals(cls.getType())) {
                 statusBar = cls;
+            } else if (ICONS.equals(cls.getType())) {
+                icons = cls;
             }
         }
         if (catalog == null || session == null || pods == null || podAction == null || router == null
                 || friends == null || friendTabs == null || friendMaps == null || friendClick == null
                 || theme == null || surfacePrefs == null
-                || glassDraw == null || glassHost == null || widgetHost == null || statusBar == null) {
+                || glassDraw == null || glassHost == null || widgetHost == null || statusBar == null || icons == null) {
             throw new IllegalStateException("catalog=" + (catalog != null) + " session=" + (session != null)
                     + " pods=" + (pods != null) + " podAction=" + (podAction != null)
                     + " router=" + (router != null)
@@ -168,7 +173,8 @@ public final class PatchCatalog {
                     + " maps=" + (friendMaps != null) + " click=" + (friendClick != null)
                     + " theme=" + (theme != null) + " surfacePrefs=" + (surfacePrefs != null)
                     + " glassDraw=" + (glassDraw != null) + " glassHost=" + (glassHost != null)
-                    + " widgetHost=" + (widgetHost != null) + " statusBar=" + (statusBar != null));
+                    + " widgetHost=" + (widgetHost != null) + " statusBar=" + (statusBar != null)
+                    + " icons=" + (icons != null));
         }
         final ClassDef catalogReplacement = patchCatalog(catalog);
         final ClassDef sessionReplacement = patchSession(session);
@@ -185,6 +191,7 @@ public final class PatchCatalog {
         final ClassDef glassHostReplacement = prefixGlassMethods(glassHost, "h", "A0");
         final ClassDef widgetHostReplacement = patchWidgetHost(widgetHost);
         final ClassDef statusBarReplacement = patchStatusBar(statusBar);
+        final ClassDef iconsReplacement = patchIcons(icons);
         final DexBackedDexFile source = dex;
         DexFileFactory.writeDexFile(args[1], new DexFile() {
             @Override
@@ -221,6 +228,8 @@ public final class PatchCatalog {
                         classes.add(widgetHostReplacement);
                     } else if (STATUS_BAR.equals(cls.getType())) {
                         classes.add(statusBarReplacement);
+                    } else if (ICONS.equals(cls.getType())) {
+                        classes.add(iconsReplacement);
                     } else {
                         classes.add(cls);
                     }
@@ -659,6 +668,7 @@ public final class PatchCatalog {
         List<Method> direct = new ArrayList<Method>();
         boolean patchedTabs = false;
         boolean patchedPanel = false;
+        boolean patchedIcon = false;
         for (Method method : friends.getDirectMethods()) {
             if ("c0".equals(method.getName())
                     && "(Lp1/o;FFLz0/e0;I)V".equals(signature(method))) {
@@ -668,6 +678,10 @@ public final class PatchCatalog {
                     && signature(method).startsWith("(Ljava/util/List;Leg/l0;Lfe/u;Ljava/util/List;Lef/w0;")) {
                 direct.add(patchFriendPanel(method));
                 patchedPanel = true;
+            } else if ("s".equals(method.getName())
+                    && "(Ljava/util/List;Lef/w0;Leg/l0;Ljb/c;Lz0/e0;I)V".equals(signature(method))) {
+                direct.add(patchFriendTabIcon(method));
+                patchedIcon = true;
             } else {
                 direct.add(method);
             }
@@ -677,6 +691,9 @@ public final class PatchCatalog {
         }
         if (!patchedPanel) {
             throw new IllegalStateException("friend tab panel not found");
+        }
+        if (!patchedIcon) {
+            throw new IllegalStateException("friend tab chips not found");
         }
         List<Method> virtual = new ArrayList<Method>();
         for (Method method : friends.getVirtualMethods()) {
@@ -829,6 +846,198 @@ public final class PatchCatalog {
             throw new IllegalStateException("friend click not found");
         }
         return copyClass(click, direct, virtual);
+    }
+
+    /** Each chip picks Steam or Android art. Let Froglog swap the art for its own tab. */
+    private static Method patchFriendTabIcon(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> instructions = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            instructions.add(instruction);
+        }
+        int steam = -1;
+        for (int i = 0; i < instructions.size() - 1; i++) {
+            Instruction instruction = instructions.get(i);
+            if (instruction.getOpcode() != Opcode.SGET_OBJECT || !(instruction instanceof ReferenceInstruction)) {
+                continue;
+            }
+            Reference ref = ((ReferenceInstruction) instruction).getReference();
+            if (ref instanceof FieldReference && ICONS.equals(((FieldReference) ref).getDefiningClass())
+                    && "STEAM".equals(((FieldReference) ref).getName())
+                    && instructions.get(i + 1).getOpcode() == Opcode.CONST_16) {
+                steam = i;
+                break;
+            }
+        }
+        if (steam < 0) {
+            throw new IllegalStateException("friend chip icon not found");
+        }
+        int icon = ((OneRegisterInstruction) instructions.get(steam)).getRegisterA();
+        int tab = -1;
+        for (int i = steam; i >= 0; i--) {
+            Instruction instruction = instructions.get(i);
+            if (instruction.getOpcode() == Opcode.INVOKE_VIRTUAL && instruction instanceof ReferenceInstruction) {
+                Reference ref = ((ReferenceInstruction) instruction).getReference();
+                if (ref instanceof MethodReference && "ordinal".equals(((MethodReference) ref).getName())) {
+                    tab = ((org.jf.dexlib2.iface.instruction.FiveRegisterInstruction) instruction).getRegisterC();
+                    break;
+                }
+            }
+        }
+        if (tab < 0 || tab > 15 || icon > 15) {
+            throw new IllegalStateException("friend chip registers tab=v" + tab + " icon=v" + icon);
+        }
+        int insert = steam + 1;
+        List<Instruction> extra = new ArrayList<Instruction>();
+        extra.add(new ImmutableInstruction35c(
+                Opcode.INVOKE_STATIC,
+                2, tab, icon, 0, 0, 0,
+                new ImmutableMethodReference(
+                        "Lrip/moth/cocoonshell/froglog/FroglogSocial;",
+                        "tabIcon",
+                        Arrays.asList("Ljava/lang/Object;", "Ljava/lang/Object;"),
+                        "Ljava/lang/Object;")));
+        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, icon));
+        extra.add(new ImmutableInstruction21c(Opcode.CHECK_CAST, icon, new ImmutableTypeReference(ICONS)));
+        int added = 0;
+        for (Instruction instruction : extra) {
+            added += instruction.getCodeUnits();
+        }
+        if (added != 6) {
+            throw new IllegalStateException("friend chip icon insert " + added);
+        }
+        int[] addresses = addresses(instructions);
+        int insertAt = addresses[insert];
+        int[] switchAt = switchAddresses(instructions, addresses);
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        for (int i = 0; i < instructions.size(); i++) {
+            if (i == insert) {
+                rewritten.addAll(extra);
+            }
+            rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], insertAt, added));
+        }
+        System.out.println("friend chip icon v" + tab + " -> v" + icon);
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                rewritten,
+                shiftTries(impl.getTryBlocks(), insertAt, added),
+                Collections.emptyList()));
+    }
+
+    /** Appends FROGLOG to Cocoon's icon enum, drawn from froglog_friends_icon. */
+    private static ClassDef patchIcons(ClassDef icons) {
+        List<Field> statics = new ArrayList<Field>();
+        for (Field field : icons.getStaticFields()) {
+            if ("FROGLOG".equals(field.getName())) {
+                throw new IllegalStateException("icon enum already has FROGLOG");
+            }
+            statics.add(field);
+        }
+        statics.add(new ImmutableField(ICONS, "FROGLOG", ICONS, 0x4019, null,
+                Collections.emptySet(), Collections.emptySet()));
+        List<Field> instance = new ArrayList<Field>();
+        for (Field field : icons.getInstanceFields()) {
+            instance.add(field);
+        }
+        List<Method> direct = new ArrayList<Method>();
+        boolean clinit = false;
+        boolean values = false;
+        for (Method method : icons.getDirectMethods()) {
+            if ("<clinit>".equals(method.getName())) {
+                direct.add(patchIconClinit(method));
+                clinit = true;
+            } else if ("a".equals(method.getName()) && "()[Lef/b;".equals(signature(method))) {
+                direct.add(patchIconValues(method));
+                values = true;
+            } else {
+                direct.add(method);
+            }
+        }
+        if (!clinit || !values) {
+            throw new IllegalStateException("icon enum clinit=" + clinit + " values=" + values);
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        for (Method method : icons.getVirtualMethods()) {
+            virtual.add(method);
+        }
+        return new ImmutableClassDef(icons.getType(), icons.getAccessFlags(), icons.getSuperclass(),
+                icons.getInterfaces(), icons.getSourceFile(), icons.getAnnotations(),
+                statics, instance, direct, virtual);
+    }
+
+    private static Method patchIconClinit(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> original = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            original.add(instruction);
+        }
+        int values = -1;
+        for (int i = 0; i < original.size(); i++) {
+            Instruction instruction = original.get(i);
+            if (instruction.getOpcode() == Opcode.INVOKE_STATIC && instruction instanceof ReferenceInstruction) {
+                Reference ref = ((ReferenceInstruction) instruction).getReference();
+                if (ref instanceof MethodReference && ICONS.equals(((MethodReference) ref).getDefiningClass())
+                        && "a".equals(((MethodReference) ref).getName())) {
+                    values = i;
+                    break;
+                }
+            }
+        }
+        if (values < 0) {
+            throw new IllegalStateException("icon values call not found");
+        }
+        List<Instruction> extra = new ArrayList<Instruction>();
+        extra.add(new ImmutableInstruction21c(Opcode.NEW_INSTANCE, 0, new ImmutableTypeReference(ICONS)));
+        extra.add(new ImmutableInstruction21c(Opcode.CONST_STRING, 1, new ImmutableStringReference("FROGLOG")));
+        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, 2, 0xd3));
+        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction31i(Opcode.CONST, 3, FROGLOG_ICON));
+        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction11n(Opcode.CONST_4, 4, 0));
+        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction11n(Opcode.CONST_4, 5, 0));
+        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, 6, 0x1c));
+        extra.add(new ImmutableInstruction3rc(
+                Opcode.INVOKE_DIRECT_RANGE, 0, 7,
+                new ImmutableMethodReference(ICONS, "<init>",
+                        Arrays.asList("Ljava/lang/String;", "I", "I", "Lw1/v;", "Lw1/v;", "I"), "V")));
+        extra.add(new ImmutableInstruction21c(Opcode.SPUT_OBJECT, 0,
+                new ImmutableFieldReference(ICONS, "FROGLOG", ICONS)));
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        rewritten.addAll(original.subList(0, values));
+        rewritten.addAll(extra);
+        rewritten.addAll(original.subList(values, original.size()));
+        System.out.println("icon enum FROGLOG ordinal 211");
+        return replace(method, new ImmutableMethodImplementation(
+                Math.max(impl.getRegisterCount(), 7),
+                rewritten,
+                Collections.emptyList(),
+                Collections.emptyList()));
+    }
+
+    private static Method patchIconValues(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> original = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            original.add(instruction);
+        }
+        Instruction size = original.get(0);
+        if (size.getOpcode() != Opcode.CONST_16
+                || ((org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction) size).getNarrowLiteral() != 0xd3
+                || original.get(original.size() - 1).getOpcode() != Opcode.RETURN_OBJECT) {
+            throw new IllegalStateException("icon values shape changed");
+        }
+        int array = ((OneRegisterInstruction) size).getRegisterA();
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        rewritten.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, array, 0xd4));
+        rewritten.addAll(original.subList(1, original.size() - 1));
+        rewritten.add(new ImmutableInstruction21c(Opcode.SGET_OBJECT, 1,
+                new ImmutableFieldReference(ICONS, "FROGLOG", ICONS)));
+        rewritten.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, 2, 0xd3));
+        rewritten.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction23x(Opcode.APUT_OBJECT, 1, array, 2));
+        rewritten.add(original.get(original.size() - 1));
+        return replace(method, new ImmutableMethodImplementation(
+                Math.max(impl.getRegisterCount(), 3),
+                rewritten,
+                Collections.emptyList(),
+                Collections.emptyList()));
     }
 
     private static ClassDef patchFriendTabEnum(ClassDef tabs) {

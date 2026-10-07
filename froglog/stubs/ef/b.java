@@ -4,5 +4,6 @@ package ef;
 public enum b {
     GAMEPAD,
     BAR_GRAPH,
-    PEOPLE
+    PEOPLE,
+    FROGLOG
 }
