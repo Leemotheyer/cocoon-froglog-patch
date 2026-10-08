@@ -58,4 +58,21 @@ SKIP_SETUP=1 ./froglog/build.sh   # BlueStacks test APK that skips onboarding
 
 If `work/cocoon-decoded` is missing, the script decodes the APK with `apktool d -s` first. A clean decode is the control: the script copies it, then patches that copy.
 
+### Base Cocoon reference cache (not in git)
+
+Everything under `work/` and `tools/` is gitignored. For bytecode work you usually want a one-time local cache of stock Cocoon 3.06:
+
+| Path | Contents |
+|------|----------|
+| `work/cocoon-306.apk` | [CocoonFE beta-3.06](https://github.com/inssekt/CocoonFE/releases/tag/beta-3.06) (sha256 `e9df90ad83200f984f085dac51448fffb558b509f7ece50d6889bb5b393cc4d5`) |
+| `work/cocoon-decoded/` | `apktool d -s` template used by `build.sh` (manifest, `res/`, raw `classes*.dex`) |
+| `work/smali-out/` | Full baksmali disassembly (`smali_classes4/cf/pi.smali`, etc.) for reading upstream behavior |
+
+```bash
+./froglog/scripts/prepare-cocoon-reference.sh
+SKIP_SMALI=1 ./froglog/scripts/prepare-cocoon-reference.sh   # APK + decode only (~400 MB)
+```
+
+Cloud Agent environment builds run the same script from `.cursor/environment.json` `install`, so the cache is baked into the environment snapshot and agents do not re-decompile on every run. Picnic and other pods live in `smali-out/smali_classes4/`; menu hooks are in `smali-out/smali/`.
+
 The catalog edit rewrites `Lmf/y1; <clinit>` and `Lmf/y1;->h`. The session edit prepends one call at the start of `GameSessionDao_Impl.insert`, which only wakes the sync. The sync itself reads `game_sessions` directly. The pod edit appends one entry in `Lxd/m0; <clinit>` and opens it from `Lrip/moth/cocoonshell/utils/u6;->a` before the other pods. The friends edit adds `FROGLOG` to the `Lef/w0;` tab enum and its `Lef/s5;` switch map. In `Lef/d0;->c0` it prepends that tab, lets a Froglog sign-in pass the "Steam available" gate, and adds the live Froglog count to the pill. `Lef/d0;->b0` swaps in Froglog rows for that tab, `Ldg/h4;->k` adds the same count to the Now Playing overlay pill, and `Lef/q3;->invoke` opens Froglog rows before Steam chat. The counts come from a StateFlow read with Cocoon's own `collectAsState`, so the pill updates when Froglog presence changes. Theme getters and the glass compose methods (`kf.n2.b`, `dg.m3.h`, `dg.m3.A0`) are gated so API 33+ still runs glass and older devices skip `RuntimeShader`. Android widgets keep a host-view squircle and an in-bounds drop shadow so the card does not blink while the home screen pans. `Lef/b;` gains a `FROGLOG` icon backed by `froglog_friends_icon`, and `Lef/d0;->s` swaps it in for the Froglog chip. `kf.n2.Z0` and `lf.k.g`, which dispatch context menu actions, hand `log_to_froglog` to Froglog first, and `Lcf/pi;->Y` adds an **Upload to Froglog** row beside **View session info in Log** on Picnic screenshot info. Those are the rewritten methods in `classes4.dex`. In `classes.dex`, `La8/z;->E` is kept as `E$froglog` and wrapped so every menu list passes through `FroglogMenu.withFroglog`. The new classes ship in `classes7.dex`. Baseline profiles are removed because the code no longer matches them.

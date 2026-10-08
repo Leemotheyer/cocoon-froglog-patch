@@ -1,0 +1,3 @@
+{
+  "install": "chmod +x froglog/scripts/prepare-cocoon-reference.sh && froglog/scripts/prepare-cocoon-reference.sh"
+}
