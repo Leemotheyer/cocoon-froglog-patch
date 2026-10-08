@@ -5,7 +5,19 @@
     "sha256": "e9df90ad83200f984f085dac51448fffb558b509f7ece50d6889bb5b393cc4d5",
     "apkUrl": "https://github.com/inssekt/CocoonFE/releases/download/beta-3.06/cocoon-306.apk"
   },
-  "notes": "Obfuscated type names are for this base only. Stable fingerprints are anchors and method substrings. When a hook moves, update every path in edit. Add a hook here whenever PatchCatalog or a Class.forName call gains a new Cocoon type.",
+  "notes": "Obfuscated type names are for this base only. Anchors find the class. methods[] is the exact descriptor PatchCatalog matches. A class file that keeps its old name can still be a different type; the fingerprint decides. excludeAnchors drops lookalikes. fallbackAnchors run only when the primary anchors miss. dexOnly keeps candidates in that dex. sharedTypes are obfuscated types that show up inside many descriptors.",
+  "sharedTypes": [
+    {
+      "id": "composer",
+      "type": "Lz0/e0;",
+      "dex": "classes",
+      "anchors": [".field public final M:Ld1/b;"],
+      "edit": [
+        "froglog/stubs/z0/e0.java",
+        "froglog/tools/PatchCatalog.java (every Lz0/e0; in a signature)"
+      ]
+    }
+  ],
   "hooks": [
     {
       "id": "widget_catalog",
@@ -14,7 +26,9 @@
       "dex": "classes4",
       "match": "all",
       "anchors": ["WDBG picker confirmWidget: type="],
-      "methods": ["h(Lz0/a1;"],
+      "methods": [
+        {"name": "h", "descriptor": "(Lz0/a1;Lz0/a1;Lz0/u0;Ljb/g;I)V"}
+      ],
       "edit": [
         "froglog/tools/PatchCatalog.java (CATALOG)",
         "froglog/tools/verify_patch.py",
@@ -43,6 +57,9 @@
       "dex": "classes4",
       "match": "all",
       "anchors": ["cocoon://pod/log", "cocoon://pod/picnic"],
+      "relatedTypes": [
+        {"type": "Lxd/l0;", "role": "pod entry object (stub xd/l0.java)"}
+      ],
       "edit": [
         "froglog/tools/PatchCatalog.java (PODS)",
         "froglog/src/rip/moth/cocoonshell/froglog/FroglogPods.java (Class.forName xd.m0, field a)",
@@ -94,6 +111,7 @@
       "dex": "classes4",
       "match": "all",
       "anchors": ["enum STEAM:", "enum ANDROID:"],
+      "excludeAnchors": ["enum GAMEPAD:"],
       "edit": [
         "froglog/tools/PatchCatalog.java (FRIEND_TABS, FRIEND_MAPS)",
         "froglog/stubs/ef/w0.java",
@@ -132,7 +150,11 @@
       "type": "Leg/j0;",
       "dex": "classes4",
       "match": "all",
-      "anchors": [".field public static final j:Lyb/i0;"],
+      "anchors": [
+        ".field public static final j:Lyb/i0;",
+        ".field public static final D:Ljava/util/concurrent/ConcurrentHashMap;",
+        ".field public static final b:Lq9/n;"
+      ],
       "edit": [
         "froglog/src/rip/moth/cocoonshell/froglog/FroglogTheme.java (Class.forName eg.j0, field j)"
       ],
@@ -168,13 +190,18 @@
       "dex": "classes",
       "match": "all",
       "anchors": [".method public static final E(Landroid/content/Context;Lnf/d0;Lde/o;ZZZZ)Ljava/util/List;"],
+      "fallbackAnchors": ["dock_launch_top"],
+      "dexOnly": true,
+      "methods": [
+        {"name": "E", "descriptor": "(Landroid/content/Context;Lnf/d0;Lde/o;ZZZZ)Ljava/util/List;"}
+      ],
       "edit": [
         "froglog/tools/PatchCatalog.java (MENU_ITEMS)",
         "froglog/tools/verify_patch.py",
         "froglog/src/rip/moth/cocoonshell/froglog/FroglogMenu.java (de.k)",
         "froglog/stubs/de/f1.java"
       ],
-      "caveat": "The method descriptor names Lnf/d0; and Lde/o;. If those types are renamed the anchor misses even though the menu still exists. Fall back to the classes.dex file that contains dock_launch_top."
+      "caveat": "Primary anchor is the 3.06 method line. fallbackAnchors searches classes.dex for dock_launch_top when that line is gone."
     },
     {
       "id": "picnic_info",
@@ -183,6 +210,9 @@
       "dex": "classes4",
       "match": "all",
       "anchors": ["View session info in Log"],
+      "methods": [
+        {"name": "Y", "descriptor": "(Lcf/pd;Ljb/a;Ljava/lang/String;Lp1/o;Lz0/e0;I)V"}
+      ],
       "edit": [
         "froglog/tools/PatchCatalog.java (SHARE, PICNIC_INFO_SIG, PICNIC_ROW_SIG)",
         "froglog/tools/verify_patch.py",
@@ -195,25 +225,59 @@
       "feature": "Home-screen widget squircle and shadow",
       "type": "Ltf/i1;",
       "dex": "classes4",
-      "match": "any",
-      "anchors": ["Ltf/i1;"],
+      "match": "all",
+      "anchors": [".method public static final f(Landroid/view/View;)V"],
+      "methods": [
+        {"name": "f", "descriptor": "(Landroid/view/View;)V"}
+      ],
       "edit": [
         "froglog/tools/PatchCatalog.java (WIDGET_HOST)",
         "froglog/tools/verify_patch.py"
-      ],
-      "caveat": "No stable string. Relocation is by reading the widget host that Recently played already uses."
+      ]
     },
     {
       "id": "status_bar",
       "feature": "Friends pill count includes Froglog online friends",
       "type": "Ldg/h4;",
       "dex": "classes4",
-      "match": "any",
-      "anchors": ["Ldg/h4;"],
+      "match": "all",
+      "anchors": [".method public static final k(ILp1/o;Lz0/e0;Z)V"],
+      "methods": [
+        {"name": "k", "descriptor": "(ILp1/o;Lz0/e0;Z)V"}
+      ],
       "edit": [
         "froglog/tools/PatchCatalog.java (STATUS_BAR)"
+      ]
+    },
+    {
+      "id": "surface_prefs",
+      "feature": "Read the surface-material preference before glass decisions",
+      "type": "Lfe/q1;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": ["theme_accent_override_enabled", "smart_folders_enabled", "dock_icon_pack"],
+      "methods": [
+        {"name": "J0", "descriptor": "()Lfe/s1;"}
       ],
-      "caveat": "No stable string. Rebind with the friends pill composable after friends_panel moves."
+      "edit": [
+        "froglog/tools/PatchCatalog.java (SURFACE_PREFS)"
+      ],
+      "caveat": "The old class name can still exist as a different type. Trust the fingerprint, not the file name."
+    },
+    {
+      "id": "glass_host",
+      "feature": "Skip RuntimeShader in the glass host composable",
+      "type": "Ldg/m3;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": ["FFFLjava/util/Map;Ljava/util/List;Ljb/c;Ljb/e;ZZZ"],
+      "methods": [
+        {"name": "h", "returns": "V"},
+        {"name": "A0", "returns": "V"}
+      ],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (GLASS_HOST)"
+      ]
     }
   ]
 }

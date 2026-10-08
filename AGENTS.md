@@ -59,7 +59,7 @@ Stock class names such as `Lmf/y1;` and `Lcf/pi;` change when Cocoon ships a new
 ./froglog/scripts/stage-new-base.sh <apk-or-url> <label>
 ```
 
-That leaves the current `work/smali-out` cache in place and writes `work/bases/<label>/UPGRADE_REPORT.md`. The hook map is `froglog/base/hooks.json`. The full order (rebind, resource ids, version rewrite, then point `build.sh` at the new decode) is [froglog/docs/BASE_UPGRADE.md](froglog/docs/BASE_UPGRADE.md).
+That leaves the current `work/smali-out` cache in place and writes `work/bases/<label>/UPGRADE_REPORT.md`. The hook map is `froglog/base/hooks.json`. The full order (rebind, resource ids, version rewrite, then point `build.sh` at the new decode) is [froglog/docs/BASE_UPGRADE.md](froglog/docs/BASE_UPGRADE.md). That workflow was checked against Cocoon beta 3.07; the report is a map for a port, and the default base stays 3.06 until the rebind is done.
 
 Check the fingerprints still describe the tree you are patching:
 
