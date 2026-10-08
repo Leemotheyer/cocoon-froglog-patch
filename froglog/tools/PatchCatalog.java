@@ -81,6 +81,9 @@ import java.util.Set;
  * open that pod before Cocoon's router handles it, and
  * add a Froglog friends tab beside Steam and Android.
  * Recently played is not rewritten. insertAll is not rewritten.
+ * These type names are Cocoon 3.06. A newer base is rebound with
+ * froglog/scripts/stage-new-base.sh and froglog/base/hooks.json.
+ * See froglog/docs/BASE_UPGRADE.md.
  */
 public final class PatchCatalog {
     private static final String CATALOG = "Lmf/y1;";

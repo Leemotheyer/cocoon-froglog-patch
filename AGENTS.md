@@ -51,6 +51,22 @@ Quick slice of one or two classes without loading all of `smali-out`:
 # output: work/disasm-scratch/
 ```
 
+## Updating to a newer Cocoon beta
+
+Stock class names such as `Lmf/y1;` and `Lcf/pi;` change when Cocoon ships a new beta. The Froglog features stay; the bindings move.
+
+```bash
+./froglog/scripts/stage-new-base.sh <apk-or-url> <label>
+```
+
+That leaves the current `work/smali-out` cache in place and writes `work/bases/<label>/UPGRADE_REPORT.md`. The hook map is `froglog/base/hooks.json`. The full order (rebind, resource ids, version rewrite, then point `build.sh` at the new decode) is [froglog/docs/BASE_UPGRADE.md](froglog/docs/BASE_UPGRADE.md).
+
+Check the fingerprints still describe the tree you are patching:
+
+```bash
+python3 froglog/scripts/scan-base-upgrade.py --check
+```
+
 ## How Froglog changes Cocoon
 
 1. **Java sources** — `froglog/src/rip/moth/cocoonshell/froglog/` (compiled to `classes7.dex`).

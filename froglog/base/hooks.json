@@ -1,0 +1,219 @@
+{
+  "base": {
+    "versionName": "3.06-1",
+    "tag": "beta-3.06",
+    "sha256": "e9df90ad83200f984f085dac51448fffb558b509f7ece50d6889bb5b393cc4d5",
+    "apkUrl": "https://github.com/inssekt/CocoonFE/releases/download/beta-3.06/cocoon-306.apk"
+  },
+  "notes": "Obfuscated type names are for this base only. Stable fingerprints are anchors and method substrings. When a hook moves, update every path in edit. Add a hook here whenever PatchCatalog or a Class.forName call gains a new Cocoon type.",
+  "hooks": [
+    {
+      "id": "widget_catalog",
+      "feature": "Froglog and Froglog stats tiles in the widget picker",
+      "type": "Lmf/y1;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": ["WDBG picker confirmWidget: type="],
+      "methods": ["h(Lz0/a1;"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (CATALOG)",
+        "froglog/tools/verify_patch.py",
+        "froglog/src/rip/moth/cocoonshell/froglog/CatalogHook.java (Class.forName mf.y1, field f)",
+        "froglog/stubs/mf/y1.java"
+      ]
+    },
+    {
+      "id": "session_insert",
+      "feature": "Copy a finished Cocoon session into the Froglog queue",
+      "type": "Lrip/moth/cocoonshell/data/local/GameSessionDao_Impl;",
+      "dex": "classes4",
+      "stableName": true,
+      "match": "all",
+      "anchors": [".method public insert(Lrip/moth/cocoonshell/data/model/GameSession;"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (SESSION, INSERT)",
+        "froglog/tools/verify_patch.py",
+        "froglog/stubs/rip/moth/cocoonshell/data/model/GameSession.java"
+      ]
+    },
+    {
+      "id": "pod_list",
+      "feature": "Froglog pod beside Picnic and Log",
+      "type": "Lxd/m0;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": ["cocoon://pod/log", "cocoon://pod/picnic"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (PODS)",
+        "froglog/src/rip/moth/cocoonshell/froglog/FroglogPods.java (Class.forName xd.m0, field a)",
+        "froglog/stubs/xd/l0.java"
+      ]
+    },
+    {
+      "id": "pod_action_enum",
+      "feature": "Distinct pod action so Froglog does not open Log",
+      "type": "Lxd/k0;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": ["enum SILK:", "enum LEAFLET:", "enum FLUTTER:", "enum PICNIC:", "enum LOG:"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (POD_ACTION)",
+        "froglog/stubs/xd/k0.java"
+      ]
+    },
+    {
+      "id": "pod_router",
+      "feature": "Open the Froglog pod before Cocoon's router",
+      "type": "Lrip/moth/cocoonshell/utils/u6;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": ["PodLaunchRouter"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (ROUTER)",
+        "froglog/tools/verify_patch.py"
+      ]
+    },
+    {
+      "id": "friends_panel",
+      "feature": "Froglog friends tab, count pill, and row list",
+      "type": "Lef/d0;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": ["previewPillAlpha"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (FRIENDS)",
+        "froglog/tools/verify_patch.py",
+        "froglog/src/rip/moth/cocoonshell/froglog/FroglogSocial.java (ef.d6)",
+        "froglog/stubs/ef/d6.java"
+      ]
+    },
+    {
+      "id": "friend_tab_enum",
+      "feature": "FROGLOG value beside STEAM and ANDROID",
+      "type": "Lef/w0;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": ["enum STEAM:", "enum ANDROID:"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (FRIEND_TABS, FRIEND_MAPS)",
+        "froglog/stubs/ef/w0.java",
+        "froglog/stubs/ef/v0.java"
+      ]
+    },
+    {
+      "id": "friend_icons",
+      "feature": "Froglog frog icon on the friends chip",
+      "type": "Lef/b;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": ["enum GAMEPAD:", "enum BAR_GRAPH:", "enum STEAM:"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (ICONS, FROGLOG_ICON)",
+        "froglog/stubs/ef/b.java",
+        "froglog/src/rip/moth/cocoonshell/froglog/CatalogHook.java (ef.b.GAMEPAD)"
+      ]
+    },
+    {
+      "id": "theme_settings",
+      "feature": "Follow Cocoon light, dark, OLED, and accent",
+      "type": "Lrip/moth/cocoonshell/ui/theme/ThemeSettings;",
+      "dex": "classes4",
+      "stableName": true,
+      "match": "all",
+      "anchors": [".class public final Lrip/moth/cocoonshell/ui/theme/ThemeSettings;"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (THEME)",
+        "froglog/src/rip/moth/cocoonshell/froglog/FroglogTheme.java"
+      ]
+    },
+    {
+      "id": "theme_flow",
+      "feature": "Read the live theme StateFlow (field j)",
+      "type": "Leg/j0;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": [".field public static final j:Lyb/i0;"],
+      "edit": [
+        "froglog/src/rip/moth/cocoonshell/froglog/FroglogTheme.java (Class.forName eg.j0, field j)"
+      ],
+      "caveat": "Field name j and type Lyb/i0; are obfuscated. If this anchor misses, search ThemeSettings for the StateFlow it reads and rebind FroglogTheme."
+    },
+    {
+      "id": "glass_draw",
+      "feature": "Skip RuntimeShader glass on API 32 and below; menu action Z0",
+      "type": "Lkf/n2;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": ["target=search_toolbar"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (GLASS_DRAW)"
+      ]
+    },
+    {
+      "id": "menu_dispatch",
+      "feature": "Hand log_to_froglog to Froglog from the context menu",
+      "type": "Llf/k;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": [".method public static final g(Landroid/content/Context;Ljava/lang/String;Ljb/c;Ljb/e;Ljb/c;Ljb/a;)V"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (MENU_DISPATCH)",
+        "froglog/tools/verify_patch.py"
+      ]
+    },
+    {
+      "id": "menu_items",
+      "feature": "Add Log to Froglog on the game context menu",
+      "type": "La8/z;",
+      "dex": "classes",
+      "match": "all",
+      "anchors": [".method public static final E(Landroid/content/Context;Lnf/d0;Lde/o;ZZZZ)Ljava/util/List;"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (MENU_ITEMS)",
+        "froglog/tools/verify_patch.py",
+        "froglog/src/rip/moth/cocoonshell/froglog/FroglogMenu.java (de.k)",
+        "froglog/stubs/de/f1.java"
+      ],
+      "caveat": "The method descriptor names Lnf/d0; and Lde/o;. If those types are renamed the anchor misses even though the menu still exists. Fall back to the classes.dex file that contains dock_launch_top."
+    },
+    {
+      "id": "picnic_info",
+      "feature": "Upload to Froglog on a Picnic screenshot info dialog",
+      "type": "Lcf/pi;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": ["View session info in Log"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (SHARE, PICNIC_INFO_SIG, PICNIC_ROW_SIG)",
+        "froglog/tools/verify_patch.py",
+        "froglog/src/rip/moth/cocoonshell/froglog/FroglogPicnic.java"
+      ],
+      "caveat": "Do not grow .registers in the info dialog method. Keep the platform string SELECT. Give the upload row its own Compose group key."
+    },
+    {
+      "id": "widget_host",
+      "feature": "Home-screen widget squircle and shadow",
+      "type": "Ltf/i1;",
+      "dex": "classes4",
+      "match": "any",
+      "anchors": ["Ltf/i1;"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (WIDGET_HOST)",
+        "froglog/tools/verify_patch.py"
+      ],
+      "caveat": "No stable string. Relocation is by reading the widget host that Recently played already uses."
+    },
+    {
+      "id": "status_bar",
+      "feature": "Friends pill count includes Froglog online friends",
+      "type": "Ldg/h4;",
+      "dex": "classes4",
+      "match": "any",
+      "anchors": ["Ldg/h4;"],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (STATUS_BAR)"
+      ],
+      "caveat": "No stable string. Rebind with the friends pill composable after friends_panel moves."
+    }
+  ]
+}
