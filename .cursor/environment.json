@@ -1,3 +1,4 @@
 {
-  "install": "chmod +x froglog/scripts/prepare-cocoon-reference.sh && froglog/scripts/prepare-cocoon-reference.sh"
+  "name": "Froglog dev (Cocoon 3.06 reference)",
+  "install": "chmod +x froglog/scripts/*.sh && froglog/scripts/agent-bootstrap.sh"
 }
