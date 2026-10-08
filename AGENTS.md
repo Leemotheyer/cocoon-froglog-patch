@@ -11,6 +11,8 @@ This guide is for **agents and contributors patching Cocoon Shell**. User-facing
 
 Point Cloud Agent environments at the **`dev`** branch for builds and installs. The repo default is `main`, so a build that only tracks default `main` will **not** run the bootstrap in `.cursor/environment.json`.
 
+After merging bootstrap changes on `dev`, trigger or rebuild your Cloud environment from the **`dev`** ref and **activate** that build so `install` snapshots `tools/` and `work/` (~1 GB). Draft builds from non-default refs are fine for this repo; promotable default-branch builds are optional because agent files stay off `main`.
+
 ## One-time bootstrap (local or fresh VM)
 
 ```bash

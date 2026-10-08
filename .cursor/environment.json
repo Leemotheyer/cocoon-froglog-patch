@@ -1,4 +1,3 @@
 {
-  "name": "Froglog dev (Cocoon 3.06 reference)",
   "install": "chmod +x froglog/scripts/*.sh && froglog/scripts/agent-bootstrap.sh"
 }
