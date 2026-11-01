@@ -35,6 +35,12 @@ public final class FroglogQueueTest {
         expect(Integer.valueOf(FroglogQueue.MAX), Integer.valueOf(capped.size()));
         expect("s" + FroglogQueue.MAX, capped.get(0).sync);
         expect(false, Boolean.valueOf(FroglogQueue.contains(many, "s0")));
+        expect(false, Boolean.valueOf(FroglogQueue.admit(true, null, false, false, false, false)));
+        expect(false, Boolean.valueOf(FroglogQueue.admit(false, "no", false, false, false, false)));
+        expect(false, Boolean.valueOf(FroglogQueue.admit(false, null, false, false, true, false)));
+        expect(false, Boolean.valueOf(FroglogQueue.admit(false, null, true, false, false, false)));
+        expect(true, Boolean.valueOf(FroglogQueue.admit(false, null, true, false, false, true)));
+        expect(true, Boolean.valueOf(FroglogQueue.admit(false, "game:4", false, false, false, false)));
         System.out.println("FroglogQueueTest ok");
     }
 

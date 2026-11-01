@@ -129,7 +129,7 @@ public class FroglogMapActivity extends FroglogActivity {
         actions.addView(action("Dismiss this session", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                FroglogStore.removePending(FroglogMapActivity.this, sync);
+                FroglogStore.dismissSession(FroglogMapActivity.this, sync);
                 finish();
             }
         }));
@@ -137,8 +137,7 @@ public class FroglogMapActivity extends FroglogActivity {
         actions.addView(action("Don't ask for this game", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                FroglogStore.decline(FroglogMapActivity.this, title, platform);
-                FroglogStore.removePendingKey(FroglogMapActivity.this, title, platform);
+                FroglogStore.stopLogging(FroglogMapActivity.this, title, platform);
                 finish();
             }
         }));
@@ -152,7 +151,7 @@ public class FroglogMapActivity extends FroglogActivity {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final FroglogClient.Recent loaded = FroglogClient.library(token);
+                final FroglogClient.Recent loaded = FroglogStore.loadLibrary(FroglogMapActivity.this);
                 final FroglogGame found = loaded.error == null
                         ? FroglogMatch.best(loaded.games, title, platform) : null;
                 runOnUiThread(new Runnable() {
@@ -163,13 +162,16 @@ public class FroglogMapActivity extends FroglogActivity {
                         }
                         library = loaded.games == null ? new ArrayList<FroglogGame>() : loaded.games;
                         if (loaded.error != null) {
-                            status.setText(loaded.error);
+                            status.setText(loaded.error
+                                    + " Dismiss and Don't ask still save on this device.");
                             return;
                         }
                         if (found != null) {
-                            offerMatch(found, title, platform);
+                            offerMatch(found, title, platform, loaded.fromCache);
                         } else if (queuedError(extra(EXTRA_SYNC)).isEmpty()) {
-                            status.setText("No close match. Map it to a library game, or create a new one.");
+                            status.setText(loaded.fromCache
+                                    ? "Offline. Using the Froglog library saved on this device. No close match. Map it, create one, or dismiss it."
+                                    : "No close match. Map it to a library game, or create a new one.");
                         }
                         if (libraryOpen) {
                             showLibrary(filter == null ? "" : filter.getText().toString());
@@ -180,12 +182,15 @@ public class FroglogMapActivity extends FroglogActivity {
         }, "froglog-map").start();
     }
 
-    private void offerMatch(final FroglogGame found, final String title, final String platform) {
+    private void offerMatch(final FroglogGame found, final String title, final String platform, boolean offline) {
         String line = "Closest match is " + found.title
                 + (found.platform == null || found.platform.isEmpty() ? "" : " · " + found.platform)
                 + (found.status == null || found.status.isEmpty() ? "" : " · " + found.status);
         if ("Completed".equals(found.status) || "DNF".equals(found.status)) {
             line = line + ". Logging will mark it in progress again.";
+        }
+        if (offline) {
+            line = "Offline. Using the Froglog library saved on this device. " + line;
         }
         if (queuedError(extra(EXTRA_SYNC)).isEmpty()) {
             status.setText(line);

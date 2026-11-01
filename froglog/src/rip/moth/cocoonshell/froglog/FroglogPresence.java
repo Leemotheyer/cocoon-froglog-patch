@@ -11,11 +11,16 @@ import android.util.Log;
 public final class FroglogPresence {
     private static final String TAG = "FroglogWidget";
     private static final long POLL_MS = 15L * 1000L;
+    /** While a game is open, notice it closing within about a second. */
+    private static final long ACTIVE_MS = 1000L;
     private static final long HEARTBEAT_MS = 2L * 60L * 1000L;
     private static final long LIBRARY_MS = 5L * 60L * 1000L;
 
     private static final Object LOCK = new Object();
+    /** After a game closes, keep scanning for a few seconds so a late session row is not left for the idle poll. */
+    private static final long WATCH_MS = 4000L;
     private static boolean started;
+    private static long watchUntil;
     private static String postedKey;
     private static long postedAt;
     private static boolean visibilityOn;
@@ -42,8 +47,9 @@ public final class FroglogPresence {
             @Override
             public void run() {
                 while (true) {
+                    long wait = POLL_MS;
                     try {
-                        sync(app);
+                        wait = sync(app);
                     } catch (Throwable t) {
                         Log.e(TAG, "Froglog presence poll failed", t);
                     }
@@ -54,7 +60,7 @@ public final class FroglogPresence {
                     }
                     FroglogSocial.warm(app);
                     try {
-                        Thread.sleep(POLL_MS);
+                        Thread.sleep(wait);
                     } catch (InterruptedException e) {
                         return;
                     }
@@ -77,23 +83,31 @@ public final class FroglogPresence {
         }, "froglog-presence-clear").start();
     }
 
-    static void sync(Context context) {
+    /** How long to wait before the next poll. A running game is watched closely so logging starts as it ends. */
+    static long sync(Context context) {
         if (!FroglogStore.signedIn(context)) {
             synchronized (LOCK) {
                 postedKey = null;
                 postedAt = 0;
             }
-            return;
+            return POLL_MS;
         }
         CocoonLibrary.Playing playing = CocoonLibrary.playing(context);
         if (playing == null) {
+            boolean wasOn = FroglogStore.presenceOn(context);
             clear(context, false);
-            return;
+            long now = System.currentTimeMillis();
+            if (wasOn) {
+                watchUntil = now + WATCH_MS;
+                FroglogSync.kick(context);
+            }
+            // The idle poll is 15s. Stay on the short interval until a just-finished session is visible.
+            return now < watchUntil ? ACTIVE_MS : POLL_MS;
         }
         Target target = resolve(context, playing);
         if (target == null) {
             clear(context, false);
-            return;
+            return ACTIVE_MS;
         }
         String key = FroglogNowPlaying.key(target.id, target.live, playing.startTimeMs);
         long now = System.currentTimeMillis();
@@ -102,7 +116,7 @@ public final class FroglogPresence {
             needPresence = postedKey == null || !key.equals(postedKey) || now - postedAt >= HEARTBEAT_MS;
         }
         if (!needPresence) {
-            return;
+            return ACTIVE_MS;
         }
         String token = FroglogStore.token(context);
         try {
@@ -123,6 +137,7 @@ public final class FroglogPresence {
         } catch (Exception e) {
             Log.w(TAG, "Could not set Froglog now playing", e);
         }
+        return ACTIVE_MS;
     }
 
     private static void ensureVisible(String token) {
@@ -209,6 +224,14 @@ public final class FroglogPresence {
             }
         }
         FroglogClient.Recent recent = FroglogClient.library(FroglogStore.token(context));
+        if (recent.error == null) {
+            FroglogStore.rememberLibrary(context, recent.games);
+        } else if (!"Sign in to Froglog again".equals(recent.error)) {
+            java.util.List<FroglogGame> cached = FroglogStore.cachedGames(context);
+            if (!cached.isEmpty()) {
+                recent = new FroglogClient.Recent(cached, null, true);
+            }
+        }
         synchronized (LOCK) {
             library = recent;
             libraryAt = now;

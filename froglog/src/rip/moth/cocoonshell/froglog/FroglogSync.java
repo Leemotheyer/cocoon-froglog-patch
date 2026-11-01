@@ -45,7 +45,11 @@ public final class FroglogSync {
         kick(app);
     }
 
-    /** Scan and upload now, ignoring the offline backoff. */
+    /**
+     * Scan and upload now, ignoring the offline backoff. The session hook runs before Cocoon's
+     * insert returns, so a second scan follows a moment later and posts the row as soon as it
+     * is visible.
+     */
     public static void kick(Context context) {
         if (context == null) {
             return;
@@ -55,8 +59,28 @@ public final class FroglogSync {
             @Override
             public void run() {
                 FroglogSync.run(app, true);
+                try {
+                    Thread.sleep(300L);
+                } catch (InterruptedException e) {
+                    return;
+                }
+                FroglogSync.run(app, true);
             }
         }, "froglog-sync").start();
+    }
+
+    public static void cancel(Context context, String sync) {
+        if (context == null || sync == null || sync.isEmpty()) {
+            return;
+        }
+        try {
+            NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager != null) {
+                manager.cancel(Math.abs(sync.hashCode()));
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Could not clear a Froglog session notice", e);
+        }
     }
 
     /** Called from the presence poll. Uploads wait out the backoff after a network failure. */
@@ -140,11 +164,14 @@ public final class FroglogSync {
             boolean posted = FroglogStore.posted(context, sync);
             boolean grew = posted && FroglogStore.remote(context, sync) != null
                     && minutes > FroglogStore.postedMinutes(context, sync);
-            if (!grew && (posted || FroglogStore.posted(context, row.title + ":" + row.startTime)
-                    || FroglogStore.hasPending(context, sync))) {
-                continue;
-            }
-            if ("no".equals(FroglogStore.link(context, FroglogMatch.linkKey(row.title, row.platformId)))) {
+            boolean dismissed = FroglogStore.dismissed(context, sync);
+            if (!FroglogQueue.admit(dismissed,
+                    FroglogStore.link(context, FroglogMatch.linkKey(row.title, row.platformId)),
+                    posted, FroglogStore.posted(context, row.title + ":" + row.startTime),
+                    FroglogStore.hasPending(context, sync), grew)) {
+                if (dismissed && FroglogStore.hasPending(context, sync)) {
+                    FroglogStore.removePending(context, sync);
+                }
                 continue;
             }
             FroglogStore.enqueuePending(context, row.title, row.platformId, minutes, date(row), sync);
@@ -161,6 +188,9 @@ public final class FroglogSync {
         FroglogClient.Recent library = null;
         for (int i = 0; i < items.size(); i++) {
             FroglogQueue.Item item = items.get(i);
+            if (!ready(context, item)) {
+                continue;
+            }
             if (item.minutes < 1 || item.sync.isEmpty()) {
                 FroglogStore.removePending(context, item.sync);
                 continue;
@@ -170,6 +200,9 @@ public final class FroglogSync {
                 String remote = FroglogStore.remote(context, item.sync);
                 if (remote == null || item.minutes <= FroglogStore.postedMinutes(context, item.sync)) {
                     FroglogStore.removePending(context, item.sync);
+                    continue;
+                }
+                if (!ready(context, item)) {
                     continue;
                 }
                 try {
@@ -194,11 +227,14 @@ public final class FroglogSync {
             FroglogGame game = linked(FroglogStore.link(context, key), item);
             if (game == null) {
                 if (library == null) {
-                    library = FroglogClient.library(token);
+                    library = FroglogStore.loadLibrary(context);
                     if (library.error != null) {
                         offline(context, item, "Could not reach Froglog".equals(library.error) ? OFFLINE : library.error);
                         return;
                     }
+                }
+                if (!ready(context, item)) {
+                    continue;
                 }
                 game = FroglogMatch.best(library.games, item.title, item.platform);
                 if (game == null) {
@@ -206,6 +242,9 @@ public final class FroglogSync {
                     continue;
                 }
                 FroglogStore.link(context, item.title, item.platform, game.id, game.live);
+            }
+            if (!ready(context, item)) {
+                continue;
             }
             try {
                 FroglogClient.Logged logged = FroglogClient.logSession(token, game, item.date,
@@ -228,6 +267,13 @@ public final class FroglogSync {
                 Log.w(TAG, "Could not log Froglog session " + item.title + ": " + message);
             }
         }
+    }
+
+    /** False once dismiss or Don't ask has landed, including during a slow library lookup. */
+    private static boolean ready(Context context, FroglogQueue.Item item) {
+        return !FroglogStore.dismissed(context, item.sync)
+                && !FroglogStore.declined(context, item.title, item.platform)
+                && FroglogStore.hasPending(context, item.sync);
     }
 
     /** Once per linked game. Earlier builds could not read a game, so its tracking was never set up. */

@@ -39,7 +39,7 @@ public final class FroglogAvatars {
             FroglogFollow p = people.get(i);
             String avatar = still(context, p.avatarUrl);
             out.add(avatar == null || avatar.equals(p.avatarUrl) ? p
-                    : new FroglogFollow(p.username, p.name, avatar, p.status, p.game, p.playing));
+                    : new FroglogFollow(p.username, p.name, avatar, p.status, p.game, p.playing, p.artwork));
         }
         return out;
     }

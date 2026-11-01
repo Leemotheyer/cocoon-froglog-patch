@@ -133,6 +133,19 @@ public final class FroglogQueue {
         return kept;
     }
 
+    /**
+     * A finished Cocoon session joins the queue unless this play was dismissed, the game is set
+     * to not log, or the same play is already queued or posted. A longer replay of a posted
+     * session ({@code grew}) is the exception and is queued so the Froglog row can be updated.
+     */
+    public static boolean admit(boolean dismissed, String link, boolean posted, boolean legacyPosted,
+            boolean pending, boolean grew) {
+        if (dismissed || "no".equals(link)) {
+            return false;
+        }
+        return grew || (!posted && !legacyPosted && !pending);
+    }
+
     public static boolean contains(String json, String sync) {
         if (sync == null || sync.isEmpty()) {
             return false;

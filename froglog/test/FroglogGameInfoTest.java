@@ -57,6 +57,28 @@ public final class FroglogGameInfoTest {
         List<FroglogGame> games = FroglogGames.recent(
                 "[{\"id\":4,\"title\":\"Hades\",\"genre\":\"Roguelike\"}]", "[]", 5);
         expect(true, new JSONObject(games.get(0).json).optString("genre").equals("Roguelike"));
+
+        JSONObject editable = new JSONObject(game.toString());
+        expect(null, FroglogGameInfo.apply(editable, false, "status", "Status", "status", "DNF"));
+        expect(true, Boolean.valueOf(editable.getBoolean("dnf")));
+        expect(JSONObject.NULL, editable.get("status_override"));
+        expect(null, FroglogGameInfo.apply(editable, false, "status", "Status", "status", "In Progress"));
+        expect(false, Boolean.valueOf(editable.getBoolean("dnf")));
+        expect(JSONObject.NULL, editable.get("end_date"));
+        expect(null, FroglogGameInfo.apply(editable, false, "end_date", "Finished", "date", "2026-10-02"));
+        expect("2026-10-02", editable.getString("end_date"));
+        expect(true, FroglogGameInfo.apply(editable, false, "end_date", "Finished", "date", "soon") != null);
+        expect(null, FroglogGameInfo.apply(editable, false, "platform", "Platform", "text", "Switch"));
+        expect("Switch", editable.getString("platform"));
+        expect(null, FroglogGameInfo.apply(editable, false, "rating", "Rating", "number", "4"));
+        expect(Double.valueOf(4), Double.valueOf(editable.getDouble("rating")));
+        JSONObject hundred = new JSONObject("{\"rating\":90}");
+        expect(null, FroglogGameInfo.apply(hundred, false, "rating", "Rating", "number", "4.5"));
+        expect(Double.valueOf(90), Double.valueOf(hundred.getDouble("rating")));
+        JSONObject service = new JSONObject("{\"live_service_status\":\"active\"}");
+        expect(null, FroglogGameInfo.apply(service, true, "live_service_status", "Status", "status", "Dormant"));
+        expect("dormant", service.getString("live_service_status"));
+        expect("Dormant", FroglogGameInfo.derivedStatus(service, true));
         System.out.println("FroglogGameInfoTest ok");
     }
 

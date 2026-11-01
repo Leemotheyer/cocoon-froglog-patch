@@ -1,4 +1,6 @@
 """Confirm the catalog patch adds Froglog and leaves the other picker path in place."""
+from __future__ import annotations
+
 import os
 import re
 import subprocess

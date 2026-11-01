@@ -37,6 +37,7 @@ public class FroglogMappingsActivity extends FroglogActivity {
     private List<FroglogGame> library = new ArrayList<FroglogGame>();
     private String libraryError;
     private boolean libraryLoaded;
+    private boolean libraryCached;
     private final Map<String, String[]> names = new HashMap<String, String[]>();
     private final Map<String, String> platformNames = new HashMap<String, String>();
     private final List<CocoonLibrary.Game> cocoon = new ArrayList<CocoonLibrary.Game>();
@@ -121,7 +122,7 @@ public class FroglogMappingsActivity extends FroglogActivity {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final FroglogClient.Recent loaded = FroglogClient.library(token);
+                final FroglogClient.Recent loaded = FroglogStore.loadLibrary(FroglogMappingsActivity.this);
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -129,7 +130,8 @@ public class FroglogMappingsActivity extends FroglogActivity {
                             return;
                         }
                         libraryLoaded = true;
-                        libraryError = loaded.error;
+                        libraryCached = loaded.fromCache;
+                        libraryError = loaded.fromCache ? null : loaded.error;
                         library = loaded.games == null ? new ArrayList<FroglogGame>() : loaded.games;
                         if ("edit".equals(screen)) {
                             showEdit(editTitle, editPlatform);
@@ -341,8 +343,7 @@ public class FroglogMappingsActivity extends FroglogActivity {
             actions.addView(wide(FroglogTheme.secondary(this, "Don't log this game", new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    FroglogStore.decline(FroglogMappingsActivity.this, title, platform);
-                    FroglogStore.removePendingKey(FroglogMappingsActivity.this, title, platform);
+                    FroglogStore.stopLogging(FroglogMappingsActivity.this, title, platform);
                     showList();
                 }
             })));
@@ -481,6 +482,9 @@ public class FroglogMappingsActivity extends FroglogActivity {
         }
         if (!libraryLoaded) {
             return "Loading your Froglog library…";
+        }
+        if (libraryCached) {
+            return "Offline. Showing the library saved on this device. Mapping changes stay here.";
         }
         return libraryError == null ? "" : libraryError;
     }

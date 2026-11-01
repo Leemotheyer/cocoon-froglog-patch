@@ -154,7 +154,94 @@ public final class FroglogFollows {
         } else {
             status = label(item.optString("type", ""));
         }
-        return new FroglogFollow(username, name, absoluteAvatar(avatar), status, game, playing);
+        String artwork = playing ? artwork(live) : null;
+        if (artwork == null) {
+            artwork = artwork(item);
+        }
+        return new FroglogFollow(username, name, absoluteAvatar(avatar), status, game, playing, artwork);
+    }
+
+    /**
+     * Wide metadata art for a game, preferring the background Froglog stores as {@code img}
+     * over the portrait cover. Relative paths are on the API host.
+     */
+    public static String wideArt(String json, String coverFallback) {
+        String fromJson = null;
+        if (json != null && !json.isEmpty()) {
+            try {
+                fromJson = artwork(new JSONObject(json));
+            } catch (Exception ignored) {
+                fromJson = null;
+            }
+        }
+        if (fromJson != null) {
+            return fromJson;
+        }
+        return coverFallback == null || coverFallback.isEmpty() ? null : absoluteAvatar(coverFallback);
+    }
+
+    /** Art for {@code title} in a public games payload and a live-service payload. */
+    public static String libraryArt(String gamesJson, String liveJson, String title) {
+        String wanted = FroglogMatch.normalizeTitle(title);
+        if (wanted.isEmpty()) {
+            return null;
+        }
+        String fromGames = artInList(gamesJson, wanted);
+        return fromGames != null ? fromGames : artInList(liveJson, wanted);
+    }
+
+    private static String artInList(String json, String wantedTitle) {
+        if (json == null || json.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            JSONArray array = new JSONArray(json.trim().startsWith("[") ? json : "[]");
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject row = array.optJSONObject(i);
+                if (row == null) {
+                    continue;
+                }
+                String title = firstText(row, "title", "name");
+                if (title != null && wantedTitle.equals(FroglogMatch.normalizeTitle(title))) {
+                    String art = artwork(row);
+                    if (art != null) {
+                        return art;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            return null;
+        }
+        return null;
+    }
+
+    /** Background image on an online row or a library game. Null when the row has none. */
+    static String artwork(JSONObject item) {
+        if (item == null) {
+            return null;
+        }
+        JSONObject nested = item.optJSONObject("game");
+        if (nested == null) {
+            nested = item.optJSONObject("now_playing");
+        }
+        String fromGame = imageUrl(nested);
+        if (fromGame != null) {
+            return absoluteAvatar(fromGame);
+        }
+        String own = imageUrl(item);
+        return own == null ? null : absoluteAvatar(own);
+    }
+
+    private static String imageUrl(JSONObject item) {
+        if (item == null) {
+            return null;
+        }
+        String wide = firstText(item, "img", "background_image", "background_image_url", "game_img",
+                "game_image", "header_image", "hero_image", "artwork", "banner");
+        if (wide != null) {
+            return wide;
+        }
+        return firstText(item, "cover_image", "cover", "image");
     }
 
     private static String activityAvatar(JSONObject item) {

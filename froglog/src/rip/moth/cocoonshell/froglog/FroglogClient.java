@@ -33,10 +33,17 @@ public final class FroglogClient {
     public static final class Recent {
         public final List<FroglogGame> games;
         public final String error;
+        /** True when {@code games} came from the last library saved on the device. */
+        public final boolean fromCache;
 
         public Recent(List<FroglogGame> games, String error) {
+            this(games, error, false);
+        }
+
+        public Recent(List<FroglogGame> games, String error, boolean fromCache) {
             this.games = games;
             this.error = error;
+            this.fromCache = fromCache;
         }
     }
 
@@ -795,11 +802,22 @@ public final class FroglogClient {
         }
     }
 
-    private static void putGame(String token, long id, JSONObject body) throws Exception {
-        HttpResult result = request("PUT", BASE + "/games/" + id, token, body.toString());
+    /** Writes one library game. Live-service rows use their own path. Computed totals are left off. */
+    public static void updateGame(String token, long id, boolean live, JSONObject body) throws Exception {
+        JSONObject payload = new JSONObject(body.toString());
+        payload.remove("total_hours");
+        payload.remove("session_count");
+        payload.remove("public_session_count");
+        payload.remove("initial_session_hours");
+        String path = BASE + (live ? "/live-service/" : "/games/") + id;
+        HttpResult result = request("PUT", path, token, payload.toString());
         if (result.code < 200 || result.code >= 300) {
             throw call(result, "Could not update the Froglog game (" + result.code + ")");
         }
+    }
+
+    private static void putGame(String token, long id, JSONObject body) throws Exception {
+        updateGame(token, id, false, body);
     }
 
     private static long postSession(String token, boolean live, long id, String date, double hours, String syncRef,

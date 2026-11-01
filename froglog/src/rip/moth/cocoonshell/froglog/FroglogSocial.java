@@ -7,7 +7,10 @@ import android.util.Log;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * Puts live Froglog follows on Cocoon's own Froglog friends tab.
@@ -22,6 +25,9 @@ public final class FroglogSocial {
     private static volatile boolean loading;
     private static yb.v0 liveFlow;
     private static int lastLogged = -1;
+    private static final long ART_MS = 10L * 60L * 1000L;
+    private static final Map<String, String> artCache = new HashMap<String, String>();
+    private static final Map<String, Long> artAt = new HashMap<String, Long>();
 
     private FroglogSocial() {}
 
@@ -179,7 +185,7 @@ public final class FroglogSocial {
             if (following == null) {
                 Log.w(TAG, "Froglog follow list unavailable, using the activity feed");
             }
-            List<FroglogFollow> people = FroglogFollows.people(activity, online, following, self);
+            List<FroglogFollow> people = withArtwork(token, FroglogFollows.people(activity, online, following, self));
             cache = FroglogAvatars.localize(CatalogHook.context, people);
             int live = 0;
             for (int i = 0; i < cache.size(); i++) {
@@ -224,6 +230,10 @@ public final class FroglogSocial {
 
     private static ef.d6 row(FroglogFollow person) {
         // Froglog presence is in-game only. Last-played never reaches this list.
+        String art = person.artwork;
+        if (art != null && art.isEmpty()) {
+            art = null;
+        }
         return new ef.d6(
                 "froglog:" + person.username,
                 null,
@@ -233,8 +243,68 @@ public final class FroglogSocial {
                 person.status,
                 person.game,
                 "froglog",
-                null,
+                art,
                 false);
+    }
+
+    /** Fills in the game background when the online row did not carry one. */
+    private static List<FroglogFollow> withArtwork(String token, List<FroglogFollow> people) {
+        if (people == null || people.isEmpty()) {
+            return people;
+        }
+        ArrayList<FroglogFollow> out = new ArrayList<FroglogFollow>(people.size());
+        for (int i = 0; i < people.size(); i++) {
+            FroglogFollow person = people.get(i);
+            if (!person.playing || person.artwork != null || person.game == null || person.game.isEmpty()) {
+                out.add(person);
+                continue;
+            }
+            String key = person.username.toLowerCase(Locale.ROOT) + "\n" + FroglogMatch.normalizeTitle(person.game);
+            String art = freshArt(key);
+            if (art == null) {
+                art = fetchArt(token, person.username, person.game);
+                synchronized (artCache) {
+                    artCache.put(key, art == null ? "" : art);
+                    artAt.put(key, Long.valueOf(System.currentTimeMillis()));
+                }
+            }
+            if (art == null || art.isEmpty()) {
+                out.add(person);
+            } else {
+                out.add(new FroglogFollow(person.username, person.name, person.avatarUrl, person.status,
+                        person.game, person.playing, art));
+            }
+        }
+        return out;
+    }
+
+    private static String freshArt(String key) {
+        synchronized (artCache) {
+            Long at = artAt.get(key);
+            if (at == null || System.currentTimeMillis() - at.longValue() > ART_MS) {
+                return null;
+            }
+            return artCache.containsKey(key) ? artCache.get(key) : null;
+        }
+    }
+
+    private static String fetchArt(String token, String username, String title) {
+        try {
+            FroglogClient.Recent recent = FroglogClient.recentGames(token, username, 80, FroglogGames.FILTER_RECENT);
+            if (recent == null || recent.games == null) {
+                return null;
+            }
+            String wanted = FroglogMatch.normalizeTitle(title);
+            for (int i = 0; i < recent.games.size(); i++) {
+                FroglogGame game = recent.games.get(i);
+                if (game != null && wanted.equals(FroglogMatch.normalizeTitle(game.title))) {
+                    return FroglogFollows.wideArt(game.json, game.coverUrl);
+                }
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Could not load Froglog game art for " + username);
+        }
+        return null;
     }
 
     private static String token() {

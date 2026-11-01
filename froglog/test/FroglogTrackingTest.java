@@ -89,8 +89,8 @@ public final class FroglogTrackingTest {
         expect(true, Boolean.valueOf(FroglogTracking.holdSession(now - 5 * 60_000, now, true, true)));
         expect(false, Boolean.valueOf(FroglogTracking.holdSession(now - 5 * 60_000, now, false, true)));
         expect(false, Boolean.valueOf(FroglogTracking.holdSession(now - 5 * 60_000, now, true, false)));
-        expect(true, Boolean.valueOf(FroglogTracking.holdSession(now - 5_000, now, true, false)));
-        expect(false, Boolean.valueOf(FroglogTracking.holdSession(now - FroglogTracking.SETTLE_MS, now, true, false)));
+        expect(false, Boolean.valueOf(FroglogTracking.holdSession(now - 5_000, now, true, false)));
+        expect(false, Boolean.valueOf(FroglogTracking.holdSession(now, now, true, false)));
 
         FroglogGame one = new FroglogGame(5, true, "Hades", "PC", null, "Live", "", null, 0, "", 0);
         FroglogGame two = new FroglogGame(6, true, "Hades", "PC", null, "Live", "", null, 0, "", 0);

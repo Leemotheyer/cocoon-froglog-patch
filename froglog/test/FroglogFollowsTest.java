@@ -64,6 +64,16 @@ public final class FroglogFollowsTest {
         expect(true, untitled.get(0).playing);
         expect("In game", untitled.get(0).status);
         expect(null, untitled.get(0).game);
+        List<FroglogFollow> art = FroglogFollows.people(activity,
+                "[{\"username\":\"bo\",\"online\":true,\"title\":\"Celeste II\",\"img\":\"/uploads/games/celeste.jpg\","
+                        + "\"avatarUrl\":\"https://img/bo\"}]", "me");
+        expect("https://api.froglog.co.uk/uploads/games/celeste.jpg", art.get(0).artwork);
+        expect("https://img/wide.jpg", FroglogFollows.libraryArt(
+                "[{\"title\":\"Hades\",\"img\":\"https://img/wide.jpg\",\"cover_image\":\"https://img/tall.jpg\"}]",
+                "[]", "Hades"));
+        expect("https://img/tall.jpg", FroglogFollows.libraryArt(
+                "[{\"title\":\"Hades\",\"cover_image\":\"https://img/tall.jpg\"}]", "[]", "hades"));
+        expect(null, FroglogFollows.libraryArt("[]", "[]", "Hades"));
         System.out.println("FroglogFollowsTest ok");
     }
 

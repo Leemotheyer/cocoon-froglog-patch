@@ -87,9 +87,9 @@ public final class FroglogStore {
     public static void setVisibility(Context context, String target, String choice) {
         String key = "vis_" + baseTarget(target);
         if (choice == null || VISIBILITY_DEFAULT.equals(choice)) {
-            prefs(context).edit().remove(key).apply();
+            prefs(context).edit().remove(key).commit();
         } else {
-            prefs(context).edit().putString(key, choice).apply();
+            prefs(context).edit().putString(key, choice).commit();
         }
     }
 
@@ -132,7 +132,7 @@ public final class FroglogStore {
         prefs(context).edit()
                 .putString(FroglogLinks.LINK + key, FroglogLinks.value(gameId, live))
                 .putString(FroglogLinks.NAME + key, FroglogLinks.encodeName(title, platform))
-                .apply();
+                .commit();
     }
 
     /** Forgets a link or a decline, so the next session for that title is matched again. */
@@ -170,7 +170,106 @@ public final class FroglogStore {
         prefs(context).edit()
                 .putString(FroglogLinks.LINK + key, FroglogLinks.DECLINED)
                 .putString(FroglogLinks.NAME + key, FroglogLinks.encodeName(title, platform))
-                .apply();
+                .commit();
+    }
+
+    /**
+     * Drops one queued session and remembers that Cocoon row so a later scan cannot put it back.
+     * Local only: it does not talk to Froglog.
+     */
+    public static synchronized void dismissSession(Context context, String sync) {
+        if (sync == null || sync.isEmpty()) {
+            return;
+        }
+        SharedPreferences store = prefs(context);
+        String next = FroglogQueue.remove(store.getString(PENDING, "[]"), sync);
+        store.edit().putBoolean(dismissedKey(sync), true).putString(PENDING, next).commit();
+        FroglogSync.cancel(context, sync);
+        FroglogRecentWidget.refresh(context);
+    }
+
+    /**
+     * Stops logging a Cocoon title and dismisses every queued session for it, in one write.
+     * Local only.
+     */
+    public static synchronized void stopLogging(Context context, String title, String platform) {
+        String key = FroglogMatch.linkKey(title, platform);
+        SharedPreferences store = prefs(context);
+        List<FroglogQueue.Item> items = FroglogQueue.parse(store.getString(PENDING, "[]"));
+        SharedPreferences.Editor edit = store.edit()
+                .putString(FroglogLinks.LINK + key, FroglogLinks.DECLINED)
+                .putString(FroglogLinks.NAME + key, FroglogLinks.encodeName(title, platform));
+        java.util.ArrayList<String> dropped = new java.util.ArrayList<String>();
+        java.util.ArrayList<FroglogQueue.Item> kept = new java.util.ArrayList<FroglogQueue.Item>();
+        for (int i = 0; i < items.size(); i++) {
+            FroglogQueue.Item item = items.get(i);
+            if (key.equals(FroglogMatch.linkKey(item.title, item.platform))) {
+                edit.putBoolean(dismissedKey(item.sync), true);
+                dropped.add(item.sync);
+            } else {
+                kept.add(item);
+            }
+        }
+        edit.putString(PENDING, writePending(kept));
+        edit.commit();
+        for (int i = 0; i < dropped.size(); i++) {
+            FroglogSync.cancel(context, dropped.get(i));
+        }
+        FroglogRecentWidget.refresh(context);
+    }
+
+    public static boolean dismissed(Context context, String sync) {
+        return sync != null && !sync.isEmpty() && prefs(context).getBoolean(dismissedKey(sync), false);
+    }
+
+    private static String dismissedKey(String sync) {
+        return "dismissed_" + sync;
+    }
+
+    private static String writePending(List<FroglogQueue.Item> items) {
+        String json = "[]";
+        if (items == null) {
+            return json;
+        }
+        for (int i = items.size() - 1; i >= 0; i--) {
+            FroglogQueue.Item item = items.get(i);
+            json = FroglogQueue.upsert(json, item.title, item.platform, item.minutes, item.date, item.sync);
+            if (!item.error.isEmpty()) {
+                json = FroglogQueue.rememberError(json, item.sync, item.error);
+            }
+        }
+        return json;
+    }
+
+    /** The signed-in library. When Froglog cannot be reached, the last library saved here. */
+    public static FroglogClient.Recent loadLibrary(Context context) {
+        FroglogClient.Recent loaded = FroglogClient.library(token(context));
+        if (loaded.error == null) {
+            rememberLibrary(context, loaded.games);
+            return loaded;
+        }
+        if ("Sign in to Froglog again".equals(loaded.error)) {
+            return loaded;
+        }
+        List<FroglogGame> cached = cachedGames(context);
+        if (!cached.isEmpty()) {
+            return new FroglogClient.Recent(cached, null, true);
+        }
+        return loaded;
+    }
+
+    public static void rememberLibrary(Context context, List<FroglogGame> games) {
+        if (context == null || games == null) {
+            return;
+        }
+        prefs(context).edit().putString("library_cache", FroglogGames.pack(games)).commit();
+    }
+
+    public static List<FroglogGame> cachedGames(Context context) {
+        if (context == null) {
+            return java.util.Collections.emptyList();
+        }
+        return FroglogGames.unpack(prefs(context).getString("library_cache", ""));
     }
 
     /** "game:12", "live:4", or null for a Cocoon title that is unmapped or declined. */
@@ -271,6 +370,9 @@ public final class FroglogStore {
 
     public static synchronized void enqueuePending(Context context, String title, String platform,
             int minutes, String date, String sync) {
+        if (dismissed(context, sync)) {
+            return;
+        }
         SharedPreferences store = prefs(context);
         String next = FroglogQueue.upsert(store.getString(PENDING, "[]"), title, platform, minutes, date, sync);
         store.edit().putString(PENDING, next).commit();

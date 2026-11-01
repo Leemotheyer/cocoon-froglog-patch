@@ -1,19 +1,25 @@
 package rip.moth.cocoonshell.froglog;
 
-import android.app.Activity;
+import android.app.DatePickerDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 /** A small cover beside the title, then every field Froglog has for the game, its review, and sessions. */
@@ -44,6 +50,14 @@ public class FroglogGameDetail extends FroglogActivity {
     }
 
     private LinearLayout sessionList;
+    private LinearLayout detailsHost;
+    private LinearLayout tagRow;
+    private JSONObject gameJson;
+    private boolean liveGame;
+    private boolean ownGame;
+    private boolean editing;
+    private long gameId;
+    private View firstEditor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,7 +76,11 @@ public class FroglogGameDetail extends FroglogActivity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(20), dp(24), dp(20), dp(24));
 
-        List<String[]> rows = FroglogGameInfo.rows(game);
+        gameJson = game;
+        liveGame = live;
+        ownGame = own && id > 0;
+        gameId = id;
+        List<FroglogGameInfo.Line> rows = FroglogGameInfo.lines(game);
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.TOP);
@@ -79,10 +97,8 @@ public class FroglogGameDetail extends FroglogActivity {
         line.setTextColor(FroglogTheme.MUTED);
         line.setPadding(0, dp(2), 0, 0);
         heading.addView(line);
-        LinearLayout tags = tags(rows, live);
-        if (tags.getChildCount() > 0) {
-            heading.addView(tags);
-        }
+        tagRow = tags(rows, live);
+        heading.addView(tagRow);
         header.addView(heading);
         root.addView(FroglogTheme.card(this, header));
 
@@ -112,17 +128,9 @@ public class FroglogGameDetail extends FroglogActivity {
             root.addView(spaced(FroglogTheme.card(this, aboutBody)));
         }
 
-        if (!rows.isEmpty()) {
-            LinearLayout details = column();
-            details.addView(FroglogTheme.section(this, "Details"));
-            for (int i = 0; i < rows.size(); i++) {
-                if (i > 0) {
-                    details.addView(divider());
-                }
-                details.addView(field(rows.get(i)[0], rows.get(i)[1]));
-            }
-            root.addView(spaced(FroglogTheme.card(this, details)));
-        }
+        detailsHost = column();
+        root.addView(detailsHost);
+        renderDetails(false);
 
         if (!review.isEmpty()) {
             LinearLayout reviewBody = column();
@@ -153,8 +161,17 @@ public class FroglogGameDetail extends FroglogActivity {
         FroglogTheme.paintSystemBars(this);
     }
 
+    @Override
+    public void onBackPressed() {
+        if (editing) {
+            renderDetails(false);
+            return;
+        }
+        super.onBackPressed();
+    }
+
     /** Status, platform, and rating as chips under the title. They also stay in Details. */
-    private LinearLayout tags(List<String[]> rows, boolean live) {
+    private LinearLayout tags(List<FroglogGameInfo.Line> rows, boolean live) {
         LinearLayout tags = new LinearLayout(this);
         tags.setOrientation(LinearLayout.HORIZONTAL);
         tags.setPadding(0, dp(8), 0, 0);
@@ -162,8 +179,8 @@ public class FroglogGameDetail extends FroglogActivity {
             addTag(tags, "Live service", true);
         }
         for (int i = 0; i < rows.size() && tags.getChildCount() < 3; i++) {
-            String label = rows.get(i)[0];
-            String value = rows.get(i)[1];
+            String label = rows.get(i).label;
+            String value = rows.get(i).value;
             if ("Status".equals(label)) {
                 addTag(tags, value, !live);
             } else if ("Platform".equals(label)) {
@@ -186,6 +203,289 @@ public class FroglogGameDetail extends FroglogActivity {
         }
         chip.setLayoutParams(params);
         tags.addView(chip);
+    }
+
+    private void renderDetails(boolean edit) {
+        editing = edit;
+        firstEditor = null;
+        detailsHost.removeAllViews();
+        List<FroglogGameInfo.Line> lines = FroglogGameInfo.lines(gameJson);
+        refreshTags(lines);
+        if (lines.isEmpty()) {
+            return;
+        }
+        LinearLayout details = column();
+        details.addView(FroglogTheme.section(this, "Details"));
+        final boolean canEdit = ownGame && FroglogStore.signedIn(this) && gameJson != null;
+        if (canEdit && !edit) {
+            TextView hint = muted("Press A to edit");
+            hint.setPadding(0, 0, 0, dp(4));
+            details.addView(hint);
+        }
+        final ArrayList<Editor> editors = new ArrayList<Editor>();
+        for (int i = 0; i < lines.size(); i++) {
+            if (i > 0) {
+                details.addView(divider());
+            }
+            FroglogGameInfo.Line line = lines.get(i);
+            if (!edit || "readonly".equals(line.editor)) {
+                details.addView(field(line.label, line.value));
+                continue;
+            }
+            Editor editor = editor(line);
+            editors.add(editor);
+            details.addView(editor.row);
+            if (firstEditor == null) {
+                firstEditor = editor.focus;
+            }
+        }
+        if (canEdit && edit) {
+            TextView error = muted("");
+            error.setPadding(0, dp(8), 0, 0);
+            details.addView(error);
+            LinearLayout actions = new LinearLayout(this);
+            actions.setOrientation(LinearLayout.HORIZONTAL);
+            actions.setPadding(0, dp(10), 0, 0);
+            Button save = FroglogTheme.button(this, "Save", new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    saveEdits(editors, error);
+                }
+            });
+            Button cancel = FroglogTheme.secondary(this, "Cancel", new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    renderDetails(false);
+                }
+            });
+            LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            gap.leftMargin = dp(8);
+            cancel.setLayoutParams(gap);
+            actions.addView(save);
+            actions.addView(cancel);
+            details.addView(actions);
+        }
+        LinearLayout card = FroglogTheme.card(this, details);
+        if (canEdit && !edit) {
+            card.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+            FroglogTheme.row(card, new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    renderDetails(true);
+                }
+            });
+        } else {
+            card.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
+        }
+        detailsHost.addView(spaced(card));
+        if (edit && firstEditor != null) {
+            final View focus = firstEditor;
+            focus.post(new Runnable() {
+                @Override
+                public void run() {
+                    focus.requestFocus();
+                }
+            });
+        }
+    }
+
+    private void refreshTags(List<FroglogGameInfo.Line> lines) {
+        if (tagRow == null) {
+            return;
+        }
+        tagRow.removeAllViews();
+        if (liveGame) {
+            addTag(tagRow, "Live service", true);
+        }
+        for (int i = 0; i < lines.size() && tagRow.getChildCount() < 3; i++) {
+            String label = lines.get(i).label;
+            String value = lines.get(i).value;
+            if ("Status".equals(label)) {
+                addTag(tagRow, value, !liveGame);
+            } else if ("Platform".equals(label)) {
+                addTag(tagRow, value, false);
+            } else if ("Rating".equals(label)) {
+                addTag(tagRow, value.startsWith("★") ? value : "★ " + value, false);
+            }
+        }
+    }
+
+    private Editor editor(final FroglogGameInfo.Line line) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setPadding(0, dp(6), 0, dp(6));
+        TextView name = FroglogTheme.text(this, line.label, 13, false);
+        name.setTextColor(FroglogTheme.MUTED);
+        row.addView(name);
+        View focus;
+        final Value value;
+        if ("status".equals(line.editor) || "bool".equals(line.editor)) {
+            final Spinner spinner = new Spinner(this);
+            String[] options = FroglogGameInfo.choices(line.editor, liveGame);
+            ArrayList<String> choiceList = new ArrayList<String>();
+            for (int c = 0; c < options.length; c++) {
+                choiceList.add(options[c]);
+            }
+            if (!line.value.isEmpty()) {
+                boolean known = false;
+                for (int c = 0; c < choiceList.size(); c++) {
+                    if (choiceList.get(c).equalsIgnoreCase(line.value)) {
+                        known = true;
+                    }
+                }
+                if (!known) {
+                    choiceList.add(line.value);
+                }
+            }
+            final String[] choices = choiceList.toArray(new String[choiceList.size()]);
+            ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, choices);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            spinner.setAdapter(adapter);
+            int selected = 0;
+            for (int i = 0; i < choices.length; i++) {
+                if (choices[i].equalsIgnoreCase(line.value)) {
+                    selected = i;
+                }
+            }
+            spinner.setSelection(selected);
+            spinner.setFocusable(true);
+            spinner.setClickable(true);
+            row.addView(spinner);
+            focus = spinner;
+            value = new Value() {
+                @Override
+                public String get() {
+                    Object item = spinner.getSelectedItem();
+                    return item == null ? "" : String.valueOf(item);
+                }
+            };
+        } else if ("date".equals(line.editor)) {
+            final Button pick = FroglogTheme.secondary(this, line.value.isEmpty() ? "Pick a date" : line.value, null);
+            pick.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    pickDate(pick);
+                }
+            });
+            final Button clear = FroglogTheme.secondary(this, "Clear", new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    pick.setText("Pick a date");
+                    pick.setTag("");
+                }
+            });
+            pick.setTag(line.value);
+            LinearLayout dates = new LinearLayout(this);
+            dates.setOrientation(LinearLayout.HORIZONTAL);
+            dates.addView(pick);
+            LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            gap.leftMargin = dp(8);
+            clear.setLayoutParams(gap);
+            dates.addView(clear);
+            row.addView(dates);
+            focus = pick;
+            value = new Value() {
+                @Override
+                public String get() {
+                    Object tag = pick.getTag();
+                    if (tag == null || "Pick a date".equals(String.valueOf(pick.getText()))) {
+                        return "";
+                    }
+                    return String.valueOf(tag);
+                }
+            };
+        } else {
+            final EditText input = FroglogTheme.field(this, line.label);
+            String shown = line.value;
+            if ("number".equals(line.editor)) {
+                shown = shown.replace("★", "").replace("h", "").trim();
+                input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
+                        | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+            }
+            input.setText(shown);
+            row.addView(input);
+            focus = input;
+            value = new Value() {
+                @Override
+                public String get() {
+                    return input.getText() == null ? "" : input.getText().toString();
+                }
+            };
+        }
+        return new Editor(line, row, focus, value);
+    }
+
+    private void pickDate(final Button pick) {
+        Calendar calendar = Calendar.getInstance();
+        Object tag = pick.getTag();
+        String current = tag == null ? "" : String.valueOf(tag);
+        if (current.length() >= 10 && current.charAt(4) == '-') {
+            try {
+                calendar.set(Calendar.YEAR, Integer.parseInt(current.substring(0, 4)));
+                calendar.set(Calendar.MONTH, Integer.parseInt(current.substring(5, 7)) - 1);
+                calendar.set(Calendar.DAY_OF_MONTH, Integer.parseInt(current.substring(8, 10)));
+            } catch (NumberFormatException ignored) {
+                // The picker opens on today when the stored date cannot be read.
+            }
+        }
+        new DatePickerDialog(this, new DatePickerDialog.OnDateSetListener() {
+            @Override
+            public void onDateSet(android.widget.DatePicker view, int year, int month, int day) {
+                String date = String.format(java.util.Locale.US, "%04d-%02d-%02d", year, month + 1, day);
+                pick.setTag(date);
+                pick.setText(date);
+            }
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show();
+    }
+
+    private void saveEdits(final List<Editor> editors, final TextView error) {
+        final JSONObject next;
+        try {
+            next = new JSONObject(gameJson.toString());
+        } catch (Exception e) {
+            error.setText("Could not read this game");
+            return;
+        }
+        for (int i = 0; i < editors.size(); i++) {
+            Editor editor = editors.get(i);
+            String problem = FroglogGameInfo.apply(next, liveGame, editor.line.key, editor.line.label,
+                    editor.line.editor, editor.value.get());
+            if (problem != null) {
+                error.setText(problem);
+                editor.focus.requestFocus();
+                return;
+            }
+        }
+        error.setText("Saving…");
+        final String token = FroglogStore.token(this);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String failure = null;
+                try {
+                    FroglogClient.updateGame(token, gameId, liveGame, next);
+                } catch (Exception e) {
+                    failure = e.getMessage() == null ? "Could not reach Froglog" : e.getMessage();
+                }
+                final String message = failure;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isFinishing()) {
+                            return;
+                        }
+                        if (message != null) {
+                            error.setText(message);
+                            return;
+                        }
+                        gameJson = next;
+                        renderDetails(false);
+                    }
+                });
+            }
+        }, "froglog-game-edit").start();
     }
 
     private View divider() {
@@ -307,5 +607,23 @@ public class FroglogGameDetail extends FroglogActivity {
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private interface Value {
+        String get();
+    }
+
+    private static final class Editor {
+        final FroglogGameInfo.Line line;
+        final View row;
+        final View focus;
+        final Value value;
+
+        Editor(FroglogGameInfo.Line line, View row, View focus, Value value) {
+            this.line = line;
+            this.row = row;
+            this.focus = focus;
+            this.value = value;
+        }
     }
 }

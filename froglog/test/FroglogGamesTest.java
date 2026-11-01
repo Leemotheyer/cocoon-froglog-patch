@@ -44,6 +44,12 @@ public final class FroglogGamesTest {
         expect("4h 30m · In Progress", FroglogGames.widgetMeta(recent.get(1)));
         expect("Sep 1", FroglogGames.widgetMeta(new FroglogGame(1, false, "No Status", null, null, null,
                 null, null, 0, "x", 0, "{\"last_session_date\":\"2026-09-01\"}")));
+        String packed = FroglogGames.pack(recent);
+        List<FroglogGame> restored = FroglogGames.unpack(packed);
+        expect(Integer.valueOf(recent.size()), Integer.valueOf(restored.size()));
+        expect(true, Boolean.valueOf(restored.get(0).live));
+        expect("Live Service", restored.get(0).title);
+        expect(0, Integer.valueOf(FroglogGames.unpack("").size()));
         System.out.println("FroglogGamesTest ok");
     }
 

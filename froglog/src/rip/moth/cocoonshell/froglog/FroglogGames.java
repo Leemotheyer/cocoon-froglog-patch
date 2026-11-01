@@ -77,6 +77,54 @@ public final class FroglogGames {
         return "Recent";
     }
 
+    /** Saves a library list, including which rows are live service, so it can be used offline. */
+    public static String pack(List<FroglogGame> games) {
+        JSONArray array = new JSONArray();
+        if (games == null) {
+            return array.toString();
+        }
+        for (int i = 0; i < games.size(); i++) {
+            FroglogGame game = games.get(i);
+            if (game == null || game.json == null || game.json.isEmpty()) {
+                continue;
+            }
+            try {
+                JSONObject row = new JSONObject();
+                row.put("live", game.live);
+                row.put("game", new JSONObject(game.json));
+                array.put(row);
+            } catch (Exception ignored) {
+                // A row that is not JSON is left out of the cache.
+            }
+        }
+        return array.toString();
+    }
+
+    public static List<FroglogGame> unpack(String packed) {
+        if (packed == null || packed.trim().isEmpty()) {
+            return new ArrayList<FroglogGame>();
+        }
+        try {
+            JSONArray array = new JSONArray(packed);
+            JSONArray games = new JSONArray();
+            JSONArray live = new JSONArray();
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject row = array.optJSONObject(i);
+                if (row == null) {
+                    continue;
+                }
+                JSONObject game = row.optJSONObject("game");
+                if (game == null) {
+                    continue;
+                }
+                (row.optBoolean("live", false) ? live : games).put(game);
+            }
+            return recent(games.toString(), live.toString(), Integer.MAX_VALUE, FILTER_RECENT);
+        } catch (Exception ignored) {
+            return new ArrayList<FroglogGame>();
+        }
+    }
+
     private static boolean accepts(FroglogGame game, String filter) {
         if (FILTER_PROGRESS.equals(filter)) {
             return !game.live && statusIs(game.status, "In Progress");

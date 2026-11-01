@@ -10,8 +10,6 @@ import java.util.List;
  * when something actually has to change.
  */
 public final class FroglogTracking {
-    public static final long SETTLE_MS = 30L * 1000L;
-
     private FroglogTracking() {}
 
     public static JSONObject preparePayload(JSONObject game, String sessionDate) throws Exception {
@@ -87,15 +85,11 @@ public final class FroglogTracking {
 
     /**
      * Cocoon commits a row each time its tracker ends a session, then folds a relaunch of the
-     * same game into that row. A shortcut that hands off to another activity ends the first
-     * session within seconds while the game keeps running, so the newest row for a game Cocoon
-     * still tracks is not final. A row that just ended also waits, in case the relaunch is late.
+     * same game into that row. The newest row for a game Cocoon still tracks is not final.
+     * Once Cocoon has stopped tracking that game, the row can be submitted immediately.
      */
     public static boolean holdSession(long endTimeMs, long nowMs, boolean newestForGame, boolean gameOpen) {
-        if (newestForGame && gameOpen) {
-            return true;
-        }
-        return endTimeMs > nowMs - SETTLE_MS;
+        return newestForGame && gameOpen;
     }
 
     /** The live-service id when exactly one row shares the title. Two matches is not a match. */
