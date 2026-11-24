@@ -1,4 +1,4 @@
-package ta;
+package sa;
 
 public interface e {
 }

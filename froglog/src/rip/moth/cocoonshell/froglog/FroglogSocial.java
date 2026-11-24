@@ -21,9 +21,12 @@ public final class FroglogSocial {
     private static final long FRESH_MS = 60000L;
 
     private static volatile List<FroglogFollow> cache = Collections.emptyList();
+    private static volatile int cacheVersion;
+    private static volatile int rowVersion = -1;
+    private static volatile List<?> rowCache = Collections.emptyList();
     private static volatile long fetchedAt;
     private static volatile boolean loading;
-    private static yb.v0 liveFlow;
+    private static yb.z0 liveFlow;
     private static int lastLogged = -1;
     private static final long ART_MS = 10L * 60L * 1000L;
     private static final Map<String, String> artCache = new HashMap<String, String>();
@@ -31,9 +34,9 @@ public final class FroglogSocial {
 
     private FroglogSocial() {}
 
-    private static synchronized yb.v0 liveFlow() {
+    private static synchronized yb.z0 liveFlow() {
         if (liveFlow == null) {
-            liveFlow = yb.n0.c(Integer.valueOf(liveCount(cache)));
+            liveFlow = yb.r0.c(Integer.valueOf(liveCount(cache)));
         }
         return liveFlow;
     }
@@ -62,7 +65,7 @@ public final class FroglogSocial {
      */
     public static int withLiveCount(int steam, Object composer) {
         refreshSoon(token(), self());
-        z0.u0 state = z7.h0.Q(liveFlow(), (z0.e0) composer);
+        y0.v0 state = lb.a.w(liveFlow(), Integer.valueOf(0), (y0.e0) composer, 0);
         Object value = state.getValue();
         int live = token() != null && value instanceof Integer ? ((Integer) value).intValue() : 0;
         if (live != lastLogged) {
@@ -85,6 +88,7 @@ public final class FroglogSocial {
 
     public static void clear() {
         cache = Collections.emptyList();
+        cacheVersion++;
         fetchedAt = 0L;
         publish();
     }
@@ -110,12 +114,12 @@ public final class FroglogSocial {
             return tabs;
         }
         for (int i = 0; i < tabs.size(); i++) {
-            if (tabs.get(i) == ef.w0.FROGLOG) {
+            if (tabs.get(i) == hf.u1.FROGLOG) {
                 return tabs;
             }
         }
         ArrayList<Object> next = new ArrayList<Object>(tabs.size() + 1);
-        next.add(ef.w0.FROGLOG);
+        next.add(hf.u1.FROGLOG);
         next.addAll(tabs);
         return next;
     }
@@ -123,8 +127,11 @@ public final class FroglogSocial {
     /** The selected social tab's friend rows. Froglog is never mixed into Steam. */
     public static List<?> listForTab(Object tab, List<?> existing) {
         refreshSoon(token(), self());
-        if (tab != ef.w0.FROGLOG) {
+        if (tab != hf.u1.FROGLOG) {
             return existing;
+        }
+        if (rowVersion == cacheVersion) {
+            return rowCache;
         }
         ArrayList<Object> live = new ArrayList<Object>();
         List<FroglogFollow> people = cache;
@@ -134,14 +141,16 @@ public final class FroglogSocial {
                 live.add(row(person));
             }
         }
+        rowCache = live;
+        rowVersion = cacheVersion;
         Log.i(TAG, "Froglog tab " + live.size() + " now-playing");
         return live;
     }
 
     /** Keep the Froglog chip from using the Steam glyph. */
     public static Object tabIcon(Object tab, Object icon) {
-        if (tab == ef.w0.FROGLOG) {
-            return ef.b.FROGLOG;
+        if (tab == hf.u1.FROGLOG) {
+            return hf.b.FROGLOG;
         }
         return icon;
     }
@@ -149,7 +158,7 @@ public final class FroglogSocial {
     /** Steam chat calls longValue on a friend id. Froglog rows have none, so open them here. */
     public static boolean openIfFriend(Object friend) {
         try {
-            if (friend == null || !"ef.d6".equals(friend.getClass().getName())) {
+            if (friend == null || !"hf.da".equals(friend.getClass().getName())) {
                 return false;
             }
             String key = stringField(friend, "a");
@@ -187,6 +196,7 @@ public final class FroglogSocial {
             }
             List<FroglogFollow> people = withArtwork(token, FroglogFollows.people(activity, online, following, self));
             cache = FroglogAvatars.localize(CatalogHook.context, people);
+            cacheVersion++;
             int live = 0;
             for (int i = 0; i < cache.size(); i++) {
                 if (cache.get(i).playing) {
@@ -228,18 +238,18 @@ public final class FroglogSocial {
         }, "froglog-follows").start();
     }
 
-    private static ef.d6 row(FroglogFollow person) {
+    private static hf.da row(FroglogFollow person) {
         // Froglog presence is in-game only. Last-played never reaches this list.
         String art = person.artwork;
         if (art != null && art.isEmpty()) {
             art = null;
         }
-        return new ef.d6(
+        return new hf.da(
                 "froglog:" + person.username,
                 null,
                 person.name,
                 person.avatarUrl,
-                ef.v0.IN_GAME,
+                hf.t1.IN_GAME,
                 person.status,
                 person.game,
                 "froglog",

@@ -1,4 +1,4 @@
-package z0;
+package y0;
 
 /** Compile-only stub of Compose's Composer implementation. */
 public class e0 {

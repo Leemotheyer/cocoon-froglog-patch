@@ -10,7 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import rip.moth.cocoonshell.utils.a2;
+import rip.moth.cocoonshell.utils.t2;
 
 /** Reads Cocoon's own game library. It does not write to that database. */
 public final class CocoonLibrary {
@@ -103,7 +103,7 @@ public final class CocoonLibrary {
         HashSet<Long> open = new HashSet<Long>();
         for (Long id : gameIds) {
             try {
-                if (a2.r(id.longValue())) {
+                if (t2.X(id.longValue())) {
                     open.add(id);
                 }
             } catch (Throwable ignored) {

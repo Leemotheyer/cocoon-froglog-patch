@@ -116,18 +116,18 @@ IDS = [
 ]
 
 PUBLIC = [
-    ("drawable", "froglog_widget_bg", 0x7F060216),
-    ("drawable", "froglog_cover_placeholder", 0x7F060217),
-    ("drawable", "froglog", 0x7F060218),
-    ("drawable", "froglog_title_icon", 0x7F060219),
-    ("drawable", "froglog_friends_icon", 0x7F06021A),
+    ("drawable", "froglog_widget_bg", 0x7F060271),
+    ("drawable", "froglog_cover_placeholder", 0x7F060272),
+    ("drawable", "froglog", 0x7F060273),
+    ("drawable", "froglog_title_icon", 0x7F060274),
+    ("drawable", "froglog_friends_icon", 0x7F060275),
     ("layout", "froglog_widget", 0x7F0A001E),
     ("layout", "froglog_stats", 0x7F0A001F),
-    ("string", "widget_type_froglog", 0x7F0E072D),
-    ("string", "widget_type_froglog_desc", 0x7F0E072E),
-    ("string", "widget_type_froglog_stats", 0x7F0E072F),
-    ("string", "widget_type_froglog_stats_desc", 0x7F0E0730),
-    ("string", "pods_overlay_froglog", 0x7F0E0731),
+    ("string", "widget_type_froglog", 0x7F0E07E7),
+    ("string", "widget_type_froglog_desc", 0x7F0E07E8),
+    ("string", "widget_type_froglog_stats", 0x7F0E07E9),
+    ("string", "widget_type_froglog_stats_desc", 0x7F0E07EA),
+    ("string", "pods_overlay_froglog", 0x7F0E07EB),
     ("xml", "froglog_widget_info", 0x7F110006),
     ("xml", "froglog_stats_info", 0x7F110007),
 ] + [("id", name, 0x7F0800CA + index) for index, name in enumerate(IDS)]
@@ -276,13 +276,13 @@ def main() -> None:
 
     yml = decoded / "apktool.yml"
     text = yml.read_text(encoding="utf-8")
-    text = text.replace("versionCode: 1\n", "versionCode: 19\n", 1)
-    text = text.replace("versionName: 3.06-1\n", "versionName: 3.06-1-froglog18-dev\n", 1)
+    text = text.replace("versionCode: 1\n", "versionCode: 20\n", 1)
+    text = text.replace("versionName: 3.11\n", "versionName: 3.11-1-froglog19-dev\n", 1)
     text = text.replace("- assets/dexopt/baseline.prof\n", "")
     text = text.replace("- assets/dexopt/baseline.profm\n", "")
     if "renameManifestPackage:" not in text:
         text = text.replace("apkFileName:", f"renameManifestPackage: {PACKAGE}\napkFileName:", 1)
-    if "versionCode: 19\n" not in text or "versionName: 3.06-1-froglog18-dev\n" not in text:
+    if "versionCode: 20\n" not in text or "versionName: 3.11-1-froglog19-dev\n" not in text:
         raise SystemExit("version was not bumped")
     yml.write_text(text, encoding="utf-8")
     for profile in ("assets/dexopt/baseline.prof", "assets/dexopt/baseline.profm"):

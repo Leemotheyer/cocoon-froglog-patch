@@ -1,4 +1,4 @@
-package ta;
+package sa;
 
 /** Compile-only stub of Kotlin Pair. */
 public final class j {

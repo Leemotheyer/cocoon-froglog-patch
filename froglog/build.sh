@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rebuild cocoon-306 with a separate Froglog widget. Recently played is not edited.
+# Rebuild cocoon-311 with a separate Froglog widget. Recently played is not edited.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -17,8 +17,8 @@ fi
 SKIP_SETUP="${SKIP_SETUP:-0}"
 SDK="${SDK:-$TOOLS/android/build-tools/35.0.0}"
 ANDROID_JAR="${ANDROID_JAR:-$TOOLS/android/platforms/android-35/android.jar}"
-SRC_APK="${SRC_APK:-$WORK/cocoon-306.apk}"
-DECODE="${DECODE:-$WORK/cocoon-decoded}"
+SRC_APK="${SRC_APK:-$WORK/cocoon-311.apk}"
+DECODE="${DECODE:-$WORK/cocoon-311-decoded}"
 BUILD="${BUILD:-$WORK/froglog-decoded}"
 JSON_JAR="${JSON_JAR:-$WORK/json.jar}"
 if ! command -v python3 >/dev/null 2>&1 || ! python3 -c "import sys" >/dev/null 2>&1; then
@@ -140,7 +140,7 @@ javac --release 11 -encoding UTF-8 -cp "$BAKSMALI" -d "$WORK/patch-classes" "$RO
 cp "$DECODE/classes4.dex" "$WORK/classes4.original.dex"
 java -cp "$WORK/patch-classes:$BAKSMALI" PatchCatalog "$WORK/classes4.original.dex" "$WORK/classes4.patched.dex"
 cp "$DECODE/classes.dex" "$WORK/classes.original.dex"
-java -cp "$WORK/patch-classes:$BAKSMALI" PatchCatalog menu "$WORK/classes.original.dex" "$WORK/classes.patched.dex"
+cp "$DECODE/classes.dex" "$WORK/classes.patched.dex"
 
 if ! python3 "$ROOT/froglog/tools/verify_patch.py" \
   "$BAKSMALI" \
@@ -188,7 +188,7 @@ if [[ -z "$VERSION" ]]; then
   echo "could not read versionName from badging" >&2
   exit 1
 fi
-OUT="$DIST/cocoon-306-froglog-${VERSION}.apk"
+OUT="$DIST/cocoon-311-froglog-${VERSION}.apk"
 cp "$SIGNED" "$OUT"
 
 OUT_PY="$OUT"

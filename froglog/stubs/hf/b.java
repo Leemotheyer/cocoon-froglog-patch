@@ -1,4 +1,4 @@
-package ef;
+package hf;
 
 /** Compile-only stub of Cocoon's icon enum. */
 public enum b {

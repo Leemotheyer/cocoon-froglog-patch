@@ -22,9 +22,9 @@ After merging bootstrap changes on `dev`, trigger or rebuild your Cloud environm
 This installs (into gitignored dirs):
 
 - **`tools/`** — apktool 2.11.1, smali 2.5.2, Android build-tools 35.0.0, `android-35` stub jar
-- **`work/cocoon-306.apk`** — [CocoonFE beta-3.06](https://github.com/inssekt/CocoonFE/releases/tag/beta-3.06) (sha256 `e9df90ad83200f984f085dac51448fffb558b509f7ece50d6889bb5b393cc4d5`)
-- **`work/cocoon-decoded/`** — `apktool d -s` template copied by `build.sh`
-- **`work/smali-out/`** — full baksmali of stock Cocoon for reading upstream code
+- **`work/cocoon-311.apk`** — [CocoonFE beta-3.11](https://github.com/KansoMirai/CocoonFE/releases/tag/beta-3.11) (sha256 `e460300a902172f7cda8b9f9af8e7b33933ba0baef775e44b7c9ddfd05387378`)
+- **`work/cocoon-311-decoded/`** — `apktool d -s` template copied by `build.sh`
+- **`work/smali-311-out/`** — full baksmali of stock Cocoon for reading upstream code
 
 Lighter cache (no smali, ~400 MB):
 
@@ -36,11 +36,11 @@ Cloud Agent **`install`** (`.cursor/environment.json`) runs the same bootstrap s
 
 ## Where to read stock Cocoon
 
-| Feature area | Dex | Smali path (under `work/smali-out/`) |
+| Feature area | Dex | Smali path (under `work/smali-311-out/`) |
 |--------------|-----|--------------------------------------|
-| Picnic UI (`cf/pi`, screenshot info) | `classes4` | `smali_classes4/cf/pi.smali` |
+| Picnic UI (`cf/pi`, screenshot info) | `classes4` | `smali_classes4/ff/fi.smali` |
 | Friends tabs, pods router | `classes4` | `smali_classes4/ef/`, `xd/`, `rip/moth/cocoonshell/utils/` |
-| Widget catalog | `classes4` | `smali_classes4/mf/y1.smali` |
+| Widget catalog | `classes4` | `smali_classes4/pf/x1.smali` |
 | Game context menu list | `classes` | `smali/a8/z.smali` |
 | Session DAO | `classes4` | `smali_classes4/rip/moth/cocoonshell/data/local/GameSessionDao_Impl.smali` |
 
@@ -53,13 +53,13 @@ Quick slice of one or two classes without loading all of `smali-out`:
 
 ## Updating to a newer Cocoon beta
 
-Stock class names such as `Lmf/y1;` and `Lcf/pi;` change when Cocoon ships a new beta. The Froglog features stay; the bindings move.
+Stock class names such as `Lpf/x1;` and `Lff/fi;` change when Cocoon ships a new beta. The Froglog features stay; the bindings move.
 
 ```bash
 ./froglog/scripts/stage-new-base.sh <apk-or-url> <label>
 ```
 
-That leaves the current `work/smali-out` cache in place and writes `work/bases/<label>/UPGRADE_REPORT.md`. The hook map is `froglog/base/hooks.json`. The full order (rebind, resource ids, version rewrite, then point `build.sh` at the new decode) is [froglog/docs/BASE_UPGRADE.md](froglog/docs/BASE_UPGRADE.md). That workflow was checked against Cocoon beta 3.07; the report is a map for a port, and the default base stays 3.06 until the rebind is done.
+That leaves the current `work/smali-out` cache in place and writes `work/bases/<label>/UPGRADE_REPORT.md`. The hook map is `froglog/base/hooks.json`. The full order (rebind, resource ids, version rewrite, then point `build.sh` at the new decode) is [froglog/docs/BASE_UPGRADE.md](froglog/docs/BASE_UPGRADE.md). That workflow was checked against Cocoon beta 3.11; the report is a map for a port, and the default base is 3.11 until the rebind is done.
 
 Check the fingerprints still describe the tree you are patching:
 
@@ -70,7 +70,7 @@ python3 froglog/scripts/scan-base-upgrade.py --check
 ## How Froglog changes Cocoon
 
 1. **Java sources** — `froglog/src/rip/moth/cocoonshell/froglog/` (compiled to `classes7.dex`).
-2. **Bytecode patches** — `froglog/tools/PatchCatalog.java` rewrites methods in `classes4.dex` (and `classes.dex` for menus). Constants at the top of `PatchCatalog` name the smali types (`Lcf/pi;`, `Lef/d0;`, …).
+2. **Bytecode patches** — `froglog/tools/PatchCatalog.java` rewrites methods in `classes4.dex` (and `classes.dex` for menus). Constants at the top of `PatchCatalog` name the smali types (`Lff/fi;`, `Lhf/j8;`, …).
 3. **Resources / manifest** — `froglog/tools/apply_resources.py` on the decoded tree.
 4. **Verification** — `froglog/tools/verify_patch.py` disassembles patched methods and asserts structure.
 
@@ -78,7 +78,7 @@ python3 froglog/scripts/scan-base-upgrade.py --check
 
 ```bash
 ./froglog/build.sh
-# APK: dist/cocoon-306-froglog-<versionName>.apk
+# APK: dist/cocoon-311-froglog-<versionName>.apk
 ```
 
 **Unit tests only** (no APK): the `echo "unit test"` block at the start of `build.sh` — or run those `javac`/`java` lines from the script.

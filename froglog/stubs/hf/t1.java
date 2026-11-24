@@ -1,7 +1,7 @@
-package ef;
+package hf;
 
 /** Compile-only stub of Cocoon's friend status tier. */
-public enum v0 {
+public enum t1 {
     UNREAD,
     IN_GAME,
     ONLINE,

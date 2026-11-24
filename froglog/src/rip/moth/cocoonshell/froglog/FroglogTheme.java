@@ -132,12 +132,12 @@ public final class FroglogTheme {
     }
 
     /**
-     * Cocoon keeps the active colour pack in eg.j0.j (StateFlow of CustomTheme). Only present
+     * Cocoon keeps the active colour pack in ig.j0.j (StateFlow of CustomTheme). Only present
      * in the Cocoon process once the theme engine has loaded; otherwise built-ins stay.
      */
     private static void applyCustom(Palette p, boolean packAccent, int[] accent) {
         try {
-            Field flowField = Class.forName("eg.j0").getField("j");
+            Field flowField = Class.forName("ig.j0").getField("j");
             Object flow = flowField.get(null);
             Object theme = flow.getClass().getMethod("getValue").invoke(flow);
             if (theme == null) {

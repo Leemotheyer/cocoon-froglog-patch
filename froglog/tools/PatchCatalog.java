@@ -10,7 +10,9 @@ import org.jf.dexlib2.builder.instruction.BuilderInstruction11x;
 import org.jf.dexlib2.builder.instruction.BuilderInstruction21c;
 import org.jf.dexlib2.builder.instruction.BuilderInstruction21t;
 import org.jf.dexlib2.builder.instruction.BuilderInstruction22c;
+import org.jf.dexlib2.builder.instruction.BuilderInstruction23x;
 import org.jf.dexlib2.builder.instruction.BuilderInstruction22t;
+import org.jf.dexlib2.builder.instruction.BuilderInstruction23x;
 import org.jf.dexlib2.builder.instruction.BuilderInstruction35c;
 import org.jf.dexlib2.dexbacked.DexBackedDexFile;
 import org.jf.dexlib2.iface.ClassDef;
@@ -53,6 +55,7 @@ import org.jf.dexlib2.immutable.instruction.ImmutableInstruction21c;
 import org.jf.dexlib2.immutable.instruction.ImmutableInstruction21t;
 import org.jf.dexlib2.immutable.instruction.ImmutableInstruction22t;
 import org.jf.dexlib2.immutable.instruction.ImmutableInstruction22x;
+import org.jf.dexlib2.immutable.instruction.ImmutableInstruction23x;
 import org.jf.dexlib2.immutable.instruction.ImmutableInstruction30t;
 import org.jf.dexlib2.immutable.instruction.ImmutableInstruction31t;
 import org.jf.dexlib2.immutable.instruction.ImmutableInstruction35c;
@@ -86,50 +89,46 @@ import java.util.Set;
  * See froglog/docs/BASE_UPGRADE.md.
  */
 public final class PatchCatalog {
-    private static final String CATALOG = "Lmf/y1;";
+    private static final String CATALOG = "Lpf/x1;";
     private static final String SESSION = "Lrip/moth/cocoonshell/data/local/GameSessionDao_Impl;";
-    private static final String PODS = "Lxd/m0;";
-    private static final String POD_ACTION = "Lxd/k0;";
-    private static final String ROUTER = "Lrip/moth/cocoonshell/utils/u6;";
-    private static final String OPEN_BY_ACTION =
-            "(Lxd/k0;Landroid/content/Context;Lza/i;I)Ljava/lang/Object;";
-    private static final String FRIENDS = "Lef/d0;";
-    private static final String FRIEND_TABS = "Lef/w0;";
-    private static final String FRIEND_MAPS = "Lef/s5;";
-    private static final String FRIEND_CLICK = "Lef/q3;";
+    private static final String PODS = "Lyd/l0;";
+    private static final String POD_ACTION = "Lyd/j0;";
+    private static final String ROUTER = "Lrip/moth/cocoonshell/utils/p8;";
+    private static final String FRIENDS = "Lhf/j8;";
+    private static final String FRIEND_GATE = "Lhf/q8;";
+    private static final String FRIEND_TABS = "Lhf/u1;";
+    private static final String FRIEND_MAPS = "Lhf/h8;";
+    private static final String FRIEND_CLICK = "Lhf/b6;";
     private static final String THEME = "Lrip/moth/cocoonshell/ui/theme/ThemeSettings;";
-    private static final String SURFACE_PREFS = "Lfe/q1;";
-    private static final String GLASS_DRAW = "Lkf/n2;";
-    private static final String GLASS_HOST = "Ldg/m3;";
-    private static final String WIDGET_HOST = "Ltf/i1;";
-    private static final String STATUS_BAR = "Ldg/h4;";
-    private static final String ICONS = "Lef/b;";
-    private static final String MENU_ITEMS = "La8/z;";
-    private static final String MENU_ITEMS_SIG = "(Landroid/content/Context;Lnf/d0;Lde/o;ZZZZ)Ljava/util/List;";
-    private static final String MENU_DISPATCH = "Llf/k;";
+    private static final String SURFACE_PREFS = "Lge/u1;";
+    private static final String GLASS_DRAW = "Lnf/k3;";
+    private static final String GLASS_HOST = "Lhg/b3;";
+    private static final String WIDGET_HOST = "Lwf/q1;";
+    private static final String STATUS_BAR = "Lhg/x3;";
+    private static final String ICONS = "Lhf/b;";
+    private static final String MENU_ITEMS = "Lqf/o0;";
+    private static final String MENU_ITEMS_SIG =
+            "(Landroid/content/Context;Lqf/r0;Lee/w;ZZZZ)Ljava/util/List;";
+    private static final String MENU_DISPATCH = "Lof/n;";
     private static final String MENU_DISPATCH_SIG =
             "(Landroid/content/Context;Ljava/lang/String;Ljb/c;Ljb/e;Ljb/c;Ljb/a;)V";
-    private static final String SHARE = "Lcf/pi;";
+    private static final String SHARE = "Lff/fi;";
     private static final String PICNIC_INFO_SIG =
-            "(Lcf/pd;Ljb/a;Ljava/lang/String;Lp1/o;Lz0/e0;I)V";
-    private static final String PICNIC_ROW_SIG = "(Ljava/lang/String;Ljb/a;Lp1/o;Lz0/e0;I)V";
+            "(Lff/vd;Ljb/a;Ljava/lang/String;Lo1/p;Ly0/e0;I)V";
+    private static final String PICNIC_ROW_SIG = "(Ljava/lang/String;Ljb/a;Lo1/p;Ly0/e0;I)V";
     private static final String FROGLOG_PICNIC = "Lrip/moth/cocoonshell/froglog/FroglogPicnic;";
     private static final String ANDROID_LOCALS = "Landroidx/compose/ui/platform/AndroidCompositionLocals_androidKt;";
-    private static final int FROGLOG_POD_ICON = 0x7F060218;
+    private static final int FROGLOG_POD_ICON = 0x7F060273;
     private static final String FROGLOG_MENU = "Lrip/moth/cocoonshell/froglog/FroglogMenu;";
-    private static final int FROGLOG_ICON = 0x7F06021A;
+    private static final int FROGLOG_ICON = 0x7F060275;
     private static final String INSERT =
             "(Lrip/moth/cocoonshell/data/model/GameSession;Lxa/c;)Ljava/lang/Object;";
     private static final String OPEN_POD =
-            "(Lxd/l0;Landroid/content/Context;Ljava/lang/Boolean;Lrip/moth/cocoonshell/data/model/Game;Lza/c;)Ljava/lang/Object;";
+            "(Lyd/k0;Landroid/content/Context;Ljava/lang/Boolean;Lrip/moth/cocoonshell/data/model/Game;Lza/c;)Ljava/lang/Object;";
 
     public static void main(String[] args) throws Exception {
-        if (args.length == 3 && "menu".equals(args[0])) {
-            patchMenuDex(args[1], args[2]);
-            return;
-        }
         if (args.length != 2) {
-            throw new IllegalArgumentException("usage: PatchCatalog [menu] <in.dex> <out.dex>");
+            throw new IllegalArgumentException("usage: PatchCatalog <in.dex> <out.dex>");
         }
         // Keep dex version 037. forApi(35) rewrites the header as dex 041, which baksmali rejects.
         DexBackedDexFile dex = DexFileFactory.loadDexFile(new File(args[0]), Opcodes.forDexVersion(37));
@@ -139,6 +138,7 @@ public final class PatchCatalog {
         ClassDef podAction = null;
         ClassDef router = null;
         ClassDef friends = null;
+        ClassDef friendGate = null;
         ClassDef friendTabs = null;
         ClassDef friendMaps = null;
         ClassDef friendClick = null;
@@ -150,6 +150,7 @@ public final class PatchCatalog {
         ClassDef statusBar = null;
         ClassDef icons = null;
         ClassDef menuDispatch = null;
+        ClassDef menuItems = null;
         ClassDef share = null;
         for (ClassDef cls : dex.getClasses()) {
             if (CATALOG.equals(cls.getType())) {
@@ -164,6 +165,8 @@ public final class PatchCatalog {
                 router = cls;
             } else if (FRIENDS.equals(cls.getType())) {
                 friends = cls;
+            } else if (FRIEND_GATE.equals(cls.getType())) {
+                friendGate = cls;
             } else if (FRIEND_TABS.equals(cls.getType())) {
                 friendTabs = cls;
             } else if (FRIEND_MAPS.equals(cls.getType())) {
@@ -186,24 +189,26 @@ public final class PatchCatalog {
                 icons = cls;
             } else if (MENU_DISPATCH.equals(cls.getType())) {
                 menuDispatch = cls;
+            } else if (MENU_ITEMS.equals(cls.getType())) {
+                menuItems = cls;
             } else if (SHARE.equals(cls.getType())) {
                 share = cls;
             }
         }
         if (catalog == null || session == null || pods == null || podAction == null || router == null
-                || friends == null || friendTabs == null || friendMaps == null || friendClick == null
+                || friends == null || friendGate == null || friendTabs == null || friendMaps == null || friendClick == null
                 || theme == null || surfacePrefs == null
-                || glassDraw == null || glassHost == null || widgetHost == null || statusBar == null || icons == null || menuDispatch == null || share == null) {
+                || glassDraw == null || glassHost == null || widgetHost == null || statusBar == null || icons == null || menuDispatch == null || menuItems == null || share == null) {
             throw new IllegalStateException("catalog=" + (catalog != null) + " session=" + (session != null)
                     + " pods=" + (pods != null) + " podAction=" + (podAction != null)
                     + " router=" + (router != null)
-                    + " friends=" + (friends != null) + " tabs=" + (friendTabs != null)
+                    + " friends=" + (friends != null) + " gate=" + (friendGate != null) + " tabs=" + (friendTabs != null)
                     + " maps=" + (friendMaps != null) + " click=" + (friendClick != null)
                     + " theme=" + (theme != null) + " surfacePrefs=" + (surfacePrefs != null)
                     + " glassDraw=" + (glassDraw != null) + " glassHost=" + (glassHost != null)
                     + " widgetHost=" + (widgetHost != null) + " statusBar=" + (statusBar != null)
                     + " icons=" + (icons != null) + " menuDispatch=" + (menuDispatch != null)
-                    + " share=" + (share != null));
+                    + " menuItems=" + (menuItems != null) + " share=" + (share != null));
         }
         final ClassDef catalogReplacement = patchCatalog(catalog);
         final ClassDef sessionReplacement = patchSession(session);
@@ -213,13 +218,15 @@ public final class PatchCatalog {
         final ClassDef friendTabsReplacement = patchFriendTabEnum(friendTabs);
         final ClassDef friendMapsReplacement = patchFriendTabMaps(friendMaps);
         final ClassDef friendsReplacement = patchFriends(friends);
+        final ClassDef friendGateReplacement = patchFriendGateClass(friendGate);
         final ClassDef clickReplacement = patchFriendClick(friendClick);
         final ClassDef themeReplacement = patchTheme(theme);
         final ClassDef surfacePrefsReplacement = patchSurfacePrefs(surfacePrefs);
-        final ClassDef glassDrawReplacement = prefixMenuAction(prefixGlassMethods(glassDraw, "b"), "Z0");
-        final ClassDef menuDispatchReplacement = prefixMenuAction(menuDispatch, "g");
+        final ClassDef glassDrawReplacement = prefixGlassMethods(glassDraw, "b");
+        final ClassDef menuDispatchReplacement = prefixMenuAction(menuDispatch, "h");
+        final ClassDef menuItemsReplacement = patchMenuItems(menuItems);
         final ClassDef picnicReplacement = patchPicnic(share);
-        final ClassDef glassHostReplacement = prefixGlassMethods(glassHost, "h", "A0");
+        final ClassDef glassHostReplacement = prefixGlassMethods(glassHost, "W");
         final ClassDef widgetHostReplacement = patchWidgetHost(widgetHost);
         final ClassDef statusBarReplacement = patchStatusBar(statusBar);
         final ClassDef iconsReplacement = patchIcons(icons);
@@ -245,6 +252,8 @@ public final class PatchCatalog {
                         classes.add(friendMapsReplacement);
                     } else if (FRIENDS.equals(cls.getType())) {
                         classes.add(friendsReplacement);
+                    } else if (FRIEND_GATE.equals(cls.getType())) {
+                        classes.add(friendGateReplacement);
                     } else if (FRIEND_CLICK.equals(cls.getType())) {
                         classes.add(clickReplacement);
                     } else if (THEME.equals(cls.getType())) {
@@ -263,6 +272,8 @@ public final class PatchCatalog {
                         classes.add(iconsReplacement);
                     } else if (MENU_DISPATCH.equals(cls.getType())) {
                         classes.add(menuDispatchReplacement);
+                    } else if (MENU_ITEMS.equals(cls.getType())) {
+                        classes.add(menuItemsReplacement);
                     } else if (SHARE.equals(cls.getType())) {
                         classes.add(picnicReplacement);
                     } else {
@@ -289,7 +300,7 @@ public final class PatchCatalog {
                 direct.add(patchClinit(method));
                 patchedClinit = true;
             } else if ("h".equals(method.getName())
-                    && "(Lz0/a1;Lz0/a1;Lz0/u0;Ljb/g;I)V".equals(signature(method))) {
+                    && "(Ly0/b1;Ly0/b1;Ly0/v0;Ljb/g;I)V".equals(signature(method))) {
                 direct.add(patchOpen(method));
                 patchedOpen = true;
             } else {
@@ -350,14 +361,8 @@ public final class PatchCatalog {
 
     private static ClassDef patchRouterClass(ClassDef router) {
         List<Method> direct = new ArrayList<Method>();
-        boolean byAction = false;
         for (Method method : router.getDirectMethods()) {
-            if ("b".equals(method.getName()) && OPEN_BY_ACTION.equals(signature(method))) {
-                direct.add(patchRouterByAction(method));
-                byAction = true;
-            } else {
-                direct.add(method);
-            }
+            direct.add(method);
         }
         List<Method> virtual = new ArrayList<Method>();
         boolean patched = false;
@@ -365,15 +370,12 @@ public final class PatchCatalog {
             if ("a".equals(method.getName()) && OPEN_POD.equals(signature(method))) {
                 virtual.add(patchRouter(method));
                 patched = true;
-            } else if ("b".equals(method.getName()) && OPEN_BY_ACTION.equals(signature(method))) {
-                virtual.add(patchRouterByAction(method));
-                byAction = true;
             } else {
                 virtual.add(method);
             }
         }
-        if (!patched || !byAction) {
-            throw new IllegalStateException("pod router a=" + patched + " b=" + byAction);
+        if (!patched) {
+            throw new IllegalStateException("pod router a=" + patched);
         }
         return copyClass(router, direct, virtual);
     }
@@ -574,7 +576,7 @@ public final class PatchCatalog {
                 continue;
             }
             Reference ref = ((ReferenceInstruction) instruction).getReference();
-            if (!(ref instanceof TypeReference) || !"[Lxd/k0;".equals(((TypeReference) ref).getType())) {
+            if (!(ref instanceof TypeReference) || !"[Lyd/j0;".equals(((TypeReference) ref).getType())) {
                 continue;
             }
             org.jf.dexlib2.iface.instruction.RegisterRangeInstruction range =
@@ -609,53 +611,13 @@ public final class PatchCatalog {
                 Opcode.FILLED_NEW_ARRAY_RANGE,
                 start,
                 7,
-                new ImmutableTypeReference("[Lxd/k0;")));
+                new ImmutableTypeReference("[Lyd/j0;")));
         rewritten.addAll(original.subList(filled + 1, original.size()));
         int regs = Math.max(impl.getRegisterCount(), 9);
         System.out.println("pod action values " + (count + 1));
         return replace(method, new ImmutableMethodImplementation(
                 regs,
                 rewritten,
-                Collections.emptyList(),
-                Collections.emptyList()));
-    }
-
-    private static Method patchRouterByAction(Method method) {
-        MethodImplementation impl = method.getImplementation();
-        int first = impl.getRegisterCount() - parameterWords(method);
-        int action = (method.getAccessFlags() & 0x8) != 0 ? first : first + 1;
-        int context = action + 1;
-        if (action != 8) {
-            throw new IllegalStateException("router action register " + action);
-        }
-        List<Instruction> instructions = new ArrayList<Instruction>();
-        instructions.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_STATIC,
-                2, action, context, 0, 0, 0,
-                new ImmutableMethodReference(
-                        "Lrip/moth/cocoonshell/froglog/FroglogPods;",
-                        "openIfAction",
-                        Arrays.asList("Lxd/k0;", "Landroid/content/Context;"),
-                        "Z")));
-        instructions.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0));
-        instructions.add(new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 5));
-        instructions.add(new ImmutableInstruction21c(Opcode.SGET_OBJECT, 0,
-                new ImmutableFieldReference("Lta/z;", "a", "Lta/z;")));
-        instructions.add(new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0));
-        int prefix = 0;
-        for (int i = 0; i < instructions.size(); i++) {
-            prefix += instructions.get(i).getCodeUnits();
-        }
-        if (prefix != 9) {
-            throw new IllegalStateException("action router prefix " + prefix);
-        }
-        for (Instruction instruction : impl.getInstructions()) {
-            instructions.add(instruction);
-        }
-        System.out.println("action router instructions " + instructions.size() + " actionReg=" + action);
-        return replace(method, new ImmutableMethodImplementation(
-                impl.getRegisterCount(),
-                instructions,
                 Collections.emptyList(),
                 Collections.emptyList()));
     }
@@ -673,13 +635,13 @@ public final class PatchCatalog {
                 2, entry, entry + 1, 0, 0, 0,
                 new ImmutableMethodReference(
                         "Lrip/moth/cocoonshell/froglog/FroglogPods;",
-                        "openIfFroglog",
-                        Arrays.asList("Lxd/l0;", "Landroid/content/Context;"),
+                        "openIfAction",
+                        Arrays.asList("Lyd/j0;", "Landroid/content/Context;"),
                         "Z")));
         instructions.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0));
         instructions.add(new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 5));
         instructions.add(new ImmutableInstruction21c(Opcode.SGET_OBJECT, 0,
-                new ImmutableFieldReference("Lta/z;", "a", "Lta/z;")));
+                new ImmutableFieldReference("Lsa/z;", "a", "Lsa/z;")));
         instructions.add(new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0));
         int prefix = 0;
         for (int i = 0; i < instructions.size(); i++) {
@@ -699,22 +661,66 @@ public final class PatchCatalog {
                 Collections.emptyList()));
     }
 
+    /** q8.a() is the "friends panel available" gate: Steam or Android. Froglog sign-in counts too. */
+    private static ClassDef patchFriendGateClass(ClassDef gate) {
+        List<Method> direct = new ArrayList<Method>();
+        boolean patched = false;
+        for (Method method : gate.getDirectMethods()) {
+            if ("a".equals(method.getName()) && "()Z".equals(signature(method))) {
+                direct.add(patchFriendGateMethod(method));
+                patched = true;
+            } else {
+                direct.add(method);
+            }
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        for (Method method : gate.getVirtualMethods()) {
+            if ("a".equals(method.getName()) && "()Z".equals(signature(method))) {
+                virtual.add(patchFriendGateMethod(method));
+                patched = true;
+            } else {
+                virtual.add(method);
+            }
+        }
+        if (!patched) {
+            throw new IllegalStateException("friend panel gate not found");
+        }
+        return copyClass(gate, direct, virtual);
+    }
+
+    private static Method patchFriendGateMethod(Method method) {
+        MethodImplementationBuilder code = new MethodImplementationBuilder(3);
+        code.addInstruction(new BuilderInstruction22c(Opcode.IGET_BOOLEAN, 0, 2,
+                field(FRIEND_GATE, "a", "Z")));
+        code.addInstruction(new BuilderInstruction22c(Opcode.IGET_BOOLEAN, 1, 2,
+                field(FRIEND_GATE, "b", "Z")));
+        code.addInstruction(new BuilderInstruction23x(Opcode.OR_INT, 0, 0, 1));
+        code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_STATIC, 1, 0, 0, 0, 0, 0,
+                method("Lrip/moth/cocoonshell/froglog/FroglogSocial;", "showFriendsPanel",
+                        Collections.singletonList("Z"), "Z")));
+        code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 0));
+        code.addInstruction(new BuilderInstruction11x(Opcode.RETURN, 0));
+        System.out.println("friend panel gate includes Froglog");
+        return replace(method, code.getMethodImplementation());
+    }
+
     private static ClassDef patchFriends(ClassDef friends) {
         List<Method> direct = new ArrayList<Method>();
         boolean patchedTabs = false;
         boolean patchedPanel = false;
         boolean patchedIcon = false;
         for (Method method : friends.getDirectMethods()) {
-            if ("c0".equals(method.getName())
-                    && "(Lp1/o;FFLz0/e0;I)V".equals(signature(method))) {
-                direct.add(patchFriendCount(patchFriendGate(patchFriendTabs(method)), "size", 3));
+            if ("r".equals(method.getName())
+                    && "(Lo1/p;FFLhf/q8;Ly0/e0;I)V".equals(signature(method))) {
+                direct.add(patchFriendCount(patchFriendTabs(method), "size", 4));
                 patchedTabs = true;
-            } else if ("b0".equals(method.getName())
-                    && signature(method).startsWith("(Ljava/util/List;Leg/l0;Lfe/u;Ljava/util/List;Lef/w0;")) {
+            } else if ("q".equals(method.getName())
+                    && signature(method).startsWith(
+                            "(Ljava/util/List;Lig/l0;Lge/z;Ljava/util/List;Lhf/u1;")) {
                 direct.add(patchFriendPanel(method));
                 patchedPanel = true;
-            } else if ("s".equals(method.getName())
-                    && "(Ljava/util/List;Lef/w0;Leg/l0;Ljb/c;Lz0/e0;I)V".equals(signature(method))) {
+            } else if ("i".equals(method.getName())
+                    && "(Ljava/util/List;Lhf/u1;Lig/l0;Ljb/c;Ly0/e0;I)V".equals(signature(method))) {
                 direct.add(patchFriendTabIcon(method));
                 patchedIcon = true;
             } else {
@@ -738,7 +744,7 @@ public final class PatchCatalog {
     }
 
     /**
-     * The status-bar friends pill shows {@code ef.d0.k0(steam).size()}. Right after that count
+     * The status-bar friends pill shows {@code hf.j8.w(steam).size()}. Right after that count
      * is read, FroglogSocial adds live Froglog follows. It reads a StateFlow through Cocoon's
      * collectAsState, so the pill recomposes when Froglog presence changes.
      */
@@ -746,8 +752,9 @@ public final class PatchCatalog {
         List<Method> direct = new ArrayList<Method>();
         boolean patched = false;
         for (Method method : bar.getDirectMethods()) {
-            if ("k".equals(method.getName()) && "(ILp1/o;Lz0/e0;Z)V".equals(signature(method))) {
-                direct.add(patchFriendCount(method, "intValue", 2));
+            if ("k".equals(method.getName())
+                    && "(ZLhf/q8;Lo1/p;Ly0/e0;I)V".equals(signature(method))) {
+                direct.add(patchFriendCount(method, "intValue", 3));
                 patched = true;
             } else {
                 direct.add(method);
@@ -780,14 +787,14 @@ public final class PatchCatalog {
             if (instruction.getOpcode() == Opcode.INVOKE_STATIC && instruction instanceof ReferenceInstruction) {
                 Reference ref = ((ReferenceInstruction) instruction).getReference();
                 if (ref instanceof MethodReference && FRIENDS.equals(((MethodReference) ref).getDefiningClass())
-                        && "k0".equals(((MethodReference) ref).getName())) {
+                        && "w".equals(((MethodReference) ref).getName())) {
                     k0 = i;
                     break;
                 }
             }
         }
         if (k0 < 0) {
-            throw new IllegalStateException("status bar k0 call not found");
+            throw new IllegalStateException("status bar friend list call not found");
         }
         int insert = -1;
         for (int i = k0; i < instructions.size() - 1; i++) {
@@ -974,15 +981,24 @@ public final class PatchCatalog {
         for (Field field : icons.getInstanceFields()) {
             instance.add(field);
         }
+        int ordinal = -1;
+        for (Method method : icons.getDirectMethods()) {
+            if ("a".equals(method.getName()) && ("()[" + ICONS).equals(signature(method))) {
+                ordinal = iconOrdinal(method);
+            }
+        }
+        if (ordinal < 0) {
+            throw new IllegalStateException("icon values not found");
+        }
         List<Method> direct = new ArrayList<Method>();
         boolean clinit = false;
         boolean values = false;
         for (Method method : icons.getDirectMethods()) {
             if ("<clinit>".equals(method.getName())) {
-                direct.add(patchIconClinit(method));
+                direct.add(patchIconClinit(method, ordinal));
                 clinit = true;
-            } else if ("a".equals(method.getName()) && "()[Lef/b;".equals(signature(method))) {
-                direct.add(patchIconValues(method));
+            } else if ("a".equals(method.getName()) && ("()[" + ICONS).equals(signature(method))) {
+                direct.add(patchIconValues(method, ordinal));
                 values = true;
             } else {
                 direct.add(method);
@@ -1000,7 +1016,17 @@ public final class PatchCatalog {
                 statics, instance, direct, virtual);
     }
 
-    private static Method patchIconClinit(Method method) {
+    /** The values() method starts with the enum count, which is also the next ordinal. */
+    private static int iconOrdinal(Method method) {
+        Instruction first = method.getImplementation().getInstructions().iterator().next();
+        if (first.getOpcode() != Opcode.CONST_16
+                || !(first instanceof org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction)) {
+            throw new IllegalStateException("icon values shape changed");
+        }
+        return ((org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction) first).getNarrowLiteral();
+    }
+
+    private static Method patchIconClinit(Method method, int ordinal) {
         MethodImplementation impl = method.getImplementation();
         List<Instruction> original = new ArrayList<Instruction>();
         for (Instruction instruction : impl.getInstructions()) {
@@ -1021,33 +1047,35 @@ public final class PatchCatalog {
         if (values < 0) {
             throw new IllegalStateException("icon values call not found");
         }
+        // 3.11's icon constructor is (name, ordinal, drawable, strokeWidth, ..., mask).
         List<Instruction> extra = new ArrayList<Instruction>();
         extra.add(new ImmutableInstruction21c(Opcode.NEW_INSTANCE, 0, new ImmutableTypeReference(ICONS)));
         extra.add(new ImmutableInstruction21c(Opcode.CONST_STRING, 1, new ImmutableStringReference("FROGLOG")));
-        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, 2, 0xd3));
+        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, 2, ordinal));
         extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction31i(Opcode.CONST, 3, FROGLOG_ICON));
         extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction11n(Opcode.CONST_4, 4, 0));
         extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction11n(Opcode.CONST_4, 5, 0));
-        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, 6, 0x1c));
+        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction11n(Opcode.CONST_4, 6, 0));
+        extra.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, 7, 0x3e));
         extra.add(new ImmutableInstruction3rc(
-                Opcode.INVOKE_DIRECT_RANGE, 0, 7,
+                Opcode.INVOKE_DIRECT_RANGE, 0, 8,
                 new ImmutableMethodReference(ICONS, "<init>",
-                        Arrays.asList("Ljava/lang/String;", "I", "I", "Lw1/v;", "Lw1/v;", "I"), "V")));
+                        Arrays.asList("Ljava/lang/String;", "I", "I", "F", "Lv1/v;", "Lv1/v;", "I"), "V")));
         extra.add(new ImmutableInstruction21c(Opcode.SPUT_OBJECT, 0,
                 new ImmutableFieldReference(ICONS, "FROGLOG", ICONS)));
         List<Instruction> rewritten = new ArrayList<Instruction>();
         rewritten.addAll(original.subList(0, values));
         rewritten.addAll(extra);
         rewritten.addAll(original.subList(values, original.size()));
-        System.out.println("icon enum FROGLOG ordinal 211");
+        System.out.println("icon enum FROGLOG ordinal " + ordinal);
         return replace(method, new ImmutableMethodImplementation(
-                Math.max(impl.getRegisterCount(), 7),
+                Math.max(impl.getRegisterCount(), 8),
                 rewritten,
                 Collections.emptyList(),
                 Collections.emptyList()));
     }
 
-    private static Method patchIconValues(Method method) {
+    private static Method patchIconValues(Method method, int ordinal) {
         MethodImplementation impl = method.getImplementation();
         List<Instruction> original = new ArrayList<Instruction>();
         for (Instruction instruction : impl.getInstructions()) {
@@ -1055,18 +1083,18 @@ public final class PatchCatalog {
         }
         Instruction size = original.get(0);
         if (size.getOpcode() != Opcode.CONST_16
-                || ((org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction) size).getNarrowLiteral() != 0xd3
+                || ((org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction) size).getNarrowLiteral() != ordinal
                 || original.get(original.size() - 1).getOpcode() != Opcode.RETURN_OBJECT) {
             throw new IllegalStateException("icon values shape changed");
         }
         int array = ((OneRegisterInstruction) size).getRegisterA();
         List<Instruction> rewritten = new ArrayList<Instruction>();
-        rewritten.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, array, 0xd4));
+        rewritten.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, array, ordinal + 1));
         rewritten.addAll(original.subList(1, original.size() - 1));
         rewritten.add(new ImmutableInstruction21c(Opcode.SGET_OBJECT, 1,
                 new ImmutableFieldReference(ICONS, "FROGLOG", ICONS)));
-        rewritten.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, 2, 0xd3));
-        rewritten.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction23x(Opcode.APUT_OBJECT, 1, array, 2));
+        rewritten.add(new org.jf.dexlib2.immutable.instruction.ImmutableInstruction21s(Opcode.CONST_16, 2, ordinal));
+        rewritten.add(new ImmutableInstruction23x(Opcode.APUT_OBJECT, 1, array, 2));
         rewritten.add(original.get(original.size() - 1));
         return replace(method, new ImmutableMethodImplementation(
                 Math.max(impl.getRegisterCount(), 3),
@@ -1167,7 +1195,7 @@ public final class PatchCatalog {
         rewritten.add(new ImmutableInstruction35c(
                 Opcode.FILLED_NEW_ARRAY,
                 3, 0, 1, 2, 0, 0,
-                new ImmutableTypeReference("[Lef/w0;")));
+                new ImmutableTypeReference("[" + FRIEND_TABS)));
         rewritten.addAll(original.subList(filled + 1, original.size()));
         System.out.println("friend tab values 3");
         return replace(method, new ImmutableMethodImplementation(
@@ -1249,9 +1277,16 @@ public final class PatchCatalog {
         for (Instruction instruction : impl.getInstructions()) {
             original.add(instruction);
         }
+        int first = impl.getRegisterCount() - parameterWords(method);
+        int tab = first + 4;
+        if (first > 255 || tab > 255) {
+            throw new IllegalStateException("friend panel registers first=v" + first + " tab=v" + tab);
+        }
+        // q(tabs, theme, colors, steamFriends, selectedTab, ...). Replace the Steam rows with
+        // Froglog follows when the selected tab is FROGLOG, before any composition reads them.
         List<Instruction> prefix = new ArrayList<Instruction>();
-        prefix.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 0, 72));
-        prefix.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 1, 68));
+        prefix.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 0, tab));
+        prefix.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 1, first));
         prefix.add(new ImmutableInstruction35c(
                 Opcode.INVOKE_STATIC,
                 2, 0, 1, 0, 0, 0,
@@ -1260,7 +1295,7 @@ public final class PatchCatalog {
                         "listForTab",
                         Arrays.asList("Ljava/lang/Object;", "Ljava/util/List;"),
                         "Ljava/util/List;")));
-        prefix.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 68));
+        prefix.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, first));
         int added = 0;
         for (Instruction instruction : prefix) {
             added += instruction.getCodeUnits();
@@ -1299,7 +1334,7 @@ public final class PatchCatalog {
                 continue;
             }
             MethodReference methodRef = (MethodReference) ref;
-            if (!"Lr3/a;".equals(methodRef.getDefiningClass()) || !"k".equals(methodRef.getName())) {
+            if (!"Lqe/j;".equals(methodRef.getDefiningClass()) || !"m".equals(methodRef.getName())) {
                 continue;
             }
             if (instructions.get(i + 1).getOpcode() != Opcode.MOVE_RESULT_OBJECT) {
@@ -1358,94 +1393,10 @@ public final class PatchCatalog {
      * conversations exist. The Steam flag is copied to a high register right before
      * that check, so FroglogSocial can also open it for a signed-in Froglog account.
      */
-    private static Method patchFriendGate(Method method) {
-        MethodImplementation impl = method.getImplementation();
-        List<Instruction> instructions = new ArrayList<Instruction>();
-        for (Instruction instruction : impl.getInstructions()) {
-            instructions.add(instruction);
-        }
-        int steamCheck = -1;
-        for (int i = 0; i < instructions.size() - 1; i++) {
-            Instruction instruction = instructions.get(i);
-            if (instruction.getOpcode() == Opcode.INVOKE_STATIC && instruction instanceof ReferenceInstruction) {
-                Reference ref = ((ReferenceInstruction) instruction).getReference();
-                if (ref instanceof MethodReference
-                        && "Lrip/moth/cocoonshell/data/api/z;".equals(((MethodReference) ref).getDefiningClass())
-                        && "m".equals(((MethodReference) ref).getName())
-                        && instructions.get(i + 1).getOpcode() == Opcode.MOVE_RESULT) {
-                    steamCheck = i;
-                    break;
-                }
-            }
-        }
-        if (steamCheck < 0) {
-            throw new IllegalStateException("friend panel Steam check not found");
-        }
-        int steam = ((OneRegisterInstruction) instructions.get(steamCheck + 1)).getRegisterA();
-        int tabs = -1;
-        for (int i = steamCheck; i < instructions.size(); i++) {
-            Instruction instruction = instructions.get(i);
-            if (instruction.getOpcode() == Opcode.INVOKE_STATIC && instruction instanceof ReferenceInstruction) {
-                Reference ref = ((ReferenceInstruction) instruction).getReference();
-                if (ref instanceof MethodReference && "withFriendsTabs".equals(((MethodReference) ref).getName())) {
-                    tabs = i;
-                    break;
-                }
-            }
-        }
-        int insert = -1;
-        for (int i = Math.max(tabs, steamCheck); i < instructions.size(); i++) {
-            Instruction instruction = instructions.get(i);
-            if (instruction.getOpcode() == Opcode.MOVE_FROM16
-                    && ((TwoRegisterInstruction) instruction).getRegisterB() == steam
-                    && ((TwoRegisterInstruction) instruction).getRegisterA() > 15) {
-                insert = i;
-                break;
-            }
-        }
-        if (tabs < 0 || insert < 0 || steam > 15) {
-            throw new IllegalStateException("friend panel gate tabs=" + tabs + " insert=" + insert + " steam=v" + steam);
-        }
-        List<Instruction> extra = new ArrayList<Instruction>();
-        extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_STATIC,
-                1, steam, 0, 0, 0, 0,
-                new ImmutableMethodReference(
-                        "Lrip/moth/cocoonshell/froglog/FroglogSocial;",
-                        "showFriendsPanel",
-                        Collections.singletonList("Z"),
-                        "Z")));
-        extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, steam));
-        int added = 0;
-        for (Instruction instruction : extra) {
-            added += instruction.getCodeUnits();
-        }
-        if (added != 4) {
-            throw new IllegalStateException("friend panel gate insert " + added);
-        }
-        int[] addresses = addresses(instructions);
-        int insertAt = addresses[insert];
-        int[] switchAt = switchAddresses(instructions, addresses);
-        List<Instruction> rewritten = new ArrayList<Instruction>();
-        for (int i = 0; i < instructions.size(); i++) {
-            if (i == insert) {
-                rewritten.addAll(extra);
-            }
-            rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], insertAt, added));
-        }
-        System.out.println("friend panel gate v" + steam + " -> v"
-                + ((TwoRegisterInstruction) instructions.get(insert)).getRegisterA());
-        return replace(method, new ImmutableMethodImplementation(
-                impl.getRegisterCount(),
-                rewritten,
-                shiftTries(impl.getTryBlocks(), insertAt, added),
-                Collections.emptyList()));
-    }
-
     private static Method patchFriendOpen(Method method) {
         MethodImplementation impl = method.getImplementation();
         int friend = impl.getRegisterCount() - parameterWords(method) + 1;
-        if (friend != 25) {
+        if (friend < 0 || friend > 255) {
             throw new IllegalStateException("friend register " + friend);
         }
         List<Instruction> instructions = new ArrayList<Instruction>();
@@ -1459,7 +1410,7 @@ public final class PatchCatalog {
                 continue;
             }
             Reference ref = ((ReferenceInstruction) instruction).getReference();
-            if (ref instanceof TypeReference && "Lef/d6;".equals(((TypeReference) ref).getType())) {
+            if (ref instanceof TypeReference && "Lhf/da;".equals(((TypeReference) ref).getType())) {
                 insert = i > 0 && instructions.get(i - 1).getOpcode() == Opcode.MOVE_OBJECT_FROM16 ? i - 1 : i;
                 break;
             }
@@ -1467,7 +1418,7 @@ public final class PatchCatalog {
         if (insert < 0) {
             throw new IllegalStateException("friend click case not found");
         }
-        // invoke-static only accepts v0-v15, and the friend arrives in v25.
+        // invoke-static only accepts v0-v15; copy the friend row down first.
         List<Instruction> prefix = new ArrayList<Instruction>();
         prefix.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 0, friend));
         prefix.add(new ImmutableInstruction35c(
@@ -1481,7 +1432,7 @@ public final class PatchCatalog {
         prefix.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0));
         prefix.add(new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 5));
         prefix.add(new ImmutableInstruction21c(Opcode.SGET_OBJECT, 0,
-                new ImmutableFieldReference("Lta/z;", "a", "Lta/z;")));
+                new ImmutableFieldReference("Lsa/z;", "a", "Lsa/z;")));
         prefix.add(new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0));
         // packed-switch payloads must stay 4-byte aligned. The friend case sits
         // between the switch and its payload, so the insert has to be an even
@@ -1649,13 +1600,13 @@ public final class PatchCatalog {
         code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_INTERFACE, 2, 0, 10, 0, 0, 0,
                 method("Ljava/util/List;", "get", Arrays.asList("I"), "Ljava/lang/Object;")));
         code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT_OBJECT, 1));
-        code.addInstruction(new BuilderInstruction21c(Opcode.CHECK_CAST, 1, new ImmutableTypeReference("Lmf/o1;")));
+        code.addInstruction(new BuilderInstruction21c(Opcode.CHECK_CAST, 1, new ImmutableTypeReference("Lpf/r1;")));
         code.addInstruction(new BuilderInstruction21c(Opcode.SGET_OBJECT, 2,
-                field("Lrip/moth/cocoonshell/utils/e2;", "a", "Lrip/moth/cocoonshell/utils/e2;")));
+                field("Lrip/moth/cocoonshell/utils/a3;", "a", "Lrip/moth/cocoonshell/utils/a3;")));
         code.addInstruction(new BuilderInstruction22c(Opcode.IGET_OBJECT, 2, 1,
-                field("Lmf/o1;", "a", "Lrip/moth/cocoonshell/data/model/Widget$WidgetType;")));
+                field("Lpf/r1;", "a", "Lrip/moth/cocoonshell/data/model/Widget$WidgetType;")));
         code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_VIRTUAL, 1, 6, 0, 0, 0, 0,
-                method("Lz0/a1;", "k", Collections.<String>emptyList(), "I")));
+                method("Ly0/b1;", "k", Collections.<String>emptyList(), "I")));
         code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 3));
         code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_INTERFACE, 1, 0, 0, 0, 0, 0,
                 method("Ljava/util/List;", "size", Collections.<String>emptyList(), "I")));
@@ -1694,18 +1645,18 @@ public final class PatchCatalog {
                 method("Ljava/lang/StringBuilder;", "toString", Collections.<String>emptyList(), "Ljava/lang/String;")));
         code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0));
         code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_STATIC, 1, 0, 0, 0, 0, 0,
-                method("Lrip/moth/cocoonshell/utils/e2;", "b", Arrays.asList("Ljava/lang/String;"), "V")));
+                method("Lrip/moth/cocoonshell/utils/a3;", "b", Arrays.asList("Ljava/lang/String;"), "V")));
         code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_VIRTUAL, 2, 6, 10, 0, 0, 0,
-                method("Lz0/a1;", "m", Arrays.asList("I"), "V")));
+                method("Ly0/b1;", "m", Arrays.asList("I"), "V")));
         code.addInstruction(new BuilderInstruction22c(Opcode.IGET_OBJECT, 6, 1,
-                field("Lmf/o1;", "a", "Lrip/moth/cocoonshell/data/model/Widget$WidgetType;")));
+                field("Lpf/r1;", "a", "Lrip/moth/cocoonshell/data/model/Widget$WidgetType;")));
         code.addInstruction(new BuilderInstruction21c(Opcode.SGET_OBJECT, 10,
                 field("Lrip/moth/cocoonshell/data/model/Widget$WidgetType;", "ANDROID_WIDGET",
                         "Lrip/moth/cocoonshell/data/model/Widget$WidgetType;")));
         code.addInstruction(new BuilderInstruction22t(Opcode.IF_NE, 6, 10, notAndroid));
 
         // Froglog tile only. A false result falls through to the original Android-widget picker.
-        code.addInstruction(new BuilderInstruction22c(Opcode.IGET, 0, 1, field("Lmf/o1;", "b", "I")));
+        code.addInstruction(new BuilderInstruction22c(Opcode.IGET, 0, 1, field("Lpf/r1;", "b", "I")));
         code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_STATIC, 2, 0, 9, 0, 0, 0,
                 method("Lrip/moth/cocoonshell/froglog/CatalogHook;", "maybeConfirm",
                         Arrays.asList("I", "Ljb/g;"), "Z")));
@@ -1714,11 +1665,11 @@ public final class PatchCatalog {
 
         code.addInstruction(new BuilderInstruction11n(Opcode.CONST_4, 6, 0));
         code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_VIRTUAL, 2, 7, 6, 0, 0, 0,
-                method("Lz0/a1;", "m", Arrays.asList("I"), "V")));
+                method("Ly0/b1;", "m", Arrays.asList("I"), "V")));
         code.addInstruction(new BuilderInstruction21c(Opcode.SGET_OBJECT, 6,
-                field("Lmf/q;", "PROVIDER", "Lmf/q;")));
+                field("Lpf/p;", "PROVIDER", "Lpf/p;")));
         code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_INTERFACE, 2, 8, 6, 0, 0, 0,
-                method("Lz0/u0;", "setValue", Arrays.asList("Ljava/lang/Object;"), "V")));
+                method("Ly0/v0;", "setValue", Arrays.asList("Ljava/lang/Object;"), "V")));
         code.addInstruction(new BuilderInstruction10x(Opcode.RETURN_VOID));
 
         code.addLabel("placed");
@@ -1726,7 +1677,7 @@ public final class PatchCatalog {
 
         code.addLabel("not_android");
         code.addInstruction(new BuilderInstruction11n(Opcode.CONST_4, 7, 0));
-        code.addInstruction(new BuilderInstruction22c(Opcode.IGET_OBJECT, 8, 1, field("Lmf/o1;", "e", "Ljava/util/List;")));
+        code.addInstruction(new BuilderInstruction22c(Opcode.IGET_OBJECT, 8, 1, field("Lpf/r1;", "e", "Ljava/util/List;")));
         code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_STATIC, 4, 9, 6, 7, 8, 0,
                 method(CATALOG, "f", Arrays.asList(
                         "Ljb/g;",
@@ -1843,13 +1794,13 @@ public final class PatchCatalog {
         extra.add(new BuilderInstruction11n(Opcode.CONST_4, 13, 0));
         extra.add(new ImmutableInstruction35c(
                 Opcode.INVOKE_STATIC, 2, 13, composer, 0, 0, 0,
-                method(SHARE, "X", Arrays.asList("I", "Lz0/e0;"), "V")));
+                method(SHARE, "X", Arrays.asList("I", "Ly0/e0;"), "V")));
         extra.add(new ImmutableInstruction21c(
                 Opcode.SGET_OBJECT, 13,
-                field(ANDROID_LOCALS, "b", "Lz0/i2;")));
+                field(ANDROID_LOCALS, "b", "Ly0/j2;")));
         extra.add(new ImmutableInstruction35c(
                 Opcode.INVOKE_VIRTUAL, 2, composer, 13, 0, 0, 0,
-                method("Lz0/e0;", "j", Collections.singletonList("Lz0/k1;"), "Ljava/lang/Object;")));
+                method("Ly0/e0;", "j", Collections.singletonList("Ly0/l1;"), "Ljava/lang/Object;")));
         extra.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 13));
         extra.add(new BuilderInstruction21c(
                 Opcode.CHECK_CAST, 13, new ImmutableTypeReference("Landroid/content/Context;")));
@@ -1865,11 +1816,11 @@ public final class PatchCatalog {
                 method(FROGLOG_PICNIC, "setUploadRow", Collections.singletonList("Z"), "V")));
         extra.add(new ImmutableInstruction21c(
                 Opcode.CONST_STRING, 13, new ImmutableStringReference("SELECT")));
-        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 15, 0));
+        extra.add(new BuilderInstruction11n(Opcode.CONST_4, 12, 0));
         extra.add(new ImmutableInstruction35c(
-                Opcode.INVOKE_STATIC, 5, 13, 14, 15, composer, flags,
+                Opcode.INVOKE_STATIC, 5, 13, 14, 12, composer, flags,
                 method(SHARE, "W", Arrays.asList(
-                        "Ljava/lang/String;", "Ljb/a;", "Lp1/o;", "Lz0/e0;", "I"), "V")));
+                        "Ljava/lang/String;", "Ljb/a;", "Lo1/p;", "Ly0/e0;", "I"), "V")));
         extra.add(new BuilderInstruction11n(Opcode.CONST_4, 13, 0));
         extra.add(new ImmutableInstruction35c(
                 Opcode.INVOKE_STATIC, 1, 13, 0, 0, 0, 0,
@@ -1899,7 +1850,7 @@ public final class PatchCatalog {
                     && instruction instanceof org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction) {
                 int value = ((org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction) instruction)
                         .getNarrowLiteral();
-                if (value == 0x7f0601d5) {
+                if (value == 0x7f060230) {
                     iconAt = i;
                 }
             }
@@ -1921,7 +1872,7 @@ public final class PatchCatalog {
             if (instruction.getOpcode() == Opcode.CONST
                     && instruction instanceof org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction
                     && ((org.jf.dexlib2.iface.instruction.NarrowLiteralInstruction) instruction).getNarrowLiteral()
-                            == 0x7f0601d5) {
+                            == 0x7f060230) {
                 iconAt = i;
                 break;
             }
@@ -2015,7 +1966,7 @@ public final class PatchCatalog {
         code.addInstruction(new BuilderInstruction10t(Opcode.GOTO, done));
         code.addLabel("froglog_icon_log");
         code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(
-                Opcode.CONST, 3, 0x7f0601d5));
+                Opcode.CONST, 3, 0x7f060230));
         code.addLabel("froglog_icon_done");
         code.addInstruction(new BuilderInstruction10x(Opcode.NOP));
         return instructionList(code);
@@ -2140,23 +2091,14 @@ public final class PatchCatalog {
      * classes.dex builds every context menu in a8.z.E. Keep that body as E$froglog and make E
      * pass its list through FroglogMenu.withFroglog, so no return path is missed.
      */
-    private static void patchMenuDex(String in, String out) throws Exception {
-        final DexBackedDexFile dex = DexFileFactory.loadDexFile(new File(in), Opcodes.forDexVersion(37));
-        ClassDef items = null;
-        for (ClassDef cls : dex.getClasses()) {
-            if (MENU_ITEMS.equals(cls.getType())) {
-                items = cls;
-            }
-        }
-        if (items == null) {
-            throw new IllegalStateException("menu items class not found");
-        }
+    /** qf.o0.c builds every context menu. Keep its body as c$froglog and pass the list through FroglogMenu. */
+    private static ClassDef patchMenuItems(ClassDef items) {
         List<Method> direct = new ArrayList<Method>();
         Method original = null;
         for (Method method : items.getDirectMethods()) {
-            if ("E".equals(method.getName()) && MENU_ITEMS_SIG.equals(signature(method))) {
+            if ("c".equals(method.getName()) && MENU_ITEMS_SIG.equals(signature(method))) {
                 original = method;
-            } else if ("E$froglog".equals(method.getName())) {
+            } else if ("c$froglog".equals(method.getName())) {
                 throw new IllegalStateException("menu items already wrapped");
             } else {
                 direct.add(method);
@@ -2167,7 +2109,7 @@ public final class PatchCatalog {
         }
         direct.add(new ImmutableMethod(
                 original.getDefiningClass(),
-                "E$froglog",
+                "c$froglog",
                 original.getParameters(),
                 original.getReturnType(),
                 original.getAccessFlags(),
@@ -2178,7 +2120,7 @@ public final class PatchCatalog {
         List<Instruction> wrapper = new ArrayList<Instruction>();
         wrapper.add(new ImmutableInstruction3rc(
                 Opcode.INVOKE_STATIC_RANGE, 1, words,
-                new ImmutableMethodReference(MENU_ITEMS, "E$froglog", original.getParameterTypes(),
+                new ImmutableMethodReference(MENU_ITEMS, "c$froglog", original.getParameterTypes(),
                         original.getReturnType())));
         wrapper.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0));
         wrapper.add(new ImmutableInstruction35c(
@@ -2195,23 +2137,8 @@ public final class PatchCatalog {
         for (Method method : items.getVirtualMethods()) {
             virtual.add(method);
         }
-        final ClassDef replacement = copyClass(items, direct, virtual);
-        DexFileFactory.writeDexFile(out, new DexFile() {
-            @Override
-            public Set<? extends ClassDef> getClasses() {
-                LinkedHashSet<ClassDef> classes = new LinkedHashSet<ClassDef>();
-                for (ClassDef cls : dex.getClasses()) {
-                    classes.add(MENU_ITEMS.equals(cls.getType()) ? replacement : cls);
-                }
-                return classes;
-            }
-
-            @Override
-            public Opcodes getOpcodes() {
-                return dex.getOpcodes();
-            }
-        });
-        System.out.println("menu items wrapped in " + out);
+        System.out.println("menu items wrapped");
+        return copyClass(items, direct, virtual);
     }
 
     private static ClassDef prefixGlassMethods(ClassDef cls, String... names) {
@@ -2369,7 +2296,7 @@ public final class PatchCatalog {
         List<Method> virtual = new ArrayList<Method>();
         boolean patched = false;
         for (Method method : prefs.getVirtualMethods()) {
-            if ("J0".equals(method.getName()) && "()Lfe/s1;".equals(signature(method))) {
+            if ("J0".equals(method.getName()) && "()Lig/w0;".equals(signature(method))) {
                 virtual.add(patchSurfaceName(method));
                 patched = true;
             } else {
@@ -2396,7 +2323,7 @@ public final class PatchCatalog {
                 if (ref instanceof org.jf.dexlib2.iface.reference.MethodReference) {
                     org.jf.dexlib2.iface.reference.MethodReference mr =
                             (org.jf.dexlib2.iface.reference.MethodReference) ref;
-                    if ("valueOf".equals(mr.getName()) && "Lfe/s1;".equals(mr.getDefiningClass())) {
+                    if ("valueOf".equals(mr.getName()) && "Lig/w0;".equals(mr.getDefiningClass())) {
                         insert = i;
                         break;
                     }

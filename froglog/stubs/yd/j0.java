@@ -1,7 +1,7 @@
-package xd;
+package yd;
 
 /** Compile-only stub of Cocoon's pod enum. */
-public enum k0 {
+public enum j0 {
     SILK,
     FLUTTER,
     LEAFLET,

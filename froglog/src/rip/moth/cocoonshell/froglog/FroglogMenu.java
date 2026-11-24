@@ -52,10 +52,10 @@ public final class FroglogMenu {
             int insert = items.size();
             for (int i = 0; i < items.size(); i++) {
                 Object item = items.get(i);
-                if (!(item instanceof nf.g)) {
+                if (!(item instanceof qf.h)) {
                     continue;
                 }
-                String action = ((nf.g) item).c;
+                String action = ((qf.h) item).c;
                 if (ACTION.equals(action)) {
                     return items;
                 }
@@ -64,7 +64,7 @@ public final class FroglogMenu {
                 }
             }
             ArrayList out = new ArrayList(items);
-            out.add(insert, new nf.g(ef.b.FROGLOG, "Log to Froglog\u2026", ACTION, false, false, null, 0x1f8));
+            out.add(insert, new qf.h(hf.b.FROGLOG, "Log to Froglog\u2026", ACTION, false, false, null, 0x1f8));
             return out;
         } catch (Throwable error) {
             Log.w(TAG, "menu row skipped", error);
@@ -76,10 +76,6 @@ public final class FroglogMenu {
     public static boolean onAction(Context context, String action) {
         if (!ACTION.equals(action)) {
             return false;
-        }
-        try {
-            de.f1.O();
-        } catch (Throwable ignored) {
         }
         if (context == null) {
             return true;
@@ -109,7 +105,11 @@ public final class FroglogMenu {
 
     /** de.k is the game tile. Folders, widgets, and shortcuts use other de.o subclasses. */
     private static Object game(Object target) throws ReflectiveOperationException {
-        if (target == null || !"de.k".equals(target.getClass().getName())) {
+        if (target == null) {
+            return null;
+        }
+        String type = target.getClass().getName();
+        if (!"ee.s".equals(type) && !"ee.t".equals(type)) {
             return null;
         }
         Field field = target.getClass().getDeclaredField("a");

@@ -24,7 +24,7 @@ public final class CatalogHook {
     public static void install(Context appContext) {
         context = appContext.getApplicationContext();
         try {
-            Class<?> catalog = Class.forName("mf.y1");
+            Class<?> catalog = Class.forName("pf.x1");
             Field field = catalog.getDeclaredField("f");
             field.setAccessible(true);
             Object current = field.get(null);
@@ -49,9 +49,9 @@ public final class CatalogHook {
                 return existing;
             }
             ArrayList<Object> copy = append(null, existing,
-                    "widget_type_froglog", "widget_type_froglog_desc", ef.b.GAMEPAD, 3, 2);
+                    "widget_type_froglog", "widget_type_froglog_desc", hf.b.GAMEPAD, 3, 2);
             copy = append(copy, existing,
-                    "widget_type_froglog_stats", "widget_type_froglog_stats_desc", ef.b.BAR_GRAPH, 2, 1);
+                    "widget_type_froglog_stats", "widget_type_froglog_stats_desc", hf.b.BAR_GRAPH, 2, 1);
             return copy == null ? existing : copy;
         } catch (Throwable t) {
             Log.e(TAG, "Catalog append failed", t);
@@ -87,9 +87,9 @@ public final class CatalogHook {
             if (info == null) {
                 return false;
             }
-            ArrayList<ta.j> sizes = new ArrayList<ta.j>();
-            sizes.add(new ta.j(Integer.valueOf(width), Integer.valueOf(height)));
-            mf.y1.f(callback, rip.moth.cocoonshell.data.model.Widget.WidgetType.ANDROID_WIDGET, info, sizes);
+            ArrayList<sa.j> sizes = new ArrayList<sa.j>();
+            sizes.add(new sa.j(Integer.valueOf(width), Integer.valueOf(height)));
+            pf.x1.f(callback, rip.moth.cocoonshell.data.model.Widget.WidgetType.ANDROID_WIDGET, info, sizes);
             return true;
         } catch (Throwable t) {
             Log.e(TAG, "Could not place Froglog widget", t);
@@ -98,7 +98,7 @@ public final class CatalogHook {
     }
 
     private static ArrayList<Object> append(ArrayList<Object> copy, List<?> existing,
-            String labelName, String descName, ef.b icon, int width, int height) {
+            String labelName, String descName, hf.b icon, int width, int height) {
         int label = res("string", labelName);
         int desc = res("string", descName);
         if (label == 0 || desc == 0) {
@@ -111,9 +111,9 @@ public final class CatalogHook {
         if (copy == null) {
             copy = new ArrayList<Object>(existing);
         }
-        ArrayList<ta.j> sizes = new ArrayList<ta.j>();
-        sizes.add(new ta.j(Integer.valueOf(width), Integer.valueOf(height)));
-        copy.add(new mf.o1(
+        ArrayList<sa.j> sizes = new ArrayList<sa.j>();
+        sizes.add(new sa.j(Integer.valueOf(width), Integer.valueOf(height)));
+        copy.add(new pf.r1(
                 rip.moth.cocoonshell.data.model.Widget.WidgetType.ANDROID_WIDGET,
                 label,
                 desc,
@@ -124,7 +124,7 @@ public final class CatalogHook {
 
     private static boolean containsLabel(List<?> existing, int label) {
         for (Object item : existing) {
-            if (item instanceof mf.o1 && ((mf.o1) item).b == label) {
+            if (item instanceof pf.r1 && ((pf.r1) item).b == label) {
                 return true;
             }
         }

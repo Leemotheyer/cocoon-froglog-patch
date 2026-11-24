@@ -1,6 +1,6 @@
 # Cocoon Shell with Froglog
 
-A rebuilt [Cocoon Shell](https://github.com/inssekt/CocoonFE) 3.06 (`cocoon-306.apk`) that adds Froglog beside the existing **Recently played** widget. Recently played still uses Cocoon's own library.
+A rebuilt [Cocoon Shell](https://github.com/KansoMirai/CocoonFE) 3.11 (`cocoon-311.apk`) that adds Froglog beside the existing **Recently played** widget. Recently played still uses Cocoon's own library.
 
 Froglog data comes from the [Froglog API](https://wiki.froglog.co.uk/Api/Documentation). The recent-games widget reads public `GET /api/users/:username/games` and `GET /api/users/:username/live-service`. Writes use the signed-in library only to match a title before posting.
 
@@ -19,7 +19,7 @@ Froglog data comes from the [Froglog API](https://wiki.froglog.co.uk/Api/Documen
 
 Sign-in stores the JWT and username only. The password is not saved. The widget grid stays on the public user endpoints, so private games do not appear there. A private game can still receive a session after it is linked.
 
-This build uses the package name `rip.moth.cocoonshell.froglog` and the launcher label **Cocoon Froglog**, so it installs beside official Cocoon (`rip.moth.cocoonshell`). Its AndroidX receiver permission is renamed to match, because two apps with different signers cannot define the same signature permission. It is signed with the debug key in `froglog/debug.keystore` (store password `froglog`, alias `froglog`). A later Froglog build signed with the same key can upgrade in place. `versionCode` is 19 and `versionName` is `3.06-1-froglog18-dev`.
+This build uses the package name `rip.moth.cocoonshell.froglog` and the launcher label **Cocoon Froglog**, so it installs beside official Cocoon (`rip.moth.cocoonshell`). Its AndroidX receiver permission is renamed to match, because two apps with different signers cannot define the same signature permission. It is signed with the debug key in `froglog/debug.keystore` (store password `froglog`, alias `froglog`). A later Froglog build signed with the same key can upgrade in place. `versionCode` is 20 and `versionName` is `3.11-1-froglog19-dev`.
 
 Cocoon only records play sessions with Usage Access, which its onboarding asks for. The `SKIP_SETUP=1` test build skips onboarding, so grant it by hand: `adb shell appops set rip.moth.cocoonshell.froglog GET_USAGE_STATS allow`.
 
@@ -29,7 +29,7 @@ The Froglog tiles follow Cocoon's own widgets. Froglog recent is placed at 3×2 
 
 ## Install
 
-`./froglog/build.sh` writes `dist/cocoon-306-froglog-<versionName>.apk` (not committed), for example `dist/cocoon-306-froglog-3.06-1-froglog18-dev.apk`. GitHub release assets use the same naming. The current release is [v3.06-1-froglog17-dev](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.06-1-froglog17-dev) (`cocoon-306-froglog-3.06-1-froglog17-dev.apk`, sha256 `a502a1b2b72b84d089109a35ce461cd42e9fc56bc0f7b5ebb3ec079c3ab3f0aa`). `SKIP_SETUP=1 ./froglog/build.sh` still marks setup complete for BlueStacks test builds. The default build leaves setup in place for Android 13.
+`./froglog/build.sh` writes `dist/cocoon-311-froglog-<versionName>.apk` (not committed), for example `dist/cocoon-311-froglog-3.11-1-froglog19-dev.apk`. GitHub release assets use the same naming. The current release is [v3.11-1-froglog17-dev](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.11-1-froglog17-dev) (`cocoon-311-froglog-3.11-1-froglog17-dev.apk`, sha256 `a502a1b2b72b84d089109a35ce461cd42e9fc56bc0f7b5ebb3ec079c3ab3f0aa`). `SKIP_SETUP=1 ./froglog/build.sh` still marks setup complete for BlueStacks test builds. The default build leaves setup in place for Android 13.
 
 1. Official Cocoon can stay installed. A previous Froglog build with this same debug key can update over itself.
 2. Install the versioned APK from Releases or from `dist/` after a local build.
@@ -51,7 +51,7 @@ Needs a JDK, `apktool` 2.11.x, smali/dexlib2 2.5.2 (`tools/smali/*.jar`), and An
 # tools/smali/{dexlib2,util,baksmali,guava,failureaccess,jcommander}.jar
 # tools/android/build-tools/35.0.0/
 # tools/android/platforms/android-35/android.jar
-# work/cocoon-306.apk          # GitHub release beta-3.06
+# work/cocoon-311.apk          # GitHub release beta-3.11
 ./froglog/build.sh
 SKIP_SETUP=1 ./froglog/build.sh   # BlueStacks test APK that skips onboarding
 ```

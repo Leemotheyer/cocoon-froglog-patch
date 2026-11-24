@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Idempotently cache base Cocoon 3.06 for local reference (not committed to git).
-# Populates work/cocoon-306.apk, work/cocoon-decoded/, and work/smali-out/.
+# Idempotently cache base Cocoon 3.11 for local reference (not committed to git).
+# Populates work/cocoon-311.apk, work/cocoon-311-decoded/, and work/smali-311-out/.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -15,13 +15,13 @@ if [[ -z "${BAKSMALI:-}" ]]; then
   fi
 fi
 
-COCOON_APK_URL="${COCOON_APK_URL:-https://github.com/inssekt/CocoonFE/releases/download/beta-3.06/cocoon-306.apk}"
-COCOON_APK_SHA256="${COCOON_APK_SHA256:-e9df90ad83200f984f085dac51448fffb558b509f7ece50d6889bb5b393cc4d5}"
+COCOON_APK_URL="${COCOON_APK_URL:-https://github.com/KansoMirai/CocoonFE/releases/download/beta-3.11/cocon-311.apk}"
+COCOON_APK_SHA256="${COCOON_APK_SHA256:-e460300a902172f7cda8b9f9af8e7b33933ba0baef775e44b7c9ddfd05387378}"
 
-SRC_APK="${SRC_APK:-$WORK/cocoon-306.apk}"
-DECODE="${DECODE:-$WORK/cocoon-decoded}"
-SMALI_OUT="${SMALI_OUT:-$WORK/smali-out}"
-MARKER="$WORK/cocoon-reference.sha256"
+SRC_APK="${SRC_APK:-$WORK/cocoon-311.apk}"
+DECODE="${DECODE:-$WORK/cocoon-311-decoded}"
+SMALI_OUT="${SMALI_OUT:-$WORK/smali-311-out}"
+MARKER="$WORK/cocoon-311-reference.sha256"
 SKIP_SMALI="${SKIP_SMALI:-0}"
 
 need() {

@@ -1,7 +1,7 @@
 package yb;
 
-/** Compile-only stub of kotlinx StateFlowImpl. {@code h} is setValue. */
-public final class v0 implements t0 {
+/** Compile-only stub of kotlinx MutableStateFlow. */
+public final class z0 implements i {
     public Object getValue() {
         throw new UnsupportedOperationException();
     }
