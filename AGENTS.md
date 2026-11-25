@@ -4,14 +4,9 @@ This guide is for **agents and contributors patching Cocoon Shell**. User-facing
 
 ## Branch policy
 
-| Branch | Purpose |
-|--------|---------|
-| **`dev`** | Active Froglog work, `.cursor/environment.json`, this file, and bootstrap scripts |
-| **`main`** | Release APKs only; intentionally **no** agent bootstrap or decompiled cache |
+`main` is the only long-lived branch. It holds the product, the build tools, the base-upgrade map, and the release notes. Use a short-lived branch for a feature or a port, then merge it back to `main` and delete it.
 
-Point Cloud Agent environments at the **`dev`** branch for builds and installs. The repo default is `main`, so a build that only tracks default `main` will **not** run the bootstrap in `.cursor/environment.json`.
-
-After merging bootstrap changes on `dev`, trigger or rebuild your Cloud environment from the **`dev`** ref and **activate** that build so `install` snapshots `tools/` and `work/` (~1 GB). Draft builds from non-default refs are fine for this repo; promotable default-branch builds are optional because agent files stay off `main`.
+The repo default is `main`. `.cursor/environment.json` runs the bootstrap from whichever ref the environment uses, so point Cloud Agent environments at `main`.
 
 ## One-time bootstrap (local or fresh VM)
 
