@@ -39,22 +39,22 @@ python3 froglog/scripts/scan-base-upgrade.py --check
 
 `--check` exits 0 only when every hook and shared type is still on the class recorded in `hooks.json`, listed method descriptors still match, and Froglog's resource ids are still free. Run that before you change the catalog, so you know the fingerprints themselves still describe 3.06.
 
-## What beta 3.11 showed
+## What beta 3.11 changed
 
-`stage-new-base.sh` was run on [cocon-311.apk](https://github.com/inssekt/CocoonFE/releases/download/beta-3.11/cocon-311.apk) (sha256 `e460300a902172f7cda8b9f9af8e7b33933ba0baef775e44b7c9ddfd05387378`). The improved report is the map for a later port. It does not switch Froglog's default base.
+The 3.11 port is complete. The scanner report for this base is `work/bases/3.11/UPGRADE_REPORT.md`; the hooks in `froglog/base/hooks.json` now point at 3.11.
 
-Things the first scanner got wrong, and that it now reports:
+The important moves were:
 
-- **A surviving filename is not the same class.** `Lfe/q1;` still exists in 3.11, but it is a different enum. The surface-prefs reader moved to `fe/r1.smali`, and `J0` now returns `Lfe/q1;` instead of `Lfe/s1;`.
-- **A stable class name can still hide a new method.** Friends pill `dg/h4` kept its name, but `k` changed from `(ILp1/o;Lz0/e0;Z)V` to `(ZLef/z5;Lp1/o;Lz0/f0;I)V`. Glass host `A0` no longer returns `V`, so `prefixGlassMethods` would throw.
-- **Lookalike enums.** `enum STEAM` plus `enum ANDROID` also matches the icon enum. `excludeAnchors` drops anything that also has `enum GAMEPAD`, which leaves the tab enum (`ef/x0` on 3.11).
-- **Fallback when the old method line is gone.** The context menu left `a8/z` for `android/support/v4/media/session/b` in `classes.dex`. The scanner only searches that dex for `dock_launch_top`, then shows the new `E` descriptor.
-- **Shared types inside signatures.** Compose's composer moved from `Lz0/e0;` to `Lz0/f0;`. Picnic's info method is still named `Y` and still returns `V`, but its parameters moved with it (`Lcf/pd;` to `Lcf/ge;`, `Lz0/e0;` to `Lz0/f0;`).
-- **Name reuse across hooks.** The pod action enum landed on `Lxd/l0;`, which on 3.06 was the pod entry object. The report says so, so the entry stub is not pointed at the action enum.
-- **Resource ids, one line per type.** On 3.11 only `string` collides. Froglog's strings start at `0x7f0e072d` and the base already uses `0x7f0e074a`, so the next free string id is `0x7f0e074b`. Drawable, layout, xml, and id still have room.
-- **versionName is `3.11`**, not `3.11-1`. `apply_resources.py` still searches for `3.06-1`, so the bump would no-op.
+- Widget catalog `pf/x1` and item `pf/r1`; the picker callback types moved to `y0/b1`, `y0/v0`, and `y0/e0`.
+- Pods `yd/l0`, pod actions `yd/j0`, and router `utils/p8`. The router now takes the action enum directly, so Froglog hooks `openIfAction` at the start of `p8.a`.
+- Friends panel `hf/j8`, tabs `hf/u1`, switch map `hf/h8`, icons `hf/b`, row `hf/da`, tier `hf/t1`, click `hf/b6`, and gate `hf/q8`.
+- Theme flow `ig/j0.j`; surface prefs `ge/u1.J0` returns `ig/w0`.
+- Glass draw `nf/k3.b` and glass host `hg/b3.W`.
+- Picnic info `ff/fi.Y` and row `ff/fi.W`.
+- Context menu builder `qf/o0.c` is in `classes4`, not `classes.dex`; the dispatcher is `of/n.h`.
+- Status-bar count `hg/x3.k`; widget host `wf/q1.f`.
 
-On this bump the session DAO, friends panel, friend icons, theme settings class, glass draw class, and menu dispatch class still matched their 3.06 fingerprints. Everything else in the report needs a rebind before `build.sh` can target the 3.11 decode.
+Resource ids moved above the 3.11 table: drawables start at `0x7f060271` and strings at `0x7f0e07e7`. `versionName` is `3.11`.
 
 ## Rebind, in this order
 
