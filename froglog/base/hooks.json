@@ -388,6 +388,27 @@
       "edit": [
         "froglog/tools/PatchCatalog.java (GLASS_HOST)"
       ]
+    },
+    {
+      "id": "pod_launch",
+      "feature": "Start Froglog from the pod launcher switch",
+      "type": "Lff/so;",
+      "dex": "classes4",
+      "match": "all",
+      "anchors": [
+        ".method public final invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;"
+      ],
+      "methods": [
+        {
+          "name": "invokeSuspend",
+          "descriptor": "(Ljava/lang/Object;)Ljava/lang/Object;"
+        }
+      ],
+      "edit": [
+        "froglog/tools/PatchCatalog.java (POD_LAUNCH)",
+        "froglog/tools/verify_patch.py"
+      ],
+      "caveat": "3.11 has no FROGLOG case in the packed switch. The patch inserts a fallback before the default throw and keeps the insert even so the switch payload stays aligned."
     }
   ]
 }
