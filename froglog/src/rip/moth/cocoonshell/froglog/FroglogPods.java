@@ -35,8 +35,46 @@ public final class FroglogPods {
                 setStatic(field, next);
                 Log.i(TAG, "Added the Froglog pod");
             }
+            syncOverlay(pods, next);
         } catch (Throwable t) {
             Log.e(TAG, "Could not add the Froglog pod", t);
+        }
+    }
+
+    /**
+     * The overlay keeps its own copy of the pod list (yd.l0.b, aliased by pf.v.a). It is
+     * built in the same class initializer as yd.l0.a, so if the catalog is initialized
+     * before the app context is available, include() cannot add the pod and the overlay
+     * copy is left without it. Add it to that live list too.
+     */
+    private static void syncOverlay(Class<?> pods, List<?> catalog) {
+        try {
+            Object found = null;
+            for (Object item : catalog) {
+                if (item instanceof yd.k0 && isFroglog((yd.k0) item)) {
+                    found = item;
+                    break;
+                }
+            }
+            if (found == null) {
+                found = entry(CatalogHook.context);
+            }
+            if (found == null) {
+                return;
+            }
+            Field field = pods.getDeclaredField("b");
+            field.setAccessible(true);
+            Object current = field.get(null);
+            if (!(current instanceof List)) {
+                return;
+            }
+            List<Object> overlay = (List<Object>) current;
+            if (!contains(overlay)) {
+                overlay.add(found);
+                Log.i(TAG, "Added the Froglog pod to the overlay");
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Could not add the Froglog pod to the overlay", t);
         }
     }
 
@@ -112,13 +150,9 @@ public final class FroglogPods {
 
     private static yd.k0 entry(Context context) {
         int icon = context.getResources().getIdentifier("froglog", "drawable", context.getPackageName());
-        int titleIcon = context.getResources().getIdentifier("froglog_title_icon", "drawable", context.getPackageName());
         int label = context.getResources().getIdentifier("pods_overlay_froglog", "string", context.getPackageName());
         if (icon == 0) {
             return null;
-        }
-        if (titleIcon == 0) {
-            titleIcon = icon;
         }
         return new yd.k0(
                 yd.j0.FROGLOG,
@@ -126,7 +160,7 @@ public final class FroglogPods {
                 "Froglog",
                 "Froglog",
                 "Sign in, see your library, and log the games you play in Cocoon.",
-                titleIcon,
+                icon,
                 SLUG,
                 icon,
                 icon,

@@ -92,8 +92,16 @@ def main() -> None:
 
         router = read(root / "after", "rip/moth/cocoonshell/utils/p8.smali")
         route = method(router, ".method public final a(Lyd/k0;Landroid/content/Context;Ljava/lang/Boolean;Lrip/moth/cocoonshell/data/model/Game;Lza/c;)Ljava/lang/Object;")
-        need(route, "FroglogPods;->openIfAction", "pod router")
-        need(route, "Lsa/z;->a:Lsa/z;", "pod router early return")
+        # The router gets the yd.k0 entry, not a yd.j0 action. Calling openIfAction here
+        # passed a k0 where the j0 parameter is declared, and ART rejected p8 on the first
+        # pod tap, so every pod crashed.
+        need(route, "FroglogPods;->openIfFroglog", "pod router")
+        if "FroglogPods;->openIfAction" in route:
+            raise SystemExit("pod router passes a yd.k0 entry to openIfAction")
+        # The caller casts the suspend result to oe.g; Unit would throw ClassCastException.
+        need(route, "Loe/a;->a:Loe/a;", "pod router early return")
+        if "Lsa/z;->a:Lsa/z;" in route:
+            raise SystemExit("pod router returns Unit where oe.g is expected")
 
         friends = read(root / "after", "hf/j8.smali")
         need(friends, "FroglogSocial;->withFriendsTabs", "friend tabs")
@@ -126,6 +134,12 @@ def main() -> None:
         row = method(picnic, ".method public static final W(Ljava/lang/String;Ljb/a;Lo1/p;Ly0/e0;I)V")
         need(row, "FroglogPicnic;->isUploadRow", "picnic row")
         need(row, 'const-string v13, "Upload to Froglog"', "picnic row label")
+        # The icon branch replaces the stock const in v4. Writing v3 leaves v4 as the
+        # label String and the following La/a.o0(II…) call fails verification.
+        need(row, "const v4, 0x7f060273", "picnic upload icon register")
+        need(row, "const v4, 0x7f060230", "picnic log icon register")
+        if "const v3, 0x7f060273" in row or "const v3, 0x7f060230" in row:
+            raise SystemExit("picnic upload icon writes the wrong register")
 
         click = read(root / "after", "hf/b6.smali")
         need(click, "FroglogSocial;->openIfFriend", "friend click")
@@ -134,6 +148,9 @@ def main() -> None:
         launch_method = method(launch, ".method public final invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;")
         need(launch_method, "FroglogPods;->openIfAction", "pod launch fallback")
         need(launch_method, "La5/r0;", "pod launch original throw")
+        # invokeSuspend has 13 registers and two parameter words (this plus the argument),
+        # so p0 is v11 and the pod entry is read from this object. baksmali prints it as p0.
+        need(launch_method, "iget-object v10, p0, Lff/so;->c", "pod launch this register")
 
         widget = read(root / "after", "wf/q1.smali")
         host = method(widget, ".method public static final f(Landroid/view/View;)V")

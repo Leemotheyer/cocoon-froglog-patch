@@ -11,7 +11,7 @@ Froglog data comes from the [Froglog API](https://wiki.froglog.co.uk/Api/Documen
 3. Open the pods overlay and choose **Froglog**. Sign in there.
 4. Add the **Froglog** and **Froglog stats** widgets from Cocoon's widget picker.
 
-The current release is [v3.11-1-froglog21-dev](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.11-1-froglog21-dev) (`cocoon-311-froglog-3.11-1-froglog21-dev.apk`, sha256 `daef19a7e520bc8d9751c37c76e1259ceadd6b972a80f601f9dbfe34d74bd983`).
+The current release is [v3.11-1-froglog21-dev](https://github.com/Leemotheyer/cocoon-froglog-patch/releases/tag/v3.11-1-froglog21-dev) (`cocoon-311-froglog-3.11-1-froglog21-dev.apk`, sha256 `cdbcce773bc2dc2a48accd846cd6708d18e85e0c981e13c2baf1f107c83f4e3a`).
 
 ## Features
 

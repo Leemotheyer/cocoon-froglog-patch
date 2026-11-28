@@ -642,13 +642,15 @@ public final class PatchCatalog {
                 2, entry, entry + 1, 0, 0, 0,
                 new ImmutableMethodReference(
                         "Lrip/moth/cocoonshell/froglog/FroglogPods;",
-                        "openIfAction",
-                        Arrays.asList("Lyd/j0;", "Landroid/content/Context;"),
+                        "openIfFroglog",
+                        Arrays.asList("Lyd/k0;", "Landroid/content/Context;"),
                         "Z")));
         instructions.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0));
         instructions.add(new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 5));
+        // The router is a suspend function and its caller casts the result to oe.g. Unit
+        // (sa.z) fails that cast, so return the success singleton the stock path uses.
         instructions.add(new ImmutableInstruction21c(Opcode.SGET_OBJECT, 0,
-                new ImmutableFieldReference("Lsa/z;", "a", "Lsa/z;")));
+                new ImmutableFieldReference("Loe/a;", "a", "Loe/a;")));
         instructions.add(new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0));
         int prefix = 0;
         for (int i = 0; i < instructions.size(); i++) {
@@ -778,6 +780,8 @@ public final class PatchCatalog {
     private static List<Instruction> podLaunchFallback() {
         MethodImplementationBuilder code = new MethodImplementationBuilder(13);
         Label notFroglog = code.getLabel("froglog_pod_no");
+        // invokeSuspend has 13 registers and two parameter words (this plus the argument),
+        // so p0 (this) is v11. The pod entry lives on this object's c field.
         code.addInstruction(new BuilderInstruction22c(Opcode.IGET_OBJECT, 10, 11,
                 field(POD_LAUNCH, "c", "Ljava/lang/Object;")));
         code.addInstruction(new BuilderInstruction21c(Opcode.CHECK_CAST, 10,
@@ -1996,7 +2000,9 @@ public final class PatchCatalog {
         if (iconAt < 0) {
             throw new IllegalStateException("picnic row icon missing after label patch");
         }
-        List<Instruction> iconBranch = picnicUploadIconBranch();
+        int iconReg = ((org.jf.dexlib2.iface.instruction.OneRegisterInstruction)
+                instructions.get(iconAt)).getRegisterA();
+        List<Instruction> iconBranch = picnicUploadIconBranch(iconReg);
         addresses = addresses(instructions);
         int iconAtAddress = addresses[iconAt];
         int iconDelta = instructionWidth(iconBranch) - instructions.get(iconAt).getCodeUnits();
@@ -2068,7 +2074,7 @@ public final class PatchCatalog {
     }
 
     /** v6 is dead until the next move-result. */
-    private static List<Instruction> picnicUploadIconBranch() {
+    private static List<Instruction> picnicUploadIconBranch(int iconReg) {
         MethodImplementationBuilder code = new MethodImplementationBuilder(16);
         Label logIcon = code.getLabel("froglog_icon_log");
         Label done = code.getLabel("froglog_icon_done");
@@ -2077,12 +2083,14 @@ public final class PatchCatalog {
                 method(FROGLOG_PICNIC, "isUploadRow", Collections.<String>emptyList(), "Z")));
         code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 6));
         code.addInstruction(new BuilderInstruction21t(Opcode.IF_EQZ, 6, logIcon));
+        // Write the same register the replaced const used: the icon id is read as an int
+        // right after this block, and the base holds a String in the other registers.
         code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(
-                Opcode.CONST, 3, FROGLOG_POD_ICON));
+                Opcode.CONST, iconReg, FROGLOG_POD_ICON));
         code.addInstruction(new BuilderInstruction10t(Opcode.GOTO, done));
         code.addLabel("froglog_icon_log");
         code.addInstruction(new org.jf.dexlib2.builder.instruction.BuilderInstruction31i(
-                Opcode.CONST, 3, 0x7f060230));
+                Opcode.CONST, iconReg, 0x7f060230));
         code.addLabel("froglog_icon_done");
         code.addInstruction(new BuilderInstruction10x(Opcode.NOP));
         return instructionList(code);
