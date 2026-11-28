@@ -19,6 +19,7 @@ CLASSES = (
     "Lqf/o0;",
     "Lff/fi;",
     "Lwf/q1;",
+    "Lff/so;",
 )
 
 
@@ -128,6 +129,11 @@ def main() -> None:
 
         click = read(root / "after", "hf/b6.smali")
         need(click, "FroglogSocial;->openIfFriend", "friend click")
+
+        launch = read(root / "after", "ff/so.smali")
+        launch_method = method(launch, ".method public final invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;")
+        need(launch_method, "FroglogPods;->openIfAction", "pod launch fallback")
+        need(launch_method, "La5/r0;", "pod launch original throw")
 
         widget = read(root / "after", "wf/q1.smali")
         host = method(widget, ".method public static final f(Landroid/view/View;)V")

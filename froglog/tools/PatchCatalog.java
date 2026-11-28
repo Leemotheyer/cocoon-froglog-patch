@@ -93,6 +93,7 @@ public final class PatchCatalog {
     private static final String SESSION = "Lrip/moth/cocoonshell/data/local/GameSessionDao_Impl;";
     private static final String PODS = "Lyd/l0;";
     private static final String POD_ACTION = "Lyd/j0;";
+    private static final String POD_LAUNCH = "Lff/so;";
     private static final String ROUTER = "Lrip/moth/cocoonshell/utils/p8;";
     private static final String FRIENDS = "Lhf/j8;";
     private static final String FRIEND_GATE = "Lhf/q8;";
@@ -136,6 +137,7 @@ public final class PatchCatalog {
         ClassDef session = null;
         ClassDef pods = null;
         ClassDef podAction = null;
+        ClassDef podLaunch = null;
         ClassDef router = null;
         ClassDef friends = null;
         ClassDef friendGate = null;
@@ -161,6 +163,8 @@ public final class PatchCatalog {
                 pods = cls;
             } else if (POD_ACTION.equals(cls.getType())) {
                 podAction = cls;
+            } else if (POD_LAUNCH.equals(cls.getType())) {
+                podLaunch = cls;
             } else if (ROUTER.equals(cls.getType())) {
                 router = cls;
             } else if (FRIENDS.equals(cls.getType())) {
@@ -195,12 +199,12 @@ public final class PatchCatalog {
                 share = cls;
             }
         }
-        if (catalog == null || session == null || pods == null || podAction == null || router == null
+        if (catalog == null || session == null || pods == null || podAction == null || podLaunch == null || router == null
                 || friends == null || friendGate == null || friendTabs == null || friendMaps == null || friendClick == null
                 || theme == null || surfacePrefs == null
                 || glassDraw == null || glassHost == null || widgetHost == null || statusBar == null || icons == null || menuDispatch == null || menuItems == null || share == null) {
             throw new IllegalStateException("catalog=" + (catalog != null) + " session=" + (session != null)
-                    + " pods=" + (pods != null) + " podAction=" + (podAction != null)
+                    + " pods=" + (pods != null) + " podAction=" + (podAction != null) + " podLaunch=" + (podLaunch != null)
                     + " router=" + (router != null)
                     + " friends=" + (friends != null) + " gate=" + (friendGate != null) + " tabs=" + (friendTabs != null)
                     + " maps=" + (friendMaps != null) + " click=" + (friendClick != null)
@@ -214,6 +218,7 @@ public final class PatchCatalog {
         final ClassDef sessionReplacement = patchSession(session);
         final ClassDef podsReplacement = patchPods(pods);
         final ClassDef podActionReplacement = patchPodAction(podAction);
+        final ClassDef podLaunchReplacement = patchPodLaunch(podLaunch);
         final ClassDef routerReplacement = patchRouterClass(router);
         final ClassDef friendTabsReplacement = patchFriendTabEnum(friendTabs);
         final ClassDef friendMapsReplacement = patchFriendTabMaps(friendMaps);
@@ -244,6 +249,8 @@ public final class PatchCatalog {
                         classes.add(podsReplacement);
                     } else if (POD_ACTION.equals(cls.getType())) {
                         classes.add(podActionReplacement);
+                    } else if (POD_LAUNCH.equals(cls.getType())) {
+                        classes.add(podLaunchReplacement);
                     } else if (ROUTER.equals(cls.getType())) {
                         classes.add(routerReplacement);
                     } else if (FRIEND_TABS.equals(cls.getType())) {
@@ -702,6 +709,115 @@ public final class PatchCatalog {
         code.addInstruction(new BuilderInstruction11x(Opcode.RETURN, 0));
         System.out.println("friend panel gate includes Froglog");
         return replace(method, code.getMethodImplementation());
+    }
+
+    /** ff.so is the pod launch switch. Unknown actions (including FROGLOG) fall to its throw. */
+    private static ClassDef patchPodLaunch(ClassDef launch) {
+        List<Method> direct = new ArrayList<Method>();
+        for (Method method : launch.getDirectMethods()) {
+            direct.add(method);
+        }
+        List<Method> virtual = new ArrayList<Method>();
+        boolean patched = false;
+        for (Method method : launch.getVirtualMethods()) {
+            if ("invokeSuspend".equals(method.getName())
+                    && "(Ljava/lang/Object;)Ljava/lang/Object;".equals(signature(method))) {
+                virtual.add(patchPodLaunchMethod(method));
+                patched = true;
+            } else {
+                virtual.add(method);
+            }
+        }
+        if (!patched) {
+            throw new IllegalStateException("pod launch switch not found");
+        }
+        return copyClass(launch, direct, virtual);
+    }
+
+    private static Method patchPodLaunchMethod(Method method) {
+        MethodImplementation impl = method.getImplementation();
+        List<Instruction> instructions = new ArrayList<Instruction>();
+        for (Instruction instruction : impl.getInstructions()) {
+            instructions.add(instruction);
+        }
+        int fallback = -1;
+        for (int i = 0; i + 1 < instructions.size(); i++) {
+            Instruction instruction = instructions.get(i);
+            if (instruction.getOpcode() != Opcode.PACKED_SWITCH
+                    || !(instruction instanceof Instruction31t)
+                    || ((Instruction31t) instruction).getRegisterA() != 12) {
+                continue;
+            }
+            Instruction next = instructions.get(i + 1);
+            if (next.getOpcode() != Opcode.NEW_INSTANCE || !(next instanceof ReferenceInstruction)) {
+                continue;
+            }
+            Reference ref = ((ReferenceInstruction) next).getReference();
+            if (ref instanceof TypeReference && "La5/r0;".equals(((TypeReference) ref).getType())) {
+                fallback = i + 1;
+                break;
+            }
+        }
+        if (fallback < 0) {
+            throw new IllegalStateException("pod launch fallback not found");
+        }
+        List<Instruction> replacement = podLaunchFallback();
+        int[] addresses = addresses(instructions);
+        int insertAt = addresses[fallback];
+        int added = instructionWidth(replacement);
+        List<Instruction> rewritten = spliceAfter(instructions, fallback - 1, replacement);
+        System.out.println("pod launch fallback handles FROGLOG");
+        return replace(method, new ImmutableMethodImplementation(
+                impl.getRegisterCount(),
+                rewritten,
+                shiftTries(impl.getTryBlocks(), insertAt, added),
+                Collections.emptyList()));
+    }
+
+    /** FROGLOG has no case in the packed switch. Start Froglog, otherwise keep the throw. */
+    private static List<Instruction> podLaunchFallback() {
+        MethodImplementationBuilder code = new MethodImplementationBuilder(13);
+        Label notFroglog = code.getLabel("froglog_pod_no");
+        code.addInstruction(new BuilderInstruction22c(Opcode.IGET_OBJECT, 10, 11,
+                field(POD_LAUNCH, "c", "Ljava/lang/Object;")));
+        code.addInstruction(new BuilderInstruction21c(Opcode.CHECK_CAST, 10,
+                new ImmutableTypeReference("Lyd/k0;")));
+        code.addInstruction(new BuilderInstruction22c(Opcode.IGET_OBJECT, 10, 10,
+                field("Lyd/k0;", "a", "Lyd/j0;")));
+        code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_STATIC, 2, 10, 5, 0, 0, 0,
+                method("Lrip/moth/cocoonshell/froglog/FroglogPods;", "openIfAction",
+                        Arrays.asList("Lyd/j0;", "Landroid/content/Context;"), "Z")));
+        code.addInstruction(new BuilderInstruction11x(Opcode.MOVE_RESULT, 10));
+        code.addInstruction(new BuilderInstruction21t(Opcode.IF_EQZ, 10, notFroglog));
+        code.addInstruction(new BuilderInstruction21c(Opcode.NEW_INSTANCE, 10,
+                new ImmutableTypeReference("Loe/f;")));
+        code.addInstruction(new BuilderInstruction35c(Opcode.INVOKE_DIRECT, 2, 10, 4, 0, 0, 0,
+                method("Loe/f;", "<init>", Collections.singletonList("Ljava/lang/Integer;"), "V")));
+        code.addInstruction(new BuilderInstruction11x(Opcode.RETURN_OBJECT, 10));
+        code.addLabel("froglog_pod_no");
+        code.addInstruction(new BuilderInstruction10x(Opcode.NOP));
+        // Packed-switch payloads must stay 2-code-unit aligned. Keep the insert even.
+        code.addInstruction(new BuilderInstruction10x(Opcode.NOP));
+        return instructionList(code);
+    }
+
+    private static List<Instruction> spliceReplaceRange(
+            List<Instruction> instructions, int index, int count, List<Instruction> replacement) {
+        int[] addresses = addresses(instructions);
+        int end = addresses[index + count - 1] + instructions.get(index + count - 1).getCodeUnits();
+        int delta = instructionWidth(replacement) - (end - addresses[index]);
+        int[] switchAt = switchAddresses(instructions, addresses);
+        List<Instruction> rewritten = new ArrayList<Instruction>();
+        for (int i = 0; i < instructions.size(); i++) {
+            if (i == index) {
+                rewritten.addAll(replacement);
+            } else if (i >= index && i < index + count) {
+                continue;
+            } else {
+                rewritten.add(retarget(instructions.get(i), addresses[i], switchAt[i], end, delta));
+            }
+        }
+        return rewritten;
     }
 
     private static ClassDef patchFriends(ClassDef friends) {
