@@ -112,9 +112,13 @@ public final class FroglogPods {
 
     private static yd.k0 entry(Context context) {
         int icon = context.getResources().getIdentifier("froglog", "drawable", context.getPackageName());
+        int titleIcon = context.getResources().getIdentifier("froglog_title_icon", "drawable", context.getPackageName());
         int label = context.getResources().getIdentifier("pods_overlay_froglog", "string", context.getPackageName());
         if (icon == 0) {
             return null;
+        }
+        if (titleIcon == 0) {
+            titleIcon = icon;
         }
         return new yd.k0(
                 yd.j0.FROGLOG,
@@ -122,11 +126,11 @@ public final class FroglogPods {
                 "Froglog",
                 "Froglog",
                 "Sign in, see your library, and log the games you play in Cocoon.",
-                icon,
+                titleIcon,
                 SLUG,
                 icon,
                 icon,
-                Collections.singletonList(Integer.valueOf(icon)),
+                Collections.nCopies(4, Integer.valueOf(icon)),
                 label);
     }
 
